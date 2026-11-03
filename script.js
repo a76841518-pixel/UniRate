@@ -129,6 +129,32 @@ const QUIZ_CONFIG = {
   pointsPerCorrect: 100,
   bonusPerSecond: 5,
 };
+/* ============ مكافآت الدخول اليومي ============ */
+const DAILY_REWARDS = [
+  { day: 1, coins: 50,  xp: 10  },
+  { day: 2, coins: 100, xp: 20  },
+  { day: 3, coins: 150, xp: 30  },
+  { day: 4, coins: 200, xp: 40  },
+  { day: 5, coins: 300, xp: 60  },
+  { day: 6, coins: 500, xp: 100 },
+  { day: 7, coins: 1000, xp: 200, badge: '🎖️' },
+];
+
+/* ============ حالات اللاعب ============ */
+const PLAYER_STATUSES = {
+  available: { icon: '🟢', label: 'متاح للعب', color: '#22c55e' },
+  playing:   { icon: '🎮', label: 'ألعب الآن', color: '#6c5ce7' },
+  busy:      { icon: '🔴', label: 'مشغول',     color: '#ff3d71' },
+  away:      { icon: '🟡', label: 'بعيد',      color: '#f5b301' },
+};
+
+/* ============ فئات المقتنيات ============ */
+const ITEM_CATEGORIES = {
+  frame: { label: 'إطار',  icon: '🖼️' },
+  title: { label: 'لقب',   icon: '👑' },
+  badge: { label: 'شارة',  icon: '⭐' },
+  theme: { label: 'سكن',   icon: '🎨' },
+};
 const AVATAR_GRADS = [
   'linear-gradient(135deg,#6c5ce7,#00d2ff)','linear-gradient(135deg,#ff3d71,#f5b301)',
   'linear-gradient(135deg,#00d2ff,#22c55e)','linear-gradient(135deg,#a78bfa,#ff3d71)',
@@ -163,7 +189,29 @@ const state = {
   teamChatUnsub: null,
   viewingTeamTab: 'info',
   matchInvites: [],
+    /* ===== Batch 2 ===== */
+  dailyReward: null,
+  challenges: [],
+  myInventory: [],
+  equipped: { frame: null, title: null, badge: null },
 };
+
+/* ============ نظام المستويات ============ */
+function xpForLevel(level){ return (level - 1) * 500; }
+function levelFromXp(xp){ return Math.floor((xp || 0) / 500) + 1; }
+function xpProgress(xp){
+  const level = levelFromXp(xp);
+  const currentLevelXp = xpForLevel(level);
+  const nextLevelXp = xpForLevel(level + 1);
+  const current = (xp || 0) - currentLevelXp;
+  const needed = nextLevelXp - currentLevelXp;
+  return {
+    level,
+    current: Math.floor(current),
+    needed,
+    pct: Math.min(100, Math.floor((current / needed) * 100))
+  };
+}
 
 /* ============ Firebase Init ============ */
 let auth, db, app;
@@ -348,6 +396,8 @@ function renderTopbar(){
 /* ============ Drawer ============ */
 const MORE_ITEMS = [
   {id:'closefriends', icon:'heart', label:'المقربون', desc:'أقرب 10 لاعبين'},
+  {id:'inventory', icon:'store', label:'مقتنياتي', desc:'كل مشترياتك وتجهيزاتك'},
+  {id:'_daily', icon:'star', label:'المكافأة اليومية', desc:'استلم مكافأتك'},
   {id:'leaderboard', icon:'trophy', label:'لوحة الصدارة', desc:'ترتيب اللاعبين'},
   {id:'achievements', icon:'medal', label:'الإنجازات', desc:'أوسمة وتحديات'},
   {id:'stats', icon:'chart', label:'الإحصائيات', desc:'أرقامك'},
@@ -523,6 +573,14 @@ onAuthStateChanged(auth, async (user) => {
     render();
     // افحص وجود مباراة نشطة
 setTimeout(checkActiveMatch, 2000);
+// ★ افحص المكافأة اليومية وأظهرها
+setTimeout(async ()=>{
+  await checkDailyReward();
+  if(state.dailyReward?.available){
+    // انتظر قليلاً ثم افتح النافذة
+    setTimeout(openDailyRewardModal, 1500);
+  }
+}, 1000);
   } else {
     state.user = null;
     state.profile = null;
@@ -1101,6 +1159,362 @@ async function buyItem(item){
   }
 }
 
+/* ============================================================
+   🎁 مكافآت الدخول اليومي
+   ============================================================ */
+async function checkDailyReward(){
+  if(!state.profile) return;
+  const p = state.profile;
+  const last = p.lastDailyReward?.toDate?.() || null;
+  const streak = p.dailyStreak || 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  if(!last){
+    state.dailyReward = { available: true, nextDay: 1, streak: 0, reset: true };
+    return;
+  }
+
+  const lastDay = new Date(last); lastDay.setHours(0,0,0,0);
+  const daysDiff = Math.round((today - lastDay) / (1000*60*60*24));
+
+  if(daysDiff === 0){
+    state.dailyReward = { available: false, nextDay: Math.min(streak+1, 7), streak };
+  } else if(daysDiff === 1){
+    state.dailyReward = { available: true, nextDay: Math.min(streak+1, 7), streak };
+  } else {
+    state.dailyReward = { available: true, nextDay: 1, streak: 0, reset: true };
+  }
+}
+
+async function claimDailyReward(){
+  if(!state.dailyReward?.available) return toast('لا يمكن الاستلام الآن');
+  const day = state.dailyReward.nextDay;
+  const r = DAILY_REWARDS[day-1];
+  try {
+    await updateDoc(doc(db,'users',state.user.uid), {
+      coins: increment(r.coins),
+      xp: increment(r.xp),
+      dailyStreak: day,
+      lastDailyReward: serverTimestamp(),
+    });
+    toast(`🎁 حصلت على ${r.coins} عملة + ${r.xp} XP`);
+    state.dailyReward = { available: false, nextDay: Math.min(day+1,7), streak: day };
+    closeModal();
+    render();
+  } catch(e){ toast('فشل الاستلام'); }
+}
+
+function openDailyRewardModal(){
+  const current = state.dailyReward;
+  if(!current) return;
+  openModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:44px;margin-bottom:6px">🎁</div>
+      <h3 style="margin:0">مكافآت الدخول</h3>
+      <div class="sub" style="margin-bottom:0">
+        ${current.available ? 'يومك المجاني جاهز!' : 'عد غداً لمكافأة جديدة'}
+      </div>
+    </div>
+    <div class="daily-grid">
+      ${DAILY_REWARDS.map((r, i)=>{
+        const day = i + 1;
+        const isToday = current.available && day === current.nextDay;
+        const isClaimed = day < (current.streak || 0) || (!current.available && day <= current.streak);
+        const cls = isToday ? 'today' : isClaimed ? 'claimed' : '';
+        return `
+          <div class="daily-cell ${cls}">
+            <div class="dn">يوم ${day}</div>
+            <div class="dc">${r.badge || '💰'}</div>
+            <div class="dv">${r.coins}</div>
+          </div>`;
+      }).join('')}
+    </div>
+    ${current.available ? `
+      <button class="btn btn-primary" style="width:100%;margin-top:16px" id="claimDailyBtn">
+        ${ic('check','sm')} استلم مكافأة اليوم ${current.nextDay}
+      </button>
+    ` : `
+      <button class="btn btn-ghost" style="width:100%;margin-top:16px" data-action="modal-close">
+        حسناً
+      </button>
+    `}
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--muted)">
+      🔥 سلسلة حالية: ${current.streak || 0} يوم
+    </div>
+  `);
+}
+
+/* ============================================================
+   🟢 حالة اللاعب
+   ============================================================ */
+async function setPlayerStatus(status, msg){
+  try {
+    await updateDoc(doc(db,'users',state.user.uid), {
+      status,
+      statusMsg: (msg || '').slice(0, 60),
+    });
+    toast('تم تحديث حالتك ✓');
+    closeModal();
+  } catch(e){ toast('فشل'); }
+}
+
+function openStatusPickerModal(){
+  const current = state.profile?.status || 'available';
+  const msg = state.profile?.statusMsg || '';
+  openModal(`
+    <h3>حالة اللاعب</h3>
+    <div class="sub">اختر حالتك الحالية ورسالة قصيرة</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      ${Object.entries(PLAYER_STATUSES).map(([k, s])=>`
+        <button class="set-row" data-set-status="${k}" style="${current===k?'border-color:'+s.color+';background:'+s.color+'15':''}">
+          <div style="width:10px;height:10px;border-radius:50%;background:${s.color}"></div>
+          <div class="sr-txt"><div class="sr-n">${s.label}</div></div>
+          ${current===k ? ic('check','sm') : ''}
+        </button>
+      `).join('')}
+    </div>
+    <div class="field">
+      <label>رسالة قصيرة (اختياري)</label>
+      <input class="input" id="statusMsgInput" value="${esc(msg)}" maxlength="60" placeholder="مثال: أبحث عن فريق">
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="saveStatusBtn">حفظ</button>
+    </div>
+  `);
+  // معالجة الضغط على الحالة
+  document.querySelectorAll('[data-set-status]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const s = btn.dataset.setStatus;
+      document.querySelectorAll('[data-set-status]').forEach(b=>{
+        b.style.borderColor = '';
+        b.style.background = '';
+      });
+      btn.style.borderColor = PLAYER_STATUSES[s].color;
+      btn.style.background = PLAYER_STATUSES[s].color + '15';
+      document.getElementById('saveStatusBtn').dataset.pendingStatus = s;
+    });
+  });
+  document.getElementById('saveStatusBtn').dataset.pendingStatus = current;
+}
+
+/* ============================================================
+   🎒 المقتنيات والتجهيز
+   ============================================================ */
+async function loadMyInventory(){
+  try {
+    const snap = await getDocs(collection(db,'users',state.user.uid,'inventory'));
+    state.myInventory = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    return state.myInventory;
+  } catch(e){ state.myInventory = []; return []; }
+}
+
+async function equipItem(itemId, category){
+  try {
+    const updates = { [`equipped.${category}`]: itemId };
+    await updateDoc(doc(db,'users',state.user.uid), updates);
+    toast('تم التجهيز ✓');
+    render();
+  } catch(e){ toast('فشل'); }
+}
+
+async function unequipItem(category){
+  try {
+    const updates = { [`equipped.${category}`]: null };
+    await updateDoc(doc(db,'users',state.user.uid), updates);
+    toast('تم الإزالة');
+    render();
+  } catch(e){ toast('فشل'); }
+}
+
+/* ============================================================
+   ⚔️ تحديات 1v1
+   ============================================================ */
+async function sendChallenge(targetUid){
+  if(targetUid === state.user.uid) return toast('لا يمكنك تحدي نفسك');
+  try {
+    const chRef = await addDoc(collection(db,'challenges'), {
+      from: state.user.uid,
+      fromName: state.profile.name,
+      fromAvatar: state.profile.avatarUrl || '',
+      to: targetUid,
+      gameId: 'g3',
+      gameName: 'Quiz Clash',
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      expiresAt: new Date(Date.now() + 5*60*1000),
+    });
+    await notify(targetUid, 'challenge', `<b>${esc(state.profile.name)}</b> تحدّاك في Quiz Clash!`, chRef.id);
+    toast('تم إرسال التحدي ⚔️');
+  } catch(e){ console.error(e); toast('فشل'); }
+}
+
+async function openChallengesModal(){
+  try {
+    const q = query(
+      collection(db,'challenges'),
+      where('to','==',state.user.uid),
+      where('status','==','pending'),
+      orderBy('createdAt','desc'),
+      limit(20)
+    );
+    const snap = await getDocs(q);
+    const items = snap.docs.map(d=>({id:d.id, ...d.data()}))
+      .filter(c => {
+        const exp = c.expiresAt?.toDate?.() || new Date(0);
+        return exp > new Date();
+      });
+    
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">⚔️ تحديات واردة</h3>
+        <button class="icon-btn" data-action="modal-close">${ic('close','sm')}</button>
+      </div>
+      ${items.length ? items.map(c=>{
+        const u = state.users[c.from] || { name: c.fromName };
+        return `
+          <div class="card" style="margin-bottom:10px;padding:14px">
+            <div class="row" style="margin-bottom:10px">
+              ${avatar(u, 44)}
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:800">${esc(u.name)}</div>
+                <div class="muted" style="font-size:10.5px">${esc(c.gameName)} · ${timeAgo(c.createdAt)}</div>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn btn-primary" style="flex:1" data-accept-challenge="${c.id}">
+                ${ic('check','sm')} قبول
+              </button>
+              <button class="btn btn-ghost" style="flex:1" data-reject-challenge="${c.id}">
+                رفض
+              </button>
+            </div>
+          </div>`;
+      }).join('') : emptyState('لا تحديات حالياً','bolt')}
+    `);
+  } catch(e){ console.error(e); toast('فشل تحميل التحديات'); }
+}
+
+async function acceptChallenge(challengeId){
+  try {
+    const chRef = doc(db,'challenges',challengeId);
+    const chSnap = await getDoc(chRef);
+    if(!chSnap.exists()) return toast('التحدي غير موجود');
+    const ch = chSnap.data();
+    if(ch.status !== 'pending') return toast('التحدي لم يعد متاحاً');
+    const exp = ch.expiresAt?.toDate?.() || new Date(0);
+    if(exp < new Date()) return toast('انتهت صلاحية التحدي');
+
+    const roomRef = await addDoc(collection(db,'rooms'), {
+      gameId: ch.gameId,
+      hostId: ch.from,
+      name: 'تحدي ' + (ch.fromName || 'لاعب'),
+      players: [ch.from, ch.to],
+      maxPlayers: 2, mode: '1v1',
+      public: false, status: 'waiting',
+      createdAt: serverTimestamp(),
+      scores: {}, answers: {},
+    });
+
+    await updateDoc(chRef, { status: 'accepted', roomId: roomRef.id });
+    await notify(ch.from, 'game', `<b>${esc(state.profile.name)}</b> قبل تحديك — المباراة جاهزة!`);
+
+    closeModal();
+    toast('قُبل التحدي — بدء المباراة');
+    setTimeout(() => startQuizMatch(roomRef.id, state.user.uid === ch.from), 600);
+  } catch(e){ console.error(e); toast('فشل القبول'); }
+}
+
+async function rejectChallenge(challengeId){
+  try {
+    await updateDoc(doc(db,'challenges',challengeId), { status: 'rejected' });
+    toast('تم الرفض');
+    openChallengesModal();
+  } catch(e){ toast('فشل'); }
+}
+
+/* ============================================================
+   👥 طلبات الانضمام للفرق
+   ============================================================ */
+async function requestJoinTeam(teamId){
+  if(state.profile.teamId) return toast('أنت في فريق بالفعل');
+  const team = state.teams.find(t => t.id === teamId);
+  if(!team) return toast('الفريق غير موجود');
+  if((team.joinRequests || []).includes(state.user.uid)) return toast('طلبك مُرسل مسبقاً');
+  try {
+    await updateDoc(doc(db,'teams',teamId), {
+      joinRequests: arrayUnion(state.user.uid),
+    });
+    await notify(team.leaderId, 'team_request',
+      `<b>${esc(state.profile.name)}</b> يطلب الانضمام لفريق ${esc(team.name)}`, teamId);
+    toast('تم إرسال الطلب — بانتظار موافقة القائد');
+  } catch(e){ console.error(e); toast('فشل'); }
+}
+
+async function approveJoinRequest(teamId, uid){
+  try {
+    const team = state.teams.find(t => t.id === teamId);
+    if(!team) return;
+    await updateDoc(doc(db,'teams',teamId), {
+      members: arrayUnion(uid),
+      joinRequests: arrayRemove(uid),
+    });
+    await updateDoc(doc(db,'users',uid), {
+      teamId: teamId,
+      teamName: team.name,
+      teamEmblem: team.emblem || '🛡️',
+    });
+    await notify(uid, 'team_accepted', `تم قبول طلبك في فريق <b>${esc(team.name)}</b> 🎉`);
+    toast('تمت الموافقة ✓');
+    render();
+  } catch(e){ console.error(e); toast('فشل'); }
+}
+
+async function rejectJoinRequest(teamId, uid){
+  try {
+    await updateDoc(doc(db,'teams',teamId), {
+      joinRequests: arrayRemove(uid),
+    });
+    await notify(uid, 'team_rejected', 'تم رفض طلب الانضمام للفريق');
+    toast('تم الرفض');
+    render();
+  } catch(e){ console.error(e); toast('فشل'); }
+}
+
+/* ============================================================
+   👑 إدارة رتب الفريق
+   ============================================================ */
+async function setTeamRole(teamId, uid, role){
+  try {
+    const team = state.teams.find(t => t.id === teamId);
+    if(!team || team.leaderId !== state.user.uid) return toast('غير مصرح');
+    const updates = { [`roles.${uid}`]: role };
+    await updateDoc(doc(db,'teams',teamId), updates);
+    await notify(uid, 'team_role', `تم تعيينك <b>${role === 'coleader' ? 'نائب القائد' : 'عضواً'}</b>`);
+    toast('تم التحديث ✓');
+    render();
+  } catch(e){ toast('فشل'); }
+}
+
+async function kickMember(teamId, uid){
+  if(!confirm('طرد هذا العضو؟')) return;
+  try {
+    const team = state.teams.find(t => t.id === teamId);
+    if(!team || team.leaderId !== state.user.uid) return toast('غير مصرح');
+    if(uid === team.leaderId) return toast('لا يمكنك طرد نفسك');
+    await updateDoc(doc(db,'teams',teamId), {
+      members: arrayRemove(uid),
+      [`roles.${uid}`]: null,
+    });
+    await updateDoc(doc(db,'users',uid), {
+      teamId: '', teamName: '', teamEmblem: '',
+    });
+    await notify(uid, 'team_kick', `تم طردك من فريق <b>${esc(team.name)}</b>`);
+    toast('تم الطرد');
+    render();
+  } catch(e){ toast('فشل'); }
+}
+
 /* ============ Pages ============ */
 function emptyState(msg, icon='grid'){
   return `<div class="empty">${ic(icon)}<div>${msg}</div></div>`;
@@ -1345,6 +1759,23 @@ if(state.viewingTeamId){
         <div><div class="v">${(t.members||[]).length}</div><div class="l">أعضاء</div></div>
         <div><div class="v">${t.level||1}</div><div class="l">مستوى</div></div>
       </div>
+      ${isLeader && (t.joinRequests||[]).length ? `
+  <div class="section-title">${ic('bell','sm')} طلبات الانضمام (${t.joinRequests.length})</div>
+  ${t.joinRequests.map(uid => {
+    const u = state.users[uid];
+    if(!u) return '';
+    return `
+      <div class="join-request">
+        ${avatar(u, 40)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:800">${esc(u.name)}</div>
+          <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" data-approve-join="${uid}" data-team-id="${t.id}">${ic('check','xs')}</button>
+        <button class="btn btn-ghost btn-sm" data-reject-join="${uid}" data-team-id="${t.id}">${ic('close','xs')}</button>
+      </div>`;
+  }).join('')}
+` : ''}
     </div>
 
     ${isMember ? `
@@ -1363,22 +1794,47 @@ if(state.viewingTeamId){
       </div>
     ` : tab === 'members' ? `
       <div class="section-title">${ic('users','sm')} الأعضاء (${(t.members||[]).length})</div>
-      ${(t.members||[]).map(uid=>{
-        const u = state.users[uid];
-        if(!u) return '';
-        const isL = uid === t.leaderId;
-        return `<div class="card" style="margin-bottom:8px;padding:11px"><div class="row">
-          ${avatar(u, 40)}
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:800">
-              ${esc(u.name)}
-              <span class="role-chip ${isL?'leader':'member'}">${isL?'قائد':'عضو'}</span>
-            </div>
-            <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+${(t.members||[]).map(uid=>{
+  const u = state.users[uid];
+  if(!u) return '';
+  const role = uid === t.leaderId ? 'leader'
+    : (t.roles?.[uid] === 'coleader') ? 'coleader' : 'member';
+  const roleLabel = role === 'leader' ? '👑 قائد' : role === 'coleader' ? '⭐ نائب' : 'عضو';
+  const roleClass = role;
+  
+  return `
+    <div class="card" style="margin-bottom:8px;padding:11px">
+      <div class="row">
+        ${avatar(u, 40)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:800">
+            ${esc(u.name)}
+            <span class="role-tag ${roleClass}">${roleLabel}</span>
           </div>
-          <button class="btn btn-ghost btn-sm" data-view-profile="${uid}">عرض</button>
-        </div></div>`;
-      }).join('')}
+          <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-view-profile="${uid}">عرض</button>
+        ${isLeader && uid !== t.leaderId ? `
+          <button class="icon-btn" style="width:32px;height:32px;background:rgba(255,61,113,.15);border-color:rgba(255,61,113,.3);color:#ff7b9d" 
+                  data-kick-member="${uid}" data-team-id="${t.id}" title="طرد">
+            ${ic('trash','xs')}
+          </button>
+        ` : ''}
+      </div>
+      ${isLeader && uid !== t.leaderId && role === 'member' ? `
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px" 
+                data-promote="${uid}" data-team-id="${t.id}" data-role="coleader">
+          ترقية إلى نائب
+        </button>
+      ` : ''}
+      ${isLeader && role === 'coleader' ? `
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px" 
+                data-promote="${uid}" data-team-id="${t.id}" data-role="member">
+          تخفيض إلى عضو
+        </button>
+      ` : ''}
+    </div>`;
+}).join('')}
     ` : `
       <div class="pc-actions" style="margin-bottom:14px">
         ${isMember
@@ -1455,6 +1911,67 @@ function pageStore(){
           </div>
         </div>`).join('')}
     </div>`;
+}
+
+async function pageInventory(){
+  await loadMyInventory();
+  const equipped = state.profile?.equipped || {};
+  const categories = ['frame','title','badge','theme'];
+  
+  // افتح تبويب "الكل" افتراضياً
+  const activeCat = state.invTab || 'all';
+  
+  const filtered = activeCat === 'all'
+    ? state.myInventory
+    : state.myInventory.filter(i => (i.category || 'theme') === activeCat);
+
+  return `
+    <h1 class="page-title">🎒 مقتنياتي</h1>
+    
+    <div class="inv-tabs">
+      <button class="inv-tab ${activeCat==='all'?'active':''}" data-inv-tab="all">الكل (${state.myInventory.length})</button>
+      ${categories.map(c=>{
+        const count = state.myInventory.filter(i => (i.category||'theme') === c).length;
+        return `<button class="inv-tab ${activeCat===c?'active':''}" data-inv-tab="${c}">
+          ${ITEM_CATEGORIES[c].icon}
+        </button>`;
+      }).join('')}
+    </div>
+
+    ${filtered.length ? `
+      <div class="inv-grid">
+        ${filtered.map(item=>{
+          const cat = item.category || 'theme';
+          const isEquipped = equipped[cat] === item.id;
+          return `
+            <div class="inv-item ${isEquipped?'equipped':''}" data-inv-item="${item.id}" data-inv-cat="${cat}">
+              ${isEquipped ? '<div class="ii-equipped-badge">مُجهّز</div>' : ''}
+              <div class="ii-emoji">${item.emoji || '🎁'}</div>
+              <div class="ii-name">${esc(item.name)}</div>
+            </div>`;
+        }).join('')}
+      </div>
+    ` : emptyState('لا توجد مقتنيات في هذه الفئة','store')}
+
+    ${Object.entries(equipped).filter(([k,v])=>v).length ? `
+      <div class="section-title" style="margin-top:20px">${ic('check','sm')} المُجهّز حالياً</div>
+      <div class="card">
+        ${Object.entries(equipped).filter(([k,v])=>v).map(([cat, id])=>{
+          const item = state.myInventory.find(i => i.id === id);
+          if(!item) return '';
+          return `
+            <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+              <span style="font-size:20px">${item.emoji}</span>
+              <div style="flex:1">
+                <div style="font-size:12.5px;font-weight:800">${esc(item.name)}</div>
+                <div class="muted" style="font-size:10px">${ITEM_CATEGORIES[cat]?.label || cat}</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" data-unequip="${cat}">إزالة</button>
+            </div>`;
+        }).join('')}
+      </div>
+    ` : ''}
+  `;
 }
 
 async function pageProfile(){
@@ -1554,6 +2071,27 @@ async function pageProfile(){
       <div class="pc-stat p"><div class="v">${nf(p.power)}</div><div class="l">القوة</div></div>
       <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
     </div>
+    <!-- ★ شريط المستوى -->
+${(() => {
+  const prog = xpProgress(p.xp || 0);
+  return `
+    <div class="level-widget">
+      <div class="level-top">
+        <div class="level-badge">${prog.level}</div>
+        <div class="level-info">
+          <div class="ln">المستوى ${prog.level}</div>
+          <div class="lx">${prog.current} / ${prog.needed} XP حتى المستوى ${prog.level + 1}</div>
+        </div>
+        <div class="status-chip" data-action="edit-status">
+          <span class="status-dot" style="background:${PLAYER_STATUSES[p.status || 'available'].color}"></span>
+          ${PLAYER_STATUSES[p.status || 'available'].label}
+        </div>
+      </div>
+      <div class="level-bar"><span style="width:${prog.pct}%"></span></div>
+      ${p.statusMsg ? `<div class="muted" style="font-size:11px;margin-top:8px;text-align:center">"${esc(p.statusMsg)}"</div>` : ''}
+    </div>
+  `;
+})()}
     <div class="tabs" style="margin-top:16px">
       ${tabs.map(t=>`<button class="tab ${state.profileTab===t.id?'active':''}" data-ptab="${t.id}">${ic(t.icon,'sm')} ${t.label}</button>`).join('')}
     </div>
@@ -1604,6 +2142,9 @@ function pageUserProfile(){
       <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-support="${state.viewingUid}">
         ${ic('star','sm')} دعم +10
       </button>
+      <button class="challenge-btn" data-send-challenge="${state.viewingUid}">
+  ${ic('bolt','sm')} تحدي
+</button>
     </div>
     <div class="pc-stats">
       <div class="pc-stat f"><div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div></div>
@@ -1676,20 +2217,28 @@ function pageNotifs(){
       updateDoc(doc(db,'notifications',state.user.uid,'items',n.id), { read: true }).catch(()=>{})
     ));
   }
-  const icons = {like:'heart', follow:'user', game:'gamepad', comment:'comment', support:'star'};
+const icons = {
+  like:'heart', follow:'user', game:'gamepad',
+  comment:'comment', support:'star',
+  challenge:'bolt', team_request:'users',
+  team_accepted:'check', team_rejected:'close',
+  team_kick:'logout', team_role:'crown',
+};
   if(!state.notifs.length){
     return `<h1 class="page-title">الإشعارات</h1>${emptyState('لا توجد إشعارات','bell')}`;
   }
   return `<h1 class="page-title">الإشعارات</h1>
     <div class="card pad0" style="padding:6px">
-    ${state.notifs.map(n=>`
-      <div class="notif-item ${n.read?'':'unread'}">
-        <div class="notif-ic ${n.type||''}">${ic(icons[n.type]||'bell','sm')}</div>
-        <div style="flex:1;min-width:0">
-          <div class="notif-txt">${n.text||'إشعار جديد'}</div>
-          <div class="notif-time">${timeAgo(n.createdAt)}</div>
-        </div>
-      </div>`).join('')}
+${state.notifs.map(n=>`
+  <div class="notif-item ${n.read?'':'unread'}" 
+       ${n.type === 'challenge' ? `data-action="show-challenges" style="cursor:pointer"` : ''}>
+    <div class="notif-ic ${n.type||''}">${ic(icons[n.type]||'bell','sm')}</div>
+    <div style="flex:1;min-width:0">
+      <div class="notif-txt">${n.text||'إشعار جديد'}</div>
+      <div class="notif-time">${timeAgo(n.createdAt)}</div>
+    </div>
+    ${n.type === 'challenge' ? `<span class="pill pink">اضغط للعرض</span>` : ''}
+  </div>`).join('')}
     </div>`;
 }
 
@@ -1854,6 +2403,7 @@ const PAGES = {
   search:pageSearch, notifs:pageNotifs, closefriends:pageCloseFriends,
   stats:pageStats, achievements:pageAchievements, leaderboard:pageLeaderboard,
   settings:pageSettings, support:pageSupport, admin:pageAdmin, logout:pageLogout,
+  inventory: pageInventory,
 };
 
 function render(){
@@ -2568,6 +3118,19 @@ document.addEventListener('click', async (e)=>{
   const t = e.target.closest('[data-nav], [data-action], [data-tab], [data-ptab], [data-follow], [data-like], [data-save], [data-chat], [data-open-chat], [data-game-open], [data-join-room], [data-leave-room], [data-create-room], [data-scat], [data-lb], [data-toggle], [data-view-profile], [data-open-comments], [data-delete-comment], [data-delete-post], [data-profile-like], [data-support], [data-buy-item], [data-open-team], [data-join-team], [data-leave-team], button');
   if(!t) return;
 
+  /* المكافأة اليومية */
+if(t.dataset.nav === '_daily'){ 
+  await checkDailyReward();
+  openDailyRewardModal(); 
+  return; 
+}
+
+/* التحديات */
+if(t.dataset.nav === '_challenges'){ 
+  await openChallengesModal(); 
+  return; 
+}
+
   if(t.dataset.nav){
     if(t.dataset.reset === 'chat'){ state.chatWith = null; }
     if(t.dataset.reset === 'game'){ state.activeGame = null; }
@@ -2585,6 +3148,43 @@ if(t.dataset.action === 'back-to-teams'){ state.viewingTeamId = null; render(); 
 
 /* ★ جديد: إعادة محاولة تحميل الملف الشخصي */
 if(t.dataset.action === 'retry-profile'){
+  /* ★ مكافآت الدخول */
+if(t.id === 'claimDailyBtn'){ await claimDailyReward(); return; }
+if(t.dataset.action === 'show-daily'){ openDailyRewardModal(); return; }
+
+/* ★ الحالة */
+if(t.dataset.action === 'edit-status'){ openStatusPickerModal(); return; }
+if(t.id === 'saveStatusBtn'){
+  const status = t.dataset.pendingStatus || 'available';
+  const msg = document.getElementById('statusMsgInput')?.value.trim() || '';
+  await setPlayerStatus(status, msg);
+  return;
+}
+
+/* ★ التحديات */
+if(t.dataset.action === 'show-challenges'){ await openChallengesModal(); return; }
+if(t.dataset.sendChallenge){ await sendChallenge(t.dataset.sendChallenge); return; }
+if(t.dataset.acceptChallenge){ await acceptChallenge(t.dataset.acceptChallenge); return; }
+if(t.dataset.rejectChallenge){ await rejectChallenge(t.dataset.rejectChallenge); return; }
+
+/* ★ المقتنيات */
+if(t.dataset.invTab){ state.invTab = t.dataset.invTab; render(); return; }
+if(t.dataset.invItem){
+  const cat = t.dataset.invCat;
+  const id = t.dataset.invItem;
+  const equipped = (state.profile?.equipped || {})[cat] === id;
+  if(equipped) await unequipItem(cat);
+  else await equipItem(id, cat);
+  return;
+}
+if(t.dataset.unequip){ await unequipItem(t.dataset.unequip); return; }
+
+/* ★ طلبات الفرق */
+if(t.dataset.requestJoin){ await requestJoinTeam(t.dataset.requestJoin); return; }
+if(t.dataset.approveJoin){ await approveJoinRequest(t.dataset.teamId, t.dataset.approveJoin); return; }
+if(t.dataset.rejectJoin){ await rejectJoinRequest(t.dataset.teamId, t.dataset.rejectJoin); return; }
+if(t.dataset.kickMember){ await kickMember(t.dataset.teamId, t.dataset.kickMember); return; }
+if(t.dataset.promote){ await setTeamRole(t.dataset.teamId, t.dataset.promote, t.dataset.role); return; }
   toast('جاري إعادة المحاولة…');
   getDoc(doc(db,'users',state.user.uid)).then(s => {
     if(s.exists()){
