@@ -99,6 +99,36 @@ const ACHIEVEMENTS = [
   {id:'a7', icon:'🛡️', name:'درع الفريق', desc:'20 حرب فرق', done:false, p:35},
   {id:'a8', icon:'👑', name:'أسطورة نكسوس', desc:'المستوى 50', done:false, p:84},
 ];
+/* ============ بنك أسئلة Quiz Clash ============ */
+const QUIZ_QUESTIONS = [
+  {q:'ما هي عاصمة اليابان؟', a:['طوكيو','بكين','سيول','بانكوك'], correct:0},
+  {q:'كم عدد كواكب المجموعة الشمسية؟', a:['7','8','9','10'], correct:1},
+  {q:'من مؤلف رواية «مئة عام من العزلة»؟', a:['بابلو نيرودا','غابرييل غارسيا ماركيز','خورخي بورخيس','ماريو بارغاس يوسا'], correct:1},
+  {q:'ما هو أكبر محيط في العالم؟', a:['الأطلسي','الهندي','الهادئ','المتجمد الشمالي'], correct:2},
+  {q:'في أي عام هبط الإنسان على سطح القمر لأول مرة؟', a:['1965','1969','1972','1958'], correct:1},
+  {q:'ما هي اللغة الأكثر تحدثاً في العالم كلغة أم؟', a:['الإنجليزية','الصينية الماندرين','الإسبانية','الهندية'], correct:1},
+  {q:'كم عدد لاعبي فريق كرة القدم في الملعب؟', a:['9','10','11','12'], correct:2},
+  {q:'ما هو أطول نهر في العالم؟', a:['الأمازون','النيل','المسيسيبي','اليانغتسي'], correct:1},
+  {q:'من رسم لوحة الموناليزا؟', a:['مايكل أنجلو','ليوناردو دافنشي','رافائيل','فان جوخ'], correct:1},
+  {q:'ما هو العنصر الكيميائي الذي رمزه Fe؟', a:['الفضة','الحديد','الذهب','النحاس'], correct:1},
+  {q:'كم عدد أضلاع الشكل السداسي؟', a:['4','5','6','8'], correct:2},
+  {q:'من هو مخترع المصباح الكهربائي؟', a:['نيكولا تسلا','توماس إديسون','ألساندرو فولتا','بنجامين فرانكلين'], correct:1},
+  {q:'ما هي أكبر قارة في العالم؟', a:['أفريقيا','أوروبا','آسيا','أمريكا الشمالية'], correct:2},
+  {q:'كم يستغرق ضوء الشمس للوصول إلى الأرض تقريباً؟', a:['8 دقائق','8 ثوان','8 ساعات','8 أيام'], correct:0},
+  {q:'ما هي العملة الرسمية في اليابان؟', a:['اليوان','الوون','الين','الروبية'], correct:2},
+  {q:'من كتب «مقدمة ابن خلدون»؟', a:['ابن سينا','ابن خلدون','ابن رشد','الفارابي'], correct:1},
+  {q:'ما هو أعمق محيط في العالم؟', a:['الأطلسي','الهندي','الهادئ','المتجمد الجنوبي'], correct:2},
+  {q:'كم عدد أسنان الإنسان البالغ؟', a:['28','30','32','36'], correct:2},
+  {q:'ما هو الرمز الكيميائي للماء؟', a:['CO2','H2O','O2','NaCl'], correct:1},
+  {q:'من هو أول رئيس للولايات المتحدة الأمريكية؟', a:['أبراهام لينكولن','جورج واشنطن','توماس جيفرسون','جون آدامز'], correct:1},
+];
+
+const QUIZ_CONFIG = {
+  totalQuestions: 7,
+  secondsPerQuestion: 15,
+  pointsPerCorrect: 100,
+  bonusPerSecond: 5,
+};
 const AVATAR_GRADS = [
   'linear-gradient(135deg,#6c5ce7,#00d2ff)','linear-gradient(135deg,#ff3d71,#f5b301)',
   'linear-gradient(135deg,#00d2ff,#22c55e)','linear-gradient(135deg,#a78bfa,#ff3d71)',
@@ -122,6 +152,17 @@ const state = {
   unsubs:[], chatUnsub:null, mmInterval:null,
   pendingImages:{ avatar:null, cover:null, post:null },
   uploadProgress:{},
+
+  /* ★ الحقول الجديدة — داخل state مباشرة */
+  activeMatch: null,
+  matchUnsub: null,
+  matchChatUnsub: null,
+  matchTimer: null,
+  matchChat: [],
+  teamChat: [],
+  teamChatUnsub: null,
+  viewingTeamTab: 'info',
+  matchInvites: [],
 };
 
 /* ============ Firebase Init ============ */
@@ -480,6 +521,8 @@ onAuthStateChanged(auth, async (user) => {
 
     // ★ الإصلاح الأساسي: اعرض الصفحة فوراً
     render();
+    // افحص وجود مباراة نشطة
+setTimeout(checkActiveMatch, 2000);
   } else {
     state.user = null;
     state.profile = null;
@@ -855,75 +898,116 @@ async function openChat(uid){
 
 /* ============ Games ============ */
 async function startMatchmaking(gameId){
+  const g = GAMES.find(x=>x.id===gameId);
+  if(!g) return;
+  if(gameId !== 'g3') return toast('هذه اللعبة قيد التطوير');
+
   openModal(`<div class="match-screen">
     <h3>جاري البحث…</h3>
-    <div class="sub">${GAMES.find(g=>g.id===gameId).name}</div>
+    <div class="sub">${g.name}</div>
     <div class="spinner"></div>
     <div class="muted" id="mmStatus">نبحث عن خصم…</div>
   </div>`);
+
   try {
+    // ابحث عن غرفة quiz عامة في الانتظار
     const q = query(
       collection(db,'rooms'),
       where('gameId','==',gameId),
       where('public','==',true),
       where('status','==','waiting'),
-      limit(1)
+      limit(5)
     );
     const snap = await getDocs(q);
-    if(!snap.empty){
-      const roomDoc = snap.docs[0];
-      if(roomDoc.data().hostId === state.user.uid){
-        toast('أنت بالفعل في غرفة انتظار'); closeModal(); return;
-      }
-      await updateDoc(roomDoc.ref, {
-        players: arrayUnion(state.user.uid), status: 'playing'
-      });
+    // اختر غرفة ليست مليئة وليست لغرفتي
+    const available = snap.docs.find(d=>{
+      const data = d.data();
+      return data.hostId !== state.user.uid && (data.players||[]).length < (data.maxPlayers||2);
+    });
+
+    if(available){
+      const data = available.data();
+      const newPlayers = arrayUnion(state.user.uid);
+      const willBeFull = (data.players||[]).length + 1 >= (data.maxPlayers||2);
+      await updateDoc(available.ref, { players: newPlayers });
       closeModal();
-      toast('تم إيجاد خصم! بدأت المباراة 🎮');
+      // إذا امتلأت — ابدأ المباراة
+      if(willBeFull){
+        await startQuizMatch(available.id, false);
+      } else {
+        // انتظر — قد تنضم غرفة أخرى
+        state.activeMatch = { roomId: available.id };
+        toast('انضممت — بانتظار خصم');
+        subscribeToMatch(available.id);
+      }
       return;
     }
+
+    // أنشئ غرفة جديدة
     const newRoom = await addDoc(collection(db,'rooms'), {
       gameId, hostId: state.user.uid, name: 'مباراة سريعة',
       players: [state.user.uid], maxPlayers: 2, mode: '1v1',
-      public: true, status: 'waiting', createdAt: serverTimestamp()
+      public: true, status: 'waiting', createdAt: serverTimestamp(),
+      scores: {}, answers: {}
     });
+
     const mmEl = document.getElementById('mmStatus');
     if(mmEl) mmEl.textContent = 'غرفتك جاهزة — انتظر خصماً…';
-    let attempts = 0;
-    state.mmInterval = setInterval(async ()=>{
-      attempts++;
-      if(attempts > 45 || !document.querySelector('.match-screen')){
-        clearInterval(state.mmInterval); state.mmInterval = null; return;
+
+    // استمع للغرفة — عندما ينضم لاعب — ابدأ
+    let started = false;
+    const unsub = onSnapshot(doc(db,'rooms',newRoom.id), snap2=>{
+      if(!snap2.exists()) return;
+      const d = snap2.data();
+      if(!started && (d.players||[]).length >= 2 && d.status === 'waiting'){
+        started = true;
+        try { unsub(); } catch(e){}
+        closeModal();
+        startQuizMatch(newRoom.id, true);
       }
-      try {
-        const roomSnap = await getDoc(newRoom);
-        if(roomSnap.exists()){
-          const data = roomSnap.data();
-          if(data.status === 'playing' && (data.players||[]).length > 1){
-            clearInterval(state.mmInterval); state.mmInterval = null;
-            closeModal();
-            toast('بدأت المباراة! 🎮');
-          }
-        }
-      } catch(e){}
-    }, 2000);
+    });
+    // احفظ مرجع لإلغاء الاستماع
+    state.mmInterval = { unsub }; // إعادة استخدام الحقل
   } catch(e){
-    if(e.code === 'failed-precondition'){ toast('يجب إنشاء فهرس Firestore'); }
-    else { toast('خطأ: ' + (e.message||'')); }
+    console.error(e);
+    toast('خطأ: ' + (e.message||''));
     closeModal();
   }
+}
+
+async function createRoom(gameId){
+  const isQuiz = gameId === 'g3';
+  openModal(`
+    <h3>إنشاء غرفة${isQuiz?' Quiz Clash':''}</h3>
+    <div class="sub">غرفة عامة أو خاصة</div>
+    <div class="field"><label>اسم الغرفة</label><input class="input" id="rName" placeholder="مثال: تحدي المساء" maxlength="40"></div>
+    <div class="field"><label>النوع</label>
+      <select class="input" id="rType"><option value="public">🌐 عامة</option><option value="private">🔒 خاصة</option></select>
+    </div>
+    ${isQuiz ? '' : `<div class="field"><label>عدد اللاعبين</label>
+      <select class="input" id="rMax"><option>2</option><option>4</option><option>8</option><option>10</option></select></div>`}
+    ${isQuiz ? `<input type="hidden" id="rMax" value="2">` : ''}
+    <div class="field"><label>كلمة المرور (اختياري)</label>
+      <input class="input" id="rPassword" placeholder="اتركها فارغة للغرف العامة" maxlength="20"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" data-create-room="${gameId}">إنشاء</button>
+    </div>`);
 }
 
 async function confirmCreateRoom(gameId){
   const name = document.getElementById('rName').value.trim() || 'غرفة بدون اسم';
   const pub = document.getElementById('rType').value === 'public';
   const max = parseInt(document.getElementById('rMax').value);
+  const pwd = document.getElementById('rPassword')?.value.trim() || '';
   try {
     await addDoc(collection(db,'rooms'), {
       gameId, hostId: state.user.uid, name,
       players: [state.user.uid], maxPlayers: max,
       mode: max===2?'1v1':'فرق', public: pub,
-      status: 'waiting', createdAt: serverTimestamp()
+      password: pwd || null,
+      status: 'waiting', createdAt: serverTimestamp(),
+      scores: {}, answers: {}
     });
     closeModal(); toast('تم إنشاء الغرفة ✓');
   } catch(e){ toast('فشل الإنشاء'); }
@@ -1146,50 +1230,68 @@ function pageGames(){
   if(state.activeGame){
     const g = GAMES.find(x=>x.id===state.activeGame);
     const rooms = state.rooms.filter(r=>r.gameId === g.id && r.status === 'waiting');
+    const isQuiz = g.id === 'g3';
     return `
       <div class="row" style="margin-bottom:14px">
         <button class="icon-btn" data-nav="games" data-reset="game">${ic('back','sm')}</button>
         <div style="flex:1"><div style="font-size:17px;font-weight:900">${g.name}</div>
         <div class="muted" style="font-size:11px">${g.cat} · ${g.online} لاعب</div></div>
+        ${isQuiz ? `<span class="pill ok">${ic('play','xs')} قابل للعب</span>` : `<span class="pill">قريباً</span>`}
       </div>
       <div class="card" style="background:${g.grad};border:0;margin-bottom:16px;padding:24px;text-align:center">
         <div style="font-size:34px;margin-bottom:6px">${ic(g.icon)}</div>
         <div style="font-size:19px;font-weight:900">${g.name}</div>
         <div style="font-size:11.5px;opacity:.85;margin-top:4px">${g.modes.join(' · ')}</div>
       </div>
-      <div class="section-title">${ic('bolt','sm')} لعب مباشر</div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="muted" style="line-height:1.8;margin-bottom:12px;font-size:12.5px">
-          ابحث عن لاعب بنفس مستواك وانضم لمباراة فورية.
+
+      ${isQuiz ? `
+        <div class="section-title">${ic('bolt','sm')} لعب مباشر</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="muted" style="line-height:1.8;margin-bottom:12px;font-size:12.5px">
+            ابحث عن خصم فوري — ${QUIZ_CONFIG.totalQuestions} أسئلة، ${QUIZ_CONFIG.secondsPerQuestion} ثانية لكل سؤال.
+          </div>
+          <button class="btn btn-primary" style="width:100%" id="matchmakingBtn" data-game="${g.id}">
+            ${ic('play','sm')} لعب مباشر
+          </button>
         </div>
-        <button class="btn btn-primary" style="width:100%" id="matchmakingBtn" data-game="${g.id}">
-          ${ic('play','sm')} لعب مباشر
-        </button>
-      </div>
+      ` : `
+        <div class="card" style="margin-bottom:16px;text-align:center;padding:30px">
+          ${ic('clock')}
+          <div style="font-size:14px;font-weight:800;margin-top:10px">قريباً</div>
+          <div class="muted" style="font-size:11.5px;margin-top:6px">هذه اللعبة قيد التطوير</div>
+        </div>
+      `}
+
       <div class="section-title">${ic('users','sm')} الغرف المفتوحة</div>
       <div class="card" style="margin-bottom:12px">
         <div class="row" style="margin-bottom:12px">
           <div style="flex:1"><div style="font-size:13px;font-weight:800">غرف عامة</div>
-          <div class="muted" style="font-size:10.5px">انضم لأي غرفة مفتوحة</div></div>
+          <div class="muted" style="font-size:10.5px">انضم لأي غرفة</div></div>
           <button class="btn btn-ghost btn-sm" id="createRoomBtn" data-game="${g.id}">${ic('plus','xs')} إنشاء</button>
         </div>
         ${rooms.length ? rooms.map(r=>{
           const host = state.users[r.hostId];
           const isMe = r.hostId === state.user.uid;
+          const isFull = (r.players||[]).length >= (r.maxPlayers||2);
           return `<div class="room-item">
             ${avatar(host, 40)}
             <div class="room-info">
-              <div class="room-n">${esc(r.name)} ${isMe?'<span class="pill ok" style="font-size:9px">غرفتك</span>':''}</div>
+              <div class="room-n">${esc(r.name)} ${isMe?'<span class="pill ok" style="font-size:9px">غرفتك</span>':''} ${r.password?'<span class="pill pink" style="font-size:9px">🔐</span>':''}</div>
               <div class="room-m">
                 <span>${(r.players||[]).length}/${r.maxPlayers||2}</span>
                 <span>${esc(r.mode||'')}</span>
               </div>
             </div>
             ${isMe
-              ? `<button class="btn btn-ghost btn-sm" data-leave-room="${r.id}">إلغاء</button>`
-              : `<button class="btn btn-primary btn-sm" data-join-room="${r.id}">انضمام</button>`}
+              ? (isQuiz
+                  ? `<button class="btn btn-primary btn-sm" data-start-quiz="${r.id}">${ic('play','xs')} ابدأ</button>
+                     <button class="btn btn-ghost btn-sm" data-invite-room="${r.id}">دعوة</button>`
+                  : `<button class="btn btn-ghost btn-sm" data-leave-room="${r.id}">إلغاء</button>`)
+              : (isFull
+                  ? `<span class="pill">ممتلئة</span>`
+                  : `<button class="btn btn-primary btn-sm" data-join-room="${r.id}">انضمام</button>`)}
           </div>`;
-        }).join('') : `<div class="empty-sm">لا توجد غرف مفتوحة</div>`}
+        }).join('') : `<div class="empty-sm">لا توجد غرف — أنشئ واحدة</div>`}
       </div>`;
   }
   return `<h1 class="page-title">الألعاب</h1>
@@ -1202,7 +1304,10 @@ function pageGames(){
         </div>
         <div class="gc-body">
           <div class="gc-name">${g.name}</div>
-          <div class="gc-meta"><span>${g.cat}</span></div>
+          <div class="gc-meta">
+            <span>${g.cat}</span>
+            ${g.id === 'g3' ? `<span class="pill ok" style="font-size:9px">${ic('play','xs')} جاهزة</span>` : ''}
+          </div>
         </div>
       </button>`).join('')}
     </div>`;
@@ -1212,50 +1317,86 @@ function pageGames(){
 function pageTeams(){
   const myTeam = state.profile?.teamId ? state.teams.find(t=>t.id===state.profile.teamId) : null;
 
-  if(state.viewingTeamId){
-    const t = state.teams.find(x=>x.id===state.viewingTeamId);
-    if(!t) return emptyState('الفريق غير موجود','users');
-    const isMember = (t.members||[]).includes(state.user.uid);
-    const isLeader = t.leaderId === state.user.uid;
-    return `
-      <div class="row" style="margin-bottom:14px">
-        <button class="icon-btn" data-action="back-to-teams">${ic('back','sm')}</button>
-        <div style="font-size:15px;font-weight:900">الفريق</div>
+if(state.viewingTeamId){
+  const t = state.teams.find(x=>x.id===state.viewingTeamId);
+  if(!t) return emptyState('الفريق غير موجود','users');
+  const isMember = (t.members||[]).includes(state.user.uid);
+  const isLeader = t.leaderId === state.user.uid;
+  const tab = state.viewingTeamTab || 'info';
+
+  // ابدأ مستمع محادثة الفريق إذا كان عضو
+  if(isMember && !state.teamChatUnsub) subscribeToTeamChat(t.id);
+
+  return `
+    <div class="row" style="margin-bottom:14px">
+      <button class="icon-btn" data-action="back-to-teams">${ic('back','sm')}</button>
+      <div style="font-size:15px;font-weight:900">${esc(t.name)}</div>
+      <span class="role-chip ${isLeader?'leader':isMember?'member':''}">
+        ${isLeader?'قائد':isMember?'عضو':'زائر'}
+      </span>
+    </div>
+
+    <div class="team-page-hero">
+      <div class="team-emblem-lg">${t.emblem||'🛡️'}</div>
+      <div class="team-name-lg">${esc(t.name)}</div>
+      <div class="team-desc-lg">${esc(t.description||'')}</div>
+      <div class="team-hero-stats">
+        <div><div class="v">${nf(t.points||0)}</div><div class="l">نقاط</div></div>
+        <div><div class="v">${(t.members||[]).length}</div><div class="l">أعضاء</div></div>
+        <div><div class="v">${t.level||1}</div><div class="l">مستوى</div></div>
       </div>
-      <div class="team-page-hero">
-        <div class="team-emblem-lg" style="background-image:${t.emblemUrl?`url(${esc(t.emblemUrl)})`:'none'}">${t.emblemUrl?'':(t.emblem||'🛡️')}</div>
-        <div class="team-name-lg">${esc(t.name)}</div>
-        <div class="team-desc-lg">${esc(t.description||'')}</div>
-        <div class="team-hero-stats">
-          <div><div class="v">${nf(t.points||0)}</div><div class="l">نقاط</div></div>
-          <div><div class="v">${(t.members||[]).length}</div><div class="l">أعضاء</div></div>
-          <div><div class="v">${t.level||1}</div><div class="l">مستوى</div></div>
-        </div>
+    </div>
+
+    ${isMember ? `
+      <div class="team-tabs">
+        <button class="team-tab ${tab==='info'?'active':''}" data-team-tab="info">معلومات</button>
+        <button class="team-tab ${tab==='members'?'active':''}" data-team-tab="members">الأعضاء</button>
+        <button class="team-tab ${tab==='chat'?'active':''}" data-team-tab="chat">المحادثة</button>
       </div>
-      <div class="pc-actions" style="margin-bottom:14px">
-        ${isMember
-          ? (isLeader
-              ? `<button class="btn btn-ghost" data-action="toast" data-msg="إدارة الفريق">${ic('settings','sm')} إدارة</button>
-                 <button class="btn btn-danger" data-action="leave-team">مغادرة</button>`
-              : `<button class="btn btn-danger" data-action="leave-team">مغادرة</button>`)
-          : (state.profile.teamId
-              ? `<button class="btn btn-ghost" disabled style="opacity:.5">أنت في فريق آخر</button>`
-              : `<button class="btn btn-primary" data-join-team="${t.id}" style="flex:1">${ic('plus','sm')} انضمام للفريق</button>`)}
+    ` : ''}
+
+    ${tab === 'chat' && isMember ? `
+      <div class="team-chat-box" id="teamChatMessages" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <input class="input" id="teamChatInput" placeholder="رسالة للفريق…" style="flex:1" maxlength="500">
+        <button class="btn btn-primary" data-send-team-chat="${t.id}" style="padding:10px 16px">${ic('send','sm')}</button>
       </div>
+    ` : tab === 'members' ? `
       <div class="section-title">${ic('users','sm')} الأعضاء (${(t.members||[]).length})</div>
       ${(t.members||[]).map(uid=>{
         const u = state.users[uid];
         if(!u) return '';
+        const isL = uid === t.leaderId;
         return `<div class="card" style="margin-bottom:8px;padding:11px"><div class="row">
           ${avatar(u, 40)}
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:800">${esc(u.name)} ${uid===t.leaderId?'<span class="pill gold" style="font-size:9px">قائد</span>':''}</div>
+            <div style="font-size:13px;font-weight:800">
+              ${esc(u.name)}
+              <span class="role-chip ${isL?'leader':'member'}">${isL?'قائد':'عضو'}</span>
+            </div>
             <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
           </div>
           <button class="btn btn-ghost btn-sm" data-view-profile="${uid}">عرض</button>
         </div></div>`;
-      }).join('')}`;
-  }
+      }).join('')}
+    ` : `
+      <div class="pc-actions" style="margin-bottom:14px">
+        ${isMember
+          ? `<button class="btn btn-danger" data-action="leave-team">مغادرة</button>`
+          : (state.profile.teamId
+              ? `<button class="btn btn-ghost" disabled style="opacity:.5">أنت في فريق آخر</button>`
+              : `<button class="btn btn-primary" data-join-team="${t.id}" style="flex:1">${ic('plus','sm')} انضمام</button>`)}
+      </div>
+      <div class="card" style="padding:14px">
+        <div class="muted" style="font-size:12px;line-height:1.7">
+          <b style="color:var(--txt)">القائد:</b> ${esc(state.users[t.leaderId]?.name||'—')}<br>
+          <b style="color:var(--txt)">النقاط:</b> ${nf(t.points||0)}<br>
+          <b style="color:var(--txt)">المستوى:</b> ${t.level||1}
+        </div>
+      </div>
+    `}
+  `;
+}
 
   return `<h1 class="page-title">الفرق</h1>
     ${myTeam ? `
@@ -1316,7 +1457,7 @@ function pageStore(){
     </div>`;
 }
 
-function pageProfile(){
+async function pageProfile(){
   const p = state.profile;
   if(!p){
     // إذا مر وقت طويل، اعرض زر إعادة محاولة
@@ -1353,9 +1494,33 @@ function pageProfile(){
   } else if(state.profileTab === 'saved'){
     const saved = state.posts.filter(x=>state.saved[x.id]);
     body = saved.length ? saved.map(x=>postCard(x)).join('') : emptyState('لا توجد منشورات محفوظة','bookmark');
-  } else if(state.profileTab === 'history'){
-    body = `<div class="card" style="text-align:center;padding:30px"><div class="muted">سيظهر سجل مبارياتك هنا</div></div>`;
-  } else {
+} else if(state.profileTab === 'history'){
+  // اجلب سجل المباريات
+  const historySnap = await getDocs(
+    query(collection(db,'users',state.user.uid,'matchHistory'), orderBy('playedAt','desc'), limit(20))
+  ).catch(()=>null);
+  const history = historySnap ? historySnap.docs.map(d=>({id:d.id, ...d.data()})) : [];
+  body = history.length ? history.map(h=>`
+    <div class="card" style="margin-bottom:8px;padding:12px">
+      <div class="row">
+        <div style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+          background:${h.result==='win'?'rgba(34,197,94,.15)':'rgba(255,61,113,.15)'};
+          color:${h.result==='win'?'var(--ok)':'var(--pink)'};font-weight:900">
+          ${h.result==='win'?'✓':'✗'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:800">${esc(h.gameName||'Quiz Clash')}</div>
+          <div class="muted" style="font-size:10.5px">${timeAgo(h.playedAt)}</div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-size:14px;font-weight:900;color:${h.result==='win'?'var(--ok)':'var(--pink)'}">
+            ${h.myScore} - ${h.opponentScore}
+          </div>
+          <div class="muted" style="font-size:9.5px">${h.result==='win'?'فوز':'خسارة'}</div>
+        </div>
+      </div>
+    </div>`).join('') : emptyState('لم تلعب أي مباراة بعد','gamepad');
+} else {
     body = `<div class="card" style="text-align:center;padding:30px"><div class="muted">ستظهر إحصائياتك لكل لعبة هنا</div></div>`;
   }
   return `
@@ -1696,10 +1861,16 @@ function render(){
   renderNav();
   const fn = PAGES[state.page] || pageHome;
   const result = fn();
+
   if(result && typeof result.then === 'function'){
     result.then(html => {
       document.getElementById('app').innerHTML = html || '';
       if(state.page === 'search') renderSearchResults();
+      
+      /* ★ جديد: رسم محادثة الفريق بعد تحديث الصفحة */
+      if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
+        setTimeout(renderTeamChat, 50);
+      }
     }).catch(err => {
       console.error('Render error:', err);
       document.getElementById('app').innerHTML = `<div class="empty">${ic('close')}<div>خطأ في التحميل</div></div>`;
@@ -1709,6 +1880,11 @@ function render(){
     if(state.page === 'search'){
       const inp = document.getElementById('searchInput');
       if(inp && document.activeElement !== inp) renderSearchResults();
+    }
+    
+    /* ★ جديد: رسم محادثة الفريق بعد تحديث الصفحة */
+    if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
+      setTimeout(renderTeamChat, 50);
     }
   }
 }
@@ -1855,6 +2031,524 @@ function createTeamModal(){
     </div>`);
 }
 
+/* ============================================================
+   🎮 محرك اللعبة - Quiz Clash
+   ============================================================ */
+
+/** بدء مباراة Quiz Clash */
+async function startQuizMatch(roomId, isHost){
+  try {
+    const roomRef = doc(db, 'rooms', roomId);
+    const snap = await getDoc(roomRef);
+    if(!snap.exists()) return toast('الغرفة غير موجودة');
+    const room = snap.data();
+
+    // Host يولد الأسئلة عشوائياً مرة واحدة
+    if(isHost && !room.quizQuestions){
+      const selected = [...QUIZ_QUESTIONS].sort(()=>Math.random()-0.5)
+        .slice(0, QUIZ_CONFIG.totalQuestions);
+      await updateDoc(roomRef, {
+        quizQuestions: selected,
+        status: 'playing',
+        currentIndex: 0,
+        questionStartedAt: Date.now(),
+        startedAt: serverTimestamp()
+      });
+    }
+
+    // استمع للغرفة
+    subscribeToMatch(roomId);
+  } catch(e){ console.error(e); toast('خطأ في بدء المباراة'); }
+}
+
+/** الاشتراك في غرفة المباراة (بما فيها محادثتها) */
+function subscribeToMatch(roomId){
+  // تنظيف سابق
+  if(state.matchUnsub){ try{state.matchUnsub();}catch(e){} state.matchUnsub = null; }
+  if(state.matchChatUnsub){ try{state.matchChatUnsub();}catch(e){} state.matchChatUnsub = null; }
+  if(state.matchTimer){ clearInterval(state.matchTimer); state.matchTimer = null; }
+
+  state.activeMatch = { roomId };
+  document.getElementById('gameOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // مستمع بيانات الغرفة
+  state.matchUnsub = onSnapshot(doc(db,'rooms',roomId), snap=>{
+    if(!snap.exists()){ exitMatch(); return; }
+    const data = snap.data();
+    state.activeMatch = { roomId, ...data };
+    renderGameUI();
+
+    // إذا انتهت المباراة — أعرض النتيجة واحفظها
+    if(data.status === 'finished' && !data._resultRendered){
+      finalizeMatch(roomId, data);
+    }
+  });
+
+  // مستمع محادثة المباراة
+  state.matchChatUnsub = onSnapshot(
+    query(collection(db,'rooms',roomId,'chat'), orderBy('createdAt','asc'), limit(100)),
+    snap=>{
+      state.matchChat = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderMatchChat();
+    }
+  );
+}
+
+/** رسم واجهة اللعبة كاملة */
+function renderGameUI(){
+  const m = state.activeMatch;
+  if(!m || !m.quizQuestions) return;
+
+  const container = document.getElementById('gameContainer');
+  const me = state.user.uid;
+  const q = m.quizQuestions[m.currentIndex];
+  const scores = m.scores || {};
+  const answers = m.answers || {}; // { uid_questionIdx: selectedIndex }
+  const myAnswer = answers[`${me}_${m.currentIndex}`];
+  const questionNum = m.currentIndex + 1;
+  const total = QUIZ_CONFIG.totalQuestions;
+
+  // نتيجة مؤقتة لخيار
+  let correctIndex = q.correct;
+
+  // الوقت المتبقي
+  const elapsed = (Date.now() - (m.questionStartedAt || Date.now())) / 1000;
+  const remaining = Math.max(0, QUIZ_CONFIG.secondsPerQuestion - elapsed);
+
+  container.innerHTML = `
+    <div class="game-topbar">
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700">سؤال</div>
+        <div style="font-size:18px;font-weight:900">${questionNum} / ${total}</div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="game-timer ${remaining < 5 ? 'warning' : ''}" id="gameTimer">
+        ${Math.ceil(remaining)}s
+      </div>
+      <button class="icon-btn" id="exitGameBtn" style="background:rgba(255,61,113,.15);border-color:rgba(255,61,113,.3);color:#ff7b9d">
+        ${ic('close','sm')}
+      </button>
+    </div>
+
+    <div class="game-players">
+      ${(m.players||[]).map(uid=>{
+        const u = state.users[uid] || {name:'لاعب'};
+        const score = scores[uid] || 0;
+        const isMe = uid === me;
+        return `
+          <div class="game-player ${isMe?'game-player-me':''}">
+            <div class="game-player-name">
+              ${isMe?'أنت':esc(u.name)}
+              ${isMe?'<span class="pill" style="font-size:9px">أنت</span>':''}
+            </div>
+            <div class="game-player-score">${score}</div>
+          </div>`;
+      }).join('')}
+    </div>
+
+    <div class="question-card">
+      <div class="question-text">${esc(q.q)}</div>
+      <div class="question-hint">الإجابة الصحيحة = ${QUIZ_CONFIG.pointsPerCorrect} نقطة + مكافأة سرعة</div>
+    </div>
+
+    <div class="answers-grid">
+      ${q.a.map((ans, i)=>{
+        let cls = 'answer-btn';
+        if(myAnswer !== undefined){
+          if(i === correctIndex) cls += ' correct';
+          else if(i === myAnswer) cls += ' wrong';
+        }
+        return `<button class="${cls}" data-answer="${i}" ${myAnswer !== undefined ? 'disabled' : ''}>
+          ${esc(ans)}
+        </button>`;
+      }).join('')}
+    </div>
+
+    ${myAnswer !== undefined ? `<div class="pill ok" style="align-self:center;margin-bottom:16px">✓ أجبت — بانتظار الآخرين…</div>` : ''}
+
+    <div class="match-chat">
+      <div class="match-chat-header">${ic('message','xs')} محادثة المباراة</div>
+      <div class="match-chat-messages" id="matchChatMessages"></div>
+      <div style="display:flex;gap:6px">
+        <input class="input" id="matchChatInput" placeholder="رسالة…" style="flex:1;padding:8px 12px;font-size:12px">
+        <button class="btn btn-primary btn-sm" id="matchChatSend" style="padding:8px 14px">${ic('send','xs')}</button>
+      </div>
+    </div>
+  `;
+
+  renderMatchChat();
+
+  // مؤقت العد التنازلي
+  if(state.matchTimer) clearInterval(state.matchTimer);
+  let lastSecond = Math.ceil(remaining);
+  state.matchTimer = setInterval(()=>{
+    const el = document.getElementById('gameTimer');
+    if(!el){ clearInterval(state.matchTimer); return; }
+    const e2 = (Date.now() - (m.questionStartedAt || Date.now())) / 1000;
+    const r = Math.max(0, QUIZ_CONFIG.secondsPerQuestion - e2);
+    el.textContent = `${Math.ceil(r)}s`;
+    el.classList.toggle('warning', r < 5);
+    if(r <= 0){
+      clearInterval(state.matchTimer);
+      autoAdvanceQuestion();
+    }
+  }, 200);
+
+  // مستمعات الأزرار
+  container.querySelectorAll('[data-answer]').forEach(b=>{
+    b.addEventListener('click', ()=>answerQuestion(parseInt(b.dataset.answer)));
+  });
+  document.getElementById('exitGameBtn')?.addEventListener('click', ()=>{
+    if(confirm('الخروج من المباراة يعني خسارتك. متأكد؟')){
+      forfeitMatch();
+    }
+  });
+  document.getElementById('matchChatSend')?.addEventListener('click', sendMatchChat);
+  document.getElementById('matchChatInput')?.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){ e.preventDefault(); sendMatchChat(); }
+  });
+}
+
+/** إرسال إجابة */
+async function answerQuestion(idx){
+  const m = state.activeMatch;
+  if(!m || m.status !== 'playing') return;
+  const key = `${state.user.uid}_${m.currentIndex}`;
+  if((m.answers||{})[key] !== undefined) return; // أجاب بالفعل
+
+  const q = m.quizQuestions[m.currentIndex];
+  const correct = idx === q.correct;
+  const elapsed = (Date.now() - m.questionStartedAt) / 1000;
+  const bonus = correct ? Math.max(0, Math.round((QUIZ_CONFIG.secondsPerQuestion - elapsed) * QUIZ_CONFIG.bonusPerSecond)) : 0;
+  const points = correct ? QUIZ_CONFIG.pointsPerCorrect + bonus : 0;
+
+  const roomRef = doc(db,'rooms',m.roomId);
+  try {
+    await runTransaction(db, async tx=>{
+      const snap = await tx.get(roomRef);
+      const data = snap.data();
+      const newAnswers = { ...(data.answers||{}) };
+      if(newAnswers[key] !== undefined) return; // race protection
+      newAnswers[key] = idx;
+      const newScores = { ...(data.scores||{}) };
+      newScores[state.user.uid] = (newScores[state.user.uid]||0) + points;
+      tx.update(roomRef, { answers: newAnswers, scores: newScores });
+    });
+  } catch(e){ console.error(e); }
+}
+
+/** الانتقال للسؤال التالي (يتم من الـ host تلقائياً) */
+async function autoAdvanceQuestion(){
+  const m = state.activeMatch;
+  if(!m || m.status !== 'playing') return;
+  if(m.hostId !== state.user.uid) return; // فقط المضيف يقدم
+
+  // تحقق: هل أجاب الجميع؟ أو انتهى الوقت؟
+  const answers = m.answers || {};
+  const allAnswered = (m.players||[]).every(uid=>answers[`${uid}_${m.currentIndex}`] !== undefined);
+  const timeUp = Date.now() - m.questionStartedAt >= QUIZ_CONFIG.secondsPerQuestion * 1000;
+
+  if(!allAnswered && !timeUp) return;
+
+  const nextIdx = m.currentIndex + 1;
+  const roomRef = doc(db,'rooms',m.roomId);
+
+  if(nextIdx >= QUIZ_CONFIG.totalQuestions){
+    // انتهت اللعبة
+    const scores = m.scores || {};
+    const winnerId = Object.entries(scores).sort((a,b)=>b[1]-a[1])[0]?.[0] || null;
+    await updateDoc(roomRef, {
+      status: 'finished',
+      finishedAt: serverTimestamp(),
+      winnerId
+    });
+  } else {
+    await updateDoc(roomRef, {
+      currentIndex: nextIdx,
+      questionStartedAt: Date.now()
+    });
+  }
+}
+
+/** حفظ النتيجة عند انتهاء المباراة */
+async function finalizeMatch(roomId, data){
+  if(data._finalizedBy === state.user.uid) return;
+  await updateDoc(doc(db,'rooms',roomId), { _resultRendered: true });
+
+  const scores = data.scores || {};
+  const winnerId = data.winnerId;
+  const isWinner = winnerId === state.user.uid;
+  const myScore = scores[state.user.uid] || 0;
+
+  // احفظ النتيجة في سجل كل لاعب
+  try {
+    await Promise.all((data.players||[]).map(uid=>{
+      const result = uid === winnerId ? 'win' : 'loss';
+      return addDoc(collection(db,'users',uid,'matchHistory'), {
+        gameId: data.gameId, gameName: 'Quiz Clash',
+        roomId, opponent: (data.players||[]).find(p=>p!==uid) || null,
+        myScore: scores[uid]||0,
+        opponentScore: scores[(data.players||[]).find(p=>p!==uid)] || 0,
+        result, playedAt: serverTimestamp()
+      });
+    }));
+  } catch(e){ console.error(e); }
+
+  // منح نقاط خبرة/شهرة
+  if(isWinner){
+    try {
+      await updateDoc(doc(db,'users',state.user.uid), {
+        fame: increment(50),
+        xp: increment(100),
+        power: increment(2)
+      });
+    } catch(e){}
+  } else {
+    try {
+      await updateDoc(doc(db,'users',state.user.uid), {
+        xp: increment(25)
+      });
+    } catch(e){}
+  }
+
+  // عرض شاشة النتيجة
+  const container = document.getElementById('gameContainer');
+  container.innerHTML = `
+    <div class="result-screen">
+      <span class="result-icon">${isWinner ? '🏆' : '😔'}</span>
+      <div class="result-title" style="color:${isWinner?'var(--gold)':'var(--muted)'}">
+        ${isWinner ? 'فوز رائع!' : 'خسارة شريفة'}
+      </div>
+      <div class="result-subtitle">
+        ${isWinner ? 'أضفت 50 شهرة + 100 XP' : 'حصلت على 25 XP'}
+      </div>
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="v">${myScore}</div>
+          <div class="l">نقاطك</div>
+        </div>
+        <div class="result-stat">
+          <div class="v">${Object.values(scores).reduce((a,b)=>a+b,0)}</div>
+          <div class="l">إجمالي</div>
+        </div>
+      </div>
+      <div class="row" style="gap:10px;justify-content:center;margin-top:24px">
+        <button class="btn btn-primary" id="playAgainBtn" style="flex:1;max-width:200px">
+          ${ic('play','sm')} مباراة أخرى
+        </button>
+        <button class="btn btn-ghost" id="backHomeBtn" style="flex:1;max-width:200px">
+          العودة للرئيسية
+        </button>
+      </div>
+    </div>
+  `;
+  document.getElementById('playAgainBtn')?.addEventListener('click', ()=>{
+    exitMatch();
+    go('games', { activeGame: 'g3' });
+  });
+  document.getElementById('backHomeBtn')?.addEventListener('click', ()=>{
+    exitMatch();
+    go('home');
+  });
+}
+
+/** الخروج من المباراة */
+function exitMatch(){
+  if(state.matchUnsub){ try{state.matchUnsub();}catch(e){} state.matchUnsub = null; }
+  if(state.matchChatUnsub){ try{state.matchChatUnsub();}catch(e){} state.matchChatUnsub = null; }
+  if(state.matchTimer){ clearInterval(state.matchTimer); state.matchTimer = null; }
+  state.activeMatch = null;
+  state.matchChat = [];
+  document.getElementById('gameOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  render();
+}
+
+/** الانسحاب (خسارة) */
+async function forfeitMatch(){
+  const m = state.activeMatch;
+  if(!m || !m.roomId) return exitMatch();
+  try {
+    const roomRef = doc(db,'rooms',m.roomId);
+    const snap = await getDoc(roomRef);
+    const data = snap.data();
+    const otherPlayer = (data.players||[]).find(p=>p!==state.user.uid);
+    await updateDoc(roomRef, {
+      status: 'finished',
+      finishedAt: serverTimestamp(),
+      winnerId: otherPlayer || null
+    });
+  } catch(e){ console.error(e); }
+  exitMatch();
+}
+
+/** إرسال رسالة في محادثة المباراة */
+async function sendMatchChat(){
+  const inp = document.getElementById('matchChatInput');
+  const txt = inp?.value.trim();
+  if(!txt || !state.activeMatch?.roomId) return;
+  inp.value = '';
+  try {
+    await addDoc(collection(db,'rooms',state.activeMatch.roomId,'chat'), {
+      uid: state.user.uid,
+      name: state.profile.name,
+      text: txt,
+      createdAt: serverTimestamp()
+    });
+  } catch(e){ console.error(e); }
+}
+
+/** رسم رسائل محادثة المباراة */
+function renderMatchChat(){
+  const box = document.getElementById('matchChatMessages');
+  if(!box) return;
+  if(!state.matchChat.length){
+    box.innerHTML = `<div class="muted" style="text-align:center;padding:10px;font-size:11px">لا رسائل بعد</div>`;
+    return;
+  }
+  box.innerHTML = state.matchChat.map(msg=>{
+    const me = msg.uid === state.user.uid;
+    return `<div class="match-chat-msg ${me?'me':''}">
+      <div class="from">${me?'أنت':esc(msg.name)}</div>
+      ${esc(msg.text)}
+    </div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ============================================================
+   🔄 نظام إعادة الاتصال
+   ============================================================ */
+
+/** فحص هل المستخدم في مباراة نشطة */
+async function checkActiveMatch(){
+  try {
+    const q = query(
+      collection(db,'rooms'),
+      where('players','array-contains',state.user.uid),
+      where('status','in',['waiting','playing'])
+    );
+    const snap = await getDocs(q);
+    if(snap.empty){ 
+      document.getElementById('resumeBanner')?.classList.add('hidden');
+      return;
+    }
+    const match = snap.docs[0];
+    const data = match.data();
+    if(data.gameId !== 'g3') return; // Quiz Clash فقط حالياً
+
+    // اعرض البانر
+    const banner = document.getElementById('resumeBanner');
+    const text = document.getElementById('resumeBannerText');
+    if(banner && text){
+      text.textContent = `Quiz Clash · ${(data.players||[]).length} لاعب`;
+      banner.classList.remove('hidden');
+      document.getElementById('resumeMatchBtn').onclick = ()=> startQuizMatch(match.id, false);
+      document.getElementById('leaveMatchBtn').onclick = async ()=>{
+        try {
+          await updateDoc(match.ref, { players: arrayRemove(state.user.uid) });
+        } catch(e){}
+        banner.classList.add('hidden');
+        toast('غادرت المباراة');
+      };
+    }
+  } catch(e){ console.error(e); }
+}
+
+/* ============================================================
+   👥 محادثة الفريق
+   ============================================================ */
+
+async function sendTeamChat(teamId){
+  const inp = document.getElementById('teamChatInput');
+  const txt = inp?.value.trim();
+  if(!txt) return;
+  inp.value = '';
+  try {
+    await addDoc(collection(db,'teams',teamId,'chat'), {
+      uid: state.user.uid,
+      name: state.profile.name,
+      text: txt,
+      createdAt: serverTimestamp()
+    });
+  } catch(e){ console.error(e); }
+}
+
+function subscribeToTeamChat(teamId){
+  if(state.teamChatUnsub){ try{state.teamChatUnsub();}catch(e){} state.teamChatUnsub = null; }
+  state.teamChatUnsub = onSnapshot(
+    query(collection(db,'teams',teamId,'chat'), orderBy('createdAt','asc'), limit(100)),
+    snap=>{
+      state.teamChat = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderTeamChat();
+    }
+  );
+}
+
+function renderTeamChat(){
+  const box = document.getElementById('teamChatMessages');
+  if(!box) return;
+  if(!state.teamChat.length){
+    box.innerHTML = `<div class="muted" style="text-align:center;padding:20px;font-size:12px">لا رسائل — كن الأول</div>`;
+    return;
+  }
+  box.innerHTML = state.teamChat.map(msg=>{
+    const me = msg.uid === state.user.uid;
+    return `<div style="align-self:${me?'flex-end':'flex-start'};max-width:80%;padding:8px 12px;border-radius:12px;font-size:12.5px;background:${me?'var(--grad)':'var(--card-2)'};color:${me?'#fff':'var(--txt)'}">
+      ${!me?`<div style="font-size:10px;font-weight:800;margin-bottom:3px;color:var(--brand-2)">${esc(msg.name)}</div>`:''}
+      ${esc(msg.text)}
+    </div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ============================================================
+   ✉️ دعوات المباريات
+   ============================================================ */
+
+async function inviteFriendToMatch(friendUid, roomId){
+  try {
+    await addDoc(collection(db,'notifications',friendUid,'items'), {
+      type: 'game_invite',
+      text: `<b>${esc(state.profile.name)}</b> يدعوك لمباراة Quiz Clash`,
+      link: roomId,
+      read: false,
+      createdAt: serverTimestamp()
+    });
+    // أضف اللاعب للغرفة أيضاً
+    await updateDoc(doc(db,'rooms',roomId), { players: arrayUnion(friendUid) });
+    toast('تمت الدعوة ✓');
+  } catch(e){ toast('فشل الدعوة'); }
+}
+
+async function openInviteMatchModal(roomId){
+  // اجلب المتابعات المتبادلة
+  const fSnap = await getDocs(query(collection(db,'follows'), where('followerId','==',state.user.uid)));
+  const myFollowing = new Set(fSnap.docs.map(d=>d.data().followingId));
+  const rSnap = await getDocs(query(collection(db,'follows'), where('followingId','==',state.user.uid)));
+  const myFollowers = new Set(rSnap.docs.map(d=>d.data().followerId));
+  const mutual = [...myFollowing].filter(u=>myFollowers.has(u));
+  const friends = mutual.map(uid=>state.users[uid]).filter(Boolean);
+
+  openModal(`
+    <h3>دعوة أصدقاء</h3>
+    <div class="sub">اختر من تريد دعوته للمباراة</div>
+    ${friends.length ? friends.map(u=>`
+      <div class="invite-card">
+        ${avatar(u, 40)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:800">${esc(u.name)}</div>
+          <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" data-send-invite="${u.uid}" data-room-id="${roomId}">دعوة</button>
+      </div>`).join('') : `<div class="empty" style="padding:30px">لا أصدقاء متبادلون بعد</div>`}
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إغلاق</button>
+    </div>
+  `);
+}
+
 /* ============ Event Handlers ============ */
 document.addEventListener('click', async (e)=>{
   // Image preview click
@@ -1905,6 +2599,30 @@ if(t.dataset.action === 'retry-profile'){
     console.error(e);
     toast('فشل التحميل — تحقق من الاتصال');
   });
+  return;
+}
+/* ★ بدء Quiz Clash */
+if(t.dataset.startQuiz){
+  await startQuizMatch(t.dataset.startQuiz, true);
+  return;
+}
+if(t.dataset.inviteRoom){
+  await openInviteMatchModal(t.dataset.inviteRoom);
+  return;
+}
+if(t.dataset.sendInvite){
+  await inviteFriendToMatch(t.dataset.sendInvite, t.dataset.roomId);
+  closeModal();
+  return;
+}
+/* ★ محادثة الفريق */
+if(t.dataset.sendTeamChat){
+  await sendTeamChat(t.dataset.sendTeamChat);
+  return;
+}
+if(t.dataset.teamTab){
+  state.viewingTeamTab = t.dataset.teamTab;
+  render();
   return;
 }
 
