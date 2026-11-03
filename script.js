@@ -288,7 +288,15 @@ function renderNav(){
 }
 
 function renderTopbar(){
-  document.getElementById('tbAvatar').innerHTML = avatar(state.profile||{}, 40);
+  const tbAvatar = document.getElementById('tbAvatar');
+  if (!state.profile) {
+    // حالة تحميل: دائرة متحركة
+    tbAvatar.innerHTML = `<div class="av" style="--s:40px;background:rgba(255,255,255,.08)">
+      <span style="display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite"></span>
+    </div>`;
+  } else {
+    tbAvatar.innerHTML = avatar(state.profile, 40);
+  }
   document.querySelectorAll('.tb-left .icon-btn').forEach(b=>{
     const hasUnread = b.dataset.nav === 'notifs' && state.notifs.some(n=>!n.read);
     b.innerHTML = ic(b.dataset.nav === 'search' ? 'search' : 'bell') +
@@ -431,17 +439,54 @@ async function handleLogout(){
 
 /* ============ Auth State ============ */
 if (CONFIGURED) {
-  onAuthStateChanged(auth, async (user) => {
-    if(user){
-      state.user = user;
-      showScreen('appShell');
-      attachListeners();
-    } else {
-      state.user = null; state.profile = null;
-      detachListeners();
-      showScreen('authScreen');
+onAuthStateChanged(auth, async (user) => {
+  if(user){
+    state.user = user;
+    showScreen('appShell');
+
+    // ★ جديد: تحميل الملف الشخصي مباشرة (getDoc) قبل أي شيء
+    // هذا يعمل من الكاش المحلي = فوري، ويضمن أن state.profile ليس null
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (snap.exists()) {
+        state.profile = snap.data();
+      } else {
+        console.warn('User document missing, creating placeholder...');
+        // إنشاء مستند احتياطي إذا لم يوجد
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          name: user.displayName || 'مستخدم',
+          username: (user.email || 'user').split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'') + Math.floor(Math.random()*1000),
+          email: user.email || '',
+          bio: 'مرحباً!',
+          avatarUrl: '', coverUrl: '',
+          grad: pickGrad(user.uid),
+          teamId: '', teamName: '', teamEmblem: '',
+          level: 1, xp: 0, fame: 0, power: 0, support: 0,
+          likesProfile: 0, likesGames: 0,
+          followers: 0, following: 0,
+          coins: 1000, role: 'user',
+          createdAt: serverTimestamp()
+        });
+        const snap2 = await getDoc(doc(db, 'users', user.uid));
+        if (snap2.exists()) state.profile = snap2.data();
+      }
+    } catch (e) {
+      console.error('Initial profile load failed:', e);
     }
-  });
+
+    // الآن أنشئ المستمعين
+    attachListeners();
+
+    // ★ الإصلاح الأساسي: اعرض الصفحة فوراً
+    render();
+  } else {
+    state.user = null;
+    state.profile = null;
+    detachListeners();
+    showScreen('authScreen');
+  }
+});
 } else {
   showScreen('setupScreen');
 }
@@ -457,29 +502,50 @@ function detachListeners(){
 function attachListeners(){
   detachListeners();
 
-  state.unsubs.push(onSnapshot(doc(db,'users',state.user.uid), snap=>{
-    if(snap.exists()){
+state.unsubs.push(onSnapshot(
+  doc(db, 'users', state.user.uid),
+  snap => {
+    if (snap.exists()) {
       state.profile = snap.data();
       renderTopbar();
-      if(['profile','stats','settings','userprofile'].includes(state.page)) render();
+      if (['profile','stats','settings','userprofile'].includes(state.page)) render();
+    } else {
+      console.warn('Profile document disappeared');
     }
-  }));
+  },
+  err => {
+    console.error('Profile snapshot error:', err);
+    // محاولة getDoc كخطة بديلة
+    getDoc(doc(db, 'users', state.user.uid)).then(s => {
+      if (s.exists()) {
+        state.profile = s.data();
+        renderTopbar();
+        render();
+      }
+    }).catch(e => console.error('getDoc fallback failed:', e));
+  }
+));
 
-  state.unsubs.push(onSnapshot(
-    query(collection(db,'posts'), orderBy('createdAt','desc'), limit(50)),
-    snap=>{
-      state.posts = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      if(['home','profile','userprofile'].includes(state.page)) render();
-    }
-  ));
+state.unsubs.push(onSnapshot(
+  query(collection(db,'posts'), orderBy('createdAt','desc'), limit(50)),
+  snap => {
+    state.posts = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    if (['home','profile','userprofile'].includes(state.page)) render();
+  },
+  err => console.error('Posts snapshot error:', err)
+));
 
-  state.unsubs.push(onSnapshot(collection(db,'users'), snap=>{
+state.unsubs.push(onSnapshot(
+  collection(db,'users'),
+  snap => {
     const map = {};
-    snap.docs.forEach(d=>{ map[d.id] = d.data(); });
+    snap.docs.forEach(d => { map[d.id] = d.data(); });
     state.users = map;
     const affected = ['home','leaderboard','closefriends','userprofile','teams','team'];
-    if(affected.includes(state.page)) render();
-  }));
+    if (affected.includes(state.page)) render();
+  },
+  err => console.error('Users snapshot error:', err)
+));
 
   state.unsubs.push(onSnapshot(
     query(collection(db,'follows'), where('followerId','==',state.user.uid)),
@@ -1253,7 +1319,26 @@ function pageStore(){
 function pageProfile(){
   const p = state.profile;
   if(!p){
-    return `<div class="empty" style="padding-top:80px"><div class="spinner"></div><div>جاري تحميل الملف…</div></div>`;
+    // إذا مر وقت طويل، اعرض زر إعادة محاولة
+    setTimeout(() => {
+      const el = document.getElementById('app');
+      if(el && state.page === 'profile' && !state.profile){
+        const box = el.querySelector('.empty');
+        if(box){
+          box.innerHTML = `
+            ${ic('user')}
+            <div>تعذّر تحميل الملف الشخصي</div>
+            <button class="btn btn-primary btn-sm" style="margin-top:12px" data-action="retry-profile">
+              ${ic('check','xs')} إعادة المحاولة
+            </button>`;
+        }
+      }
+    }, 5000);
+
+    return `<div class="empty" style="padding-top:80px">
+      <div class="spinner"></div>
+      <div>جاري تحميل الملف الشخصي…</div>
+    </div>`;
   }
   const tabs = [
     {id:'posts', label:'المنشورات', icon:'grid'},
@@ -1801,11 +1886,30 @@ document.addEventListener('click', async (e)=>{
   if(t.dataset.action === 'compose'){ composeModal(); return; }
   if(t.dataset.action === 'edit-profile'){ editProfileModal(); return; }
   if(t.dataset.action === 'create-team'){ createTeamModal(); return; }
-  if(t.dataset.action === 'leave-team'){ await leaveTeam(); return; }
-  if(t.dataset.action === 'back-to-teams'){ state.viewingTeamId = null; render(); return; }
+if(t.dataset.action === 'leave-team'){ await leaveTeam(); return; }
+if(t.dataset.action === 'back-to-teams'){ state.viewingTeamId = null; render(); return; }
 
-  if(t.dataset.tab){ state.homeTab = t.dataset.tab; render(); return; }
-  if(t.dataset.ptab){ state.profileTab = t.dataset.ptab; render(); return; }
+/* ★ جديد: إعادة محاولة تحميل الملف الشخصي */
+if(t.dataset.action === 'retry-profile'){
+  toast('جاري إعادة المحاولة…');
+  getDoc(doc(db,'users',state.user.uid)).then(s => {
+    if(s.exists()){
+      state.profile = s.data();
+      renderTopbar();
+      render();
+      toast('تم التحميل ✓');
+    } else {
+      toast('لم يتم العثور على الملف');
+    }
+  }).catch(e => {
+    console.error(e);
+    toast('فشل التحميل — تحقق من الاتصال');
+  });
+  return;
+}
+
+if(t.dataset.tab){ state.homeTab = t.dataset.tab; render(); return; }
+if(t.dataset.ptab){ state.profileTab = t.dataset.ptab; render(); return; }
 
   if(t.dataset.follow){ await toggleFollow(t.dataset.follow); return; }
   if(t.dataset.like){ await toggleLike(t.dataset.like); return; }
