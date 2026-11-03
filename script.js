@@ -881,7 +881,12 @@ function pageStore(){
 /* --- الملف الشخصي --- */
 function pageProfile(){
   const p = state.profile;
-  if(!p) return '';
+  if(!p){
+    return `<div class="empty" style="padding-top:80px">
+      <div class="spinner"></div>
+      <div>جاري تحميل الملف الشخصي…</div>
+    </div>`;
+  }
   const tabs = [
     {id:'posts', label:'المنشورات', icon:'grid'},
     {id:'saved', label:'المحفوظات', icon:'bookmark'},
@@ -1026,7 +1031,7 @@ function renderSearchResults(){
 }
 
 /* --- الإشعارات --- */
-async function pageNotifs(){
+function pageNotifs(){
   state.notifRead = true;
   renderTopbar();
   // علّم كمقروء في Firestore
@@ -1222,11 +1227,24 @@ function render(){
   renderTopbar();
   renderNav();
   const fn = PAGES[state.page] || pageHome;
-  document.getElementById('app').innerHTML = fn();
-  if(state.page === 'search'){
-    // لا نركّز تلقائياً إذا كان المستخدم يكتب بالفعل
-    const inp = document.getElementById('searchInput');
-    if(inp && document.activeElement !== inp){ renderSearchResults(); }
+  const result = fn();
+
+  // دعم الصفحات المزامنة وغير المزامنة
+  if(result && typeof result.then === 'function'){
+    result.then(html => {
+      document.getElementById('app').innerHTML = html || '';
+      if(state.page === 'search') renderSearchResults();
+    }).catch(err => {
+      console.error('Page render error:', err);
+      document.getElementById('app').innerHTML =
+        `<div class="empty">${ic('close')}<div>حدث خطأ في تحميل الصفحة</div></div>`;
+    });
+  } else {
+    document.getElementById('app').innerHTML = result || '';
+    if(state.page === 'search'){
+      const inp = document.getElementById('searchInput');
+      if(inp && document.activeElement !== inp) renderSearchResults();
+    }
   }
 }
 
