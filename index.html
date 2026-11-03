@@ -1,174 +1,96 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#6366f1" />
-<title>UniRate — منصة الجامعة الأكاديمية</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>نكسوس — NEXUS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css" />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="assets/logo.png">
+<script>
+/* تعريف احتياطي مبكر لتفادي أخطاء التحميل */
+window.LOGO_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6c5ce7"/><stop offset="1" stop-color="#00d2ff"/></linearGradient></defs><rect width="100" height="100" rx="26" fill="url(#g)"/><path d="M30 72V28l40 44V28" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+);
+</script>
 </head>
 <body>
 
-<!-- LOADER -->
 <div id="loader" class="loader-screen">
-  <div class="loader-logo">🎓</div>
   <div class="loader-spinner"></div>
-  <p class="loader-text">جارٍ التحميل…</p>
+  <div class="loader-text">نكسوس</div>
 </div>
 
-<!-- AUTH -->
-<section id="authScreen" class="screen hidden">
-  <div class="auth-wrap">
-    <div class="auth-side">
-      <div class="brand-big">🎓 <span>UniRate</span></div>
-      <h1>مجتمعك الأكاديمي المتكامل</h1>
-      <p>قيّم المواد، اطرح الأسئلة، شارك الموارد، وانضم لمجموعات الدراسة.</p>
-      <ul class="auth-feats">
-        <li><span>💬</span> مجتمع نقاشات وأسئلة وأجوبة</li>
-        <li><span>⭐</span> تقييم المواد والأساتذة</li>
-        <li><span>📚</span> ملخصات وموارد تعليمية</li>
-        <li><span>👥</span> مجموعات دراسة</li>
-        <li><span>🏆</span> شارات ومستويات خبرة</li>
-        <li><span>📊</span> بحث موحد وإحصائيات</li>
-      </ul>
-    </div>
-    <div class="auth-card">
-      <div class="tabs">
-        <button class="tab active" data-tab="login">تسجيل الدخول</button>
-        <button class="tab" data-tab="register">حساب جديد</button>
-      </div>
-      <form id="loginForm" class="auth-form" novalidate>
-        <label>الرقم الجامعي</label>
-        <input id="loginId" type="text" inputmode="numeric" maxlength="13" placeholder="13 رقم" />
-        <label>كلمة المرور</label>
-        <input id="loginPass" type="password" placeholder="••••••••" />
-        <button type="submit" class="btn btn-primary btn-block">دخول</button>
-      </form>
-      <form id="registerForm" class="auth-form hidden" novalidate>
-        <label>الرقم الجامعي</label>
-        <input id="regId" type="text" inputmode="numeric" maxlength="13" placeholder="13 رقم" />
-        <label>كلمة المرور</label>
-        <input id="regPass" type="password" placeholder="6 أحرف على الأقل" />
-        <label>تأكيد كلمة المرور</label>
-        <input id="regPass2" type="password" />
-        <button type="submit" class="btn btn-primary btn-block">إنشاء الحساب</button>
-      </form>
-    </div>
+<div id="setupScreen" class="setup-screen hidden">
+  <div class="setup-card">
+    <div class="setup-title">⚠️ إعداد Firebase مطلوب</div>
+    <p class="setup-desc">افتح ملف <code>script.js</code> واستبدل <code>firebaseConfig</code> بإعدادات مشروعك.</p>
+    <ol class="setup-steps">
+      <li>افتح <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
+      <li>فعّل: <b>Authentication</b> (Email + Google) و <b>Firestore</b></li>
+      <li>انسخ إعدادات الويب والصقها في أعلى <code>script.js</code></li>
+    </ol>
   </div>
-</section>
+</div>
 
-<!-- PROFILE SETUP -->
-<section id="profileScreen" class="screen hidden">
-  <div class="profile-wrap">
-    <div class="card profile-card">
-      <div class="profile-head">
-        <div class="ico-badge">📝</div>
-        <h2>إكمال بيانات الطالب</h2>
-        <p class="muted">تُطلب مرة واحدة فقط.</p>
-      </div>
-      <form id="profileForm">
-        <label>اسم الطالب</label>
-        <input id="pfName" placeholder="الاسم الكامل" required />
-        <label>التخصص</label>
-        <select id="pfMajor" required></select>
-        <label>الكلية (تلقائي)</label>
-        <input id="pfCollege" readonly placeholder="—" />
-        <label>الفرع (المدينة)</label>
-        <input id="pfBranch" placeholder="مثال: الرياض" required />
-        <label>المستوى الدراسي</label>
-        <select id="pfLevel">
-          <option value="1">أول</option><option value="2">ثاني</option>
-          <option value="3">ثالث</option><option value="4">رابع</option>
-          <option value="5">خامس+</option>
-        </select>
-        <button type="submit" class="btn btn-primary btn-block">حفظ ومتابعة</button>
-      </form>
+<div id="authScreen" class="auth-screen hidden">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="assets/logo.png" alt="NEXUS" onerror="this.onerror=null;this.src=window.LOGO_FALLBACK">
+      <div class="auth-word">نكسوس</div>
+      <div class="auth-sub">مجتمع وألعاب</div>
     </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">دخول</button>
+      <button class="auth-tab" data-tab="signup">حساب جديد</button>
+    </div>
+    <form id="loginForm" class="auth-form">
+      <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" autocomplete="email" required>
+      <input type="password" id="loginPass" placeholder="كلمة المرور" autocomplete="current-password" required>
+      <button type="submit" class="btn-primary">دخول</button>
+    </form>
+    <form id="signupForm" class="auth-form hidden">
+      <input type="text" id="signupName" placeholder="الاسم الكامل" required>
+      <input type="text" id="signupUser" placeholder="اسم المستخدم (بالإنجليزية)" pattern="[a-zA-Z0-9_]{3,20}" required>
+      <input type="email" id="signupEmail" placeholder="البريد الإلكتروني" autocomplete="email" required>
+      <input type="password" id="signupPass" placeholder="كلمة المرور (6+ أحرف)" minlength="6" autocomplete="new-password" required>
+      <button type="submit" class="btn-primary">إنشاء الحساب</button>
+    </form>
+    <div class="auth-or"><span>أو</span></div>
+    <button id="googleBtn" class="btn-google">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.7 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.3 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.4c-.5 2.9-2.1 5.3-4.5 6.9l7.3 5.7c4.3-3.9 6.9-9.7 6.9-16.9z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3.1-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C1 16.5 0 20.1 0 24s1 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2.1 15.3-5.6l-7.3-5.7c-2 1.4-4.7 2.2-8 2.2-6.3 0-11.6-3.8-13.5-9.1l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+      المتابعة مع Google
+    </button>
+    <div class="auth-error" id="authError"></div>
   </div>
-</section>
+</div>
 
-<!-- MAIN APP -->
-<div id="mainApp" class="hidden">
-  <header class="app-header">
-    <div class="hdr-inner">
-      <button class="brand" id="brandBtn">🎓 <span>UniRate</span></button>
-
-      <nav class="main-nav" id="mainNav">
-        <button class="nav-btn active" data-view="home">🏠 الرئيسية</button>
-        <button class="nav-btn" data-view="community">💬 المجتمع</button>
-        <button class="nav-btn" data-view="colleges">🏛️ الكليات</button>
-        <button class="nav-btn" data-view="professors">👨‍🏫 الأساتذة</button>
-        <button class="nav-btn" data-view="stats">📊 الإحصائيات</button>
-        <button class="nav-btn" data-view="bookmarks">🔖 المفضلة</button>
-        <button class="nav-btn admin-only hidden" data-view="admin">⚙️ المشرف</button>
-      </nav>
-
-      <div class="user-area">
-        <button class="icon-btn" id="searchToggle" title="بحث موحد">🔍</button>
-        <button class="icon-btn badge-host" id="notifBtn" title="الإشعارات">🔔<span class="badge hidden" id="notifBadge">0</span></button>
-        <button class="icon-btn" id="themeBtn" title="الوضع الليلي">🌙</button>
-        <div class="user-menu">
-          <button class="user-info" id="userInfoBtn">
-            <div class="avatar" id="userAvatar">؟</div>
-            <div class="user-meta">
-              <div class="user-name" id="userName">—</div>
-              <div class="user-role" id="userRole">طالب</div>
-            </div>
-          </button>
-          <div class="dropdown hidden" id="userDropdown">
-            <button data-menu="profile">👤 ملفي الشخصي</button>
-            <button data-menu="myCourses">📚 موادّي</button>
-            <button data-menu="myContributions">📝 مساهماتي</button>
-            <button data-menu="bookmarks">🔖 المفضلة</button>
-            <button data-menu="summary">🏆 ملخص إنجازاتي</button>
-            <button data-menu="admin" class="admin-only hidden">⚙️ لوحة المشرف</button>
-            <button data-menu="settings">⚙️ الإعدادات</button>
-            <hr/>
-            <button data-menu="logout" class="danger">🚪 خروج</button>
-          </div>
+<div id="appShell" class="app-shell hidden">
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="tb-right"><button class="avatar-btn" id="tbAvatar"></button></div>
+      <div class="tb-center">
+        <div class="logo" data-nav="home" style="cursor:pointer">
+          <img class="logo-img" src="assets/logo.png" alt="logo" onerror="this.onerror=null;this.src=window.LOGO_FALLBACK">
+          <div class="logo-word">نكسوس<small>NEXUS</small></div>
         </div>
+      </div>
+      <div class="tb-left">
+        <button class="icon-btn" data-nav="search" aria-label="بحث"></button>
+        <button class="icon-btn" data-nav="notifs" aria-label="إشعارات"></button>
       </div>
     </div>
   </header>
-
-  <!-- Unified search panel -->
-  <div id="searchPanel" class="search-panel hidden">
-    <div class="search-panel-inner">
-      <input id="globalSearch" placeholder="ابحث عن مادة، أستاذ، سؤال، مورد، مجموعة…" autocomplete="off"/>
-      <div class="search-hints" id="searchHints"></div>
-      <div id="globalSearchResults" class="search-results"></div>
-    </div>
-  </div>
-
-  <!-- Notifications panel -->
-  <div id="notifPanel" class="notif-panel hidden">
-    <div class="notif-head">
-      <strong>الإشعارات</strong>
-      <button id="markAllRead" class="btn btn-ghost btn-sm">تعليم الكل كمقروء</button>
-    </div>
-    <div id="notifList" class="notif-list"></div>
-  </div>
-
-  <main id="viewRoot" class="view-root"></main>
-
-  <footer class="app-footer">
-    <span>© 2025 UniRate — مجتمعك الأكاديمي</span>
-  </footer>
-
-  <nav class="bottom-nav" id="bottomNav">
-    <button data-view="home" class="active">🏠<span>الرئيسية</span></button>
-    <button data-view="community">💬<span>المجتمع</span></button>
-    <button data-view="colleges">🏛️<span>الكليات</span></button>
-    <button data-view="stats">📊<span>إحصائيات</span></button>
-    <button data-menu="profile">👤<span>حسابي</span></button>
-  </nav>
+  <main class="app" id="app"></main>
+  <nav class="bottombar" id="bottombar"></nav>
 </div>
 
+<div class="overlay" id="overlay" data-action="close-drawer"></div>
+<aside class="drawer" id="drawer"></aside>
 <div id="modalRoot"></div>
-<div id="toastWrap" class="toast-wrap"></div>
+<div class="toast" id="toast"></div>
 
 <script type="module" src="script.js"></script>
 </body>
