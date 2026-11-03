@@ -95,6 +95,21 @@ window.LOGO_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
 
 <input type="file" id="globalFileInput" accept="image/*" style="display:none">
 
+<!-- ★ حاوية اللعبة (تظهر أثناء المباراة فقط) -->
+<div id="gameOverlay" class="game-overlay hidden">
+  <div class="game-container" id="gameContainer"></div>
+</div>
+
+<!-- ★ شريط "لديك مباراة جارية" -->
+<div id="resumeBanner" class="resume-banner hidden">
+  <div style="flex:1">
+    <div style="font-size:12px;font-weight:800">لديك مباراة جارية</div>
+    <div class="muted" id="resumeBannerText" style="font-size:10px"></div>
+  </div>
+  <button class="btn btn-primary btn-sm" id="resumeMatchBtn">استئناف</button>
+  <button class="btn btn-ghost btn-sm" id="leaveMatchBtn">خروج</button>
+</div>
+
 <script type="module" src="script.js"></script>
 </body>
 </html>
