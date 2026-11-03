@@ -648,3 +648,193 @@ select.input option{background:#121a2a;color:var(--txt)}
 .char-counter { font-size: 10.5px; color: var(--muted); text-align: left; margin-top: 4px; }
 .char-counter.warn { color: var(--gold); }
 .char-counter.danger { color: var(--pink); }
+
+/* ===== شاشة اللعب ===== */
+.game-overlay{
+  position:fixed;inset:0;z-index:150;
+  background:radial-gradient(circle at 50% 0%, #121a2a, #060810 70%);
+  overflow-y:auto;
+}
+.game-container{
+  max-width:760px;margin:0 auto;min-height:100vh;
+  padding:20px 16px 40px;display:flex;flex-direction:column;
+}
+
+/* شريط اللعبة العلوي */
+.game-topbar{
+  display:flex;align-items:center;gap:12px;margin-bottom:18px;
+  padding:12px 14px;background:rgba(255,255,255,.05);border-radius:16px;
+  border:1px solid var(--line);backdrop-filter:blur(12px);
+}
+.game-timer{
+  font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;
+  color:var(--brand-2);min-width:70px;text-align:center;
+  text-shadow:0 0 20px rgba(0,210,255,.6);
+}
+.game-timer.warning{color:var(--pink);animation:pulse 0.8s infinite}
+
+/* شريط تقدم كل لاعب */
+.game-players{
+  display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;
+}
+.game-player{
+  flex:1;min-width:140px;padding:12px;border-radius:14px;
+  background:var(--card);border:1px solid var(--line);
+  transition:.3s;
+}
+.game-player.active{
+  border-color:rgba(108,92,231,.6);
+  box-shadow:0 0 20px rgba(108,92,231,.3);
+}
+.game-player.winner{
+  border-color:rgba(245,179,1,.6);
+  background:linear-gradient(135deg,rgba(245,179,1,.15),rgba(255,61,113,.05));
+}
+.game-player-me{
+  background:linear-gradient(135deg,rgba(108,92,231,.15),transparent);
+}
+.game-player-name{
+  font-size:12px;font-weight:800;margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;
+}
+.game-player-score{
+  font-size:20px;font-weight:900;color:var(--brand-2);
+  font-variant-numeric:tabular-nums;
+}
+
+/* بطاقة السؤال */
+.question-card{
+  background:linear-gradient(135deg,rgba(108,92,231,.12),rgba(0,210,255,.04));
+  border:1px solid rgba(108,92,231,.3);border-radius:24px;
+  padding:32px 24px;text-align:center;margin-bottom:18px;
+  animation:pop .4s cubic-bezier(.34,1.4,.64,1);
+}
+.question-text{
+  font-size:20px;font-weight:800;line-height:1.5;margin-bottom:8px;
+}
+.question-hint{
+  font-size:12px;color:var(--muted);margin-top:8px;
+}
+
+/* شبكة الإجابات */
+.answers-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;
+}
+.answer-btn{
+  padding:20px;border-radius:16px;font-size:14px;font-weight:800;
+  background:var(--card);border:2px solid var(--line);color:var(--txt);
+  transition:.2s;text-align:center;line-height:1.4;
+  min-height:80px;display:flex;align-items:center;justify-content:center;
+}
+.answer-btn:hover:not(:disabled){
+  background:var(--card-2);border-color:rgba(108,92,231,.4);transform:translateY(-2px);
+}
+.answer-btn:disabled{opacity:.5;cursor:not-allowed}
+.answer-btn.correct{
+  background:linear-gradient(135deg,rgba(34,197,94,.28),rgba(34,197,94,.12));
+  border-color:var(--ok);color:#5ee08a;
+  animation:correctPulse .5s;
+}
+.answer-btn.wrong{
+  background:linear-gradient(135deg,rgba(255,61,113,.28),rgba(255,61,113,.12));
+  border-color:var(--pink);color:#ff7b9d;
+  animation:wrongShake .4s;
+}
+@keyframes correctPulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* شاشة النتيجة */
+.result-screen{
+  text-align:center;padding:40px 20px;
+  animation:pop .5s cubic-bezier(.34,1.4,.64,1);
+}
+.result-icon{font-size:80px;margin-bottom:16px;display:block}
+.result-title{font-size:32px;font-weight:900;margin-bottom:8px}
+.result-subtitle{font-size:14px;color:var(--muted);margin-bottom:24px}
+.result-stats{
+  display:flex;gap:20px;justify-content:center;margin:24px 0;
+  flex-wrap:wrap;
+}
+.result-stat{
+  text-align:center;padding:16px 20px;border-radius:16px;
+  background:var(--card);border:1px solid var(--line);min-width:100px;
+}
+.result-stat .v{font-size:24px;font-weight:900;color:var(--brand-2)}
+.result-stat .l{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* محادثة المباراة */
+.match-chat{
+  margin-top:20px;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:12px;
+}
+.match-chat-header{
+  font-size:12px;font-weight:800;margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.match-chat-messages{
+  max-height:120px;overflow-y:auto;margin-bottom:8px;
+  display:flex;flex-direction:column;gap:5px;
+}
+.match-chat-msg{
+  font-size:12px;padding:6px 10px;border-radius:10px;
+  background:var(--card-2);word-wrap:break-word;
+}
+.match-chat-msg.me{background:rgba(108,92,231,.25)}
+.match-chat-msg .from{font-weight:800;color:var(--brand-2);font-size:10.5px}
+
+/* شارة "لديك مباراة" */
+.resume-banner{
+  position:fixed;bottom:100px;right:50%;transform:translateX(50%);
+  z-index:70;width:calc(100% - 24px);max-width:640px;
+  padding:12px 16px;border-radius:16px;
+  background:linear-gradient(135deg,rgba(108,92,231,.95),rgba(0,210,255,.85));
+  box-shadow:0 12px 32px rgba(108,92,231,.5);
+  color:#fff;display:flex;align-items:center;gap:10px;
+  animation:slideUp .4s ease;
+}
+@keyframes slideUp{from{opacity:0;transform:translateX(50%) translateY(20px)}to{opacity:1;transform:translateX(50%) translateY(0)}}
+
+/* رتب الفريق */
+.role-chip{
+  padding:2px 8px;border-radius:7px;font-size:9.5px;font-weight:900;
+}
+.role-chip.leader{background:rgba(245,179,1,.2);color:#f5c451}
+.role-chip.coleader{background:rgba(108,92,231,.2);color:#a99cff}
+.role-chip.member{background:rgba(255,255,255,.08);color:var(--muted)}
+
+/* صفحة فريق - تبويبات داخلية */
+.team-tabs{
+  display:flex;gap:4px;padding:4px;background:var(--card);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:14px;
+}
+.team-tab{
+  flex:1;padding:8px 4px;border-radius:10px;font-size:11.5px;font-weight:800;
+  color:var(--muted);transition:.2s;
+}
+.team-tab.active{background:var(--grad);color:#fff}
+
+/* محادثة الفريق */
+.team-chat-box{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:10px;max-height:280px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:6px;
+}
+
+/* دعوات الفريق */
+.invite-card{
+  padding:12px;border-radius:14px;background:var(--card);
+  border:1px solid var(--line);margin-bottom:8px;
+  display:flex;align-items:center;gap:10px;
+}
+
+/* بطاقة إنجاز في اللعبة */
+.game-stats-mini{
+  display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;
+}
+.game-stats-mini > div{
+  flex:1;min-width:100px;padding:10px;border-radius:12px;
+  background:rgba(255,255,255,.03);border:1px solid var(--line);
+  text-align:center;
+}
+.game-stats-mini .v{font-size:16px;font-weight:900;color:var(--brand-2)}
+.game-stats-mini .l{font-size:10px;color:var(--muted);margin-top:2px}
