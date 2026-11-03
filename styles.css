@@ -538,3 +538,113 @@ select.input option{background:#121a2a;color:var(--txt)}
 .btn-load-more{display:block;width:100%;margin-top:8px;padding:12px;border-radius:12px;
   background:var(--card);border:1px solid var(--line);color:var(--muted);font-weight:800;font-size:13px}
 .btn-load-more:hover{background:var(--card-2);color:var(--txt)}
+
+/* ===== رفع الصور ===== */
+.img-field { margin-bottom: 14px; }
+.img-field label { display: block; font-size: 11.5px; font-weight: 800; color: var(--muted); margin-bottom: 8px; }
+.img-preview {
+  width: 100%; height: 120px; border-radius: 14px;
+  background: var(--card-2) center/cover no-repeat;
+  border: 1px dashed rgba(255,255,255,.15);
+  display: grid; place-items: center;
+  cursor: pointer; transition: .2s; position: relative; overflow: hidden;
+}
+.img-preview:hover { border-color: rgba(108,92,231,.6); background-color: rgba(108,92,231,.08); }
+.img-preview.has-image { border-style: solid; border-color: rgba(108,92,231,.5); }
+.img-preview .img-empty { color: var(--muted); font-size: 12.5px; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.img-preview .img-empty .ic { width: 28px; height: 28px; }
+.img-preview.has-image .img-empty { display: none; }
+.img-preview .img-badge {
+  position: absolute; top: 8px; right: 8px;
+  padding: 3px 9px; border-radius: 8px;
+  background: rgba(7,10,17,.85); font-size: 10.5px; font-weight: 800;
+  backdrop-filter: blur(8px); display: none;
+}
+.img-preview.has-image .img-badge { display: block; }
+.img-preview.avatar-preview { height: 100px; width: 100px; border-radius: 50%; margin: 0 auto; }
+.img-upload-progress {
+  height: 4px; border-radius: 9px; background: rgba(255,255,255,.08);
+  overflow: hidden; margin-top: 8px; display: none;
+}
+.img-upload-progress.active { display: block; }
+.img-upload-progress span { display: block; height: 100%; background: var(--grad); width: 0; transition: width .2s; }
+
+/* ===== التعليقات ===== */
+.comment-item {
+  display: flex; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--line); animation: rise .3s ease both;
+}
+.comment-item:last-child { border-bottom: 0; }
+.comment-body { flex: 1; min-width: 0; }
+.comment-name { font-size: 12.5px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+.comment-time { font-size: 10px; color: var(--muted); font-weight: 600; }
+.comment-text { font-size: 13px; line-height: 1.65; color: #dbe3f5; margin-top: 3px; white-space: pre-wrap; }
+.comment-input-wrap {
+  display: flex; gap: 8px; padding-top: 12px;
+  border-top: 1px solid var(--line); margin-top: 10px;
+}
+.comment-input-wrap .av { flex-shrink: 0; }
+
+/* ===== بطاقة الفريق ===== */
+.team-page-hero {
+  background: linear-gradient(135deg,rgba(108,92,231,.24),rgba(0,210,255,.08));
+  border-radius: 22px; padding: 22px; text-align: center;
+  border: 1px solid rgba(108,92,231,.32); margin-bottom: 16px;
+  position: relative; overflow: hidden;
+}
+.team-page-hero::after {
+  content: ""; position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+  width: 200px; height: 200px; background: var(--brand); opacity: .2; filter: blur(60px);
+}
+.team-emblem-lg {
+  width: 84px; height: 84px; border-radius: 24px; margin: 0 auto 12px;
+  background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.15);
+  display: grid; place-items: center; font-size: 42px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.4); position: relative; z-index: 1;
+  background-size: cover; background-position: center;
+}
+.team-name-lg { font-size: 22px; font-weight: 900; letter-spacing: -.4px; position: relative; z-index: 1; }
+.team-desc-lg { font-size: 13px; color: #b7c2d8; margin-top: 6px; line-height: 1.7; position: relative; z-index: 1; }
+.team-hero-stats {
+  display: flex; justify-content: center; gap: 26px;
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.1);
+  position: relative; z-index: 1;
+}
+.team-hero-stats > div { text-align: center; }
+.team-hero-stats .v { font-size: 18px; font-weight: 900; color: var(--brand-2); }
+.team-hero-stats .l { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+/* ===== زر إجراء على المنشور ===== */
+.post-menu-btn {
+  padding: 6px; border-radius: 10px; color: var(--muted);
+  transition: .2s; display: grid; place-items: center;
+}
+.post-menu-btn:hover { background: var(--card-2); color: var(--txt); }
+
+/* ===== زر متابعة أفقي ===== */
+.pc-actions .btn-follow-wide {
+  flex: 1; padding: 12px; border-radius: 14px; font-size: 13px; font-weight: 800;
+  background: var(--grad); color: #fff; transition: .2s;
+}
+.pc-actions .btn-follow-wide.on { background: var(--card); color: var(--muted); border: 1px solid var(--line); }
+
+/* ===== شراء ناجح (تحسين بصري) ===== */
+.purchase-success {
+  background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.3);
+  color: #5ee08a; padding: 10px 14px; border-radius: 12px;
+  font-size: 12.5px; font-weight: 800; text-align: center; margin-top: 10px;
+}
+
+/* ===== Skeleton للتحميل ===== */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.09), rgba(255,255,255,.04));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 10px;
+}
+@keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+/* ===== عداد الكلمات ===== */
+.char-counter { font-size: 10.5px; color: var(--muted); text-align: left; margin-top: 4px; }
+.char-counter.warn { color: var(--gold); }
+.char-counter.danger { color: var(--pink); }

@@ -1,5 +1,5 @@
 /* ============================================================
-   نكسوس — Firebase Integration (v1.1 — Fixed)
+   نكسوس — v2.0 (Image Upload + Comments + Teams + Store)
    ============================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -14,7 +14,7 @@ import {
   deleteDoc, increment, runTransaction, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ============ إعدادات Firebase (املأ ببياناتك) ============ */
+/* ============ Firebase Config ============ */
 const firebaseConfig = {
   apiKey: "AIzaSyAzhloP8j7MG0E8N0OJpLMSHL_pfwmbbe8",
   authDomain: "games-8b039.firebaseapp.com",
@@ -27,10 +27,7 @@ const firebaseConfig = {
 };
 const CONFIGURED = !firebaseConfig.apiKey.includes("YOUR_");
 
-/* ============ الأيقونات ============ */
-const LOGO_FALLBACK = window.LOGO_FALLBACK || "data:image/svg+xml;utf8," + encodeURIComponent(
-`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="#6c5ce7"/></svg>`);
-
+/* ============ Icons ============ */
 const ICONS = {
   home:'<path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5.5v-6.5h-5V21H4a1 1 0 0 1-1-1z"/>',
   message:'<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.4-.6L3 21l1.7-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
@@ -69,10 +66,13 @@ const ICONS = {
   image:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m21 16-5-5-9 9"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   back:'<path d="M15 18l-6-6 6-6"/>',
+  trash:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/>',
+  camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  dots:'<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
 };
 function ic(name, cls=''){ return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`; }
 
-/* ============ كتالوج الألعاب ============ */
+/* ============ Static Data ============ */
 const GAMES = [
   {id:'g1', name:'Arena Clash', cat:'قتال جماعي', icon:'bolt', online:'12.4K', grad:'linear-gradient(135deg,#6c5ce7,#ff3d71)', modes:['1v1','5v5','تعاوني']},
   {id:'g2', name:'Word Duel', cat:'كلمات', icon:'comment', online:'8.1K', grad:'linear-gradient(135deg,#00d2ff,#22c55e)', modes:['1v1','فرق']},
@@ -107,18 +107,21 @@ const AVATAR_GRADS = [
 ];
 function pickGrad(seed=''){ let h=0; for(const c of seed) h=(h*31+c.charCodeAt(0))>>>0; return AVATAR_GRADS[h % AVATAR_GRADS.length]; }
 
-/* ============ الحالة ============ */
+/* ============ State ============ */
 const state = {
   user:null, profile:null,
   page:'home', homeTab:'explore', profileTab:'posts',
   searchQ:'', searchCat:'all', lbTab:'fame',
-  activeGame:null, chatWith:null,
-  viewingUid:null,           // ← جديد: عرض ملف مستخدم آخر
-  liked:{}, saved:{}, followed:new Set(),
-  posts:[], users:{}, chats:[], messages:{}, notifs:[], rooms:[],
+  activeGame:null, chatWith:null, viewingUid:null,
+  viewingTeamId:null,
+  liked:{}, saved:{}, profileLiked:{}, followed:new Set(),
+  posts:[], users:{}, chats:[], messages:{}, notifs:[], rooms:[], teams:[],
+  comments:{},
   settings:{notif:true, sound:false, privateAcc:false, twofa:false, location:true, autoplay:true},
   notifRead:false,
   unsubs:[], chatUnsub:null, mmInterval:null,
+  pendingImages:{ avatar:null, cover:null, post:null },
+  uploadProgress:{},
 };
 
 /* ============ Firebase Init ============ */
@@ -130,7 +133,7 @@ if (CONFIGURED) {
   setPersistence(auth, browserLocalPersistence).catch(()=>{});
 }
 
-/* ============ أدوات ============ */
+/* ============ Utils ============ */
 function nf(n){ return Number(n||0).toLocaleString('en-US'); }
 function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function toast(msg){
@@ -156,13 +159,110 @@ function avatar(u, size=44, extra='', square=false){
   return `<div class="av ${square?'sq':''} ${extra}" style="--s:${size}px;background:${bg}">${img}</div>`;
 }
 
+/* ============ Image Upload System ============ */
+/* ضغط أقوى — يستهدف Base64 صغير */
+async function compressImage(file, maxDim = 700, quality = 0.6) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const c = document.createElement('canvas');
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      c.width = width; c.height = height;
+      c.getContext('2d').drawImage(img, 0, 0, width, height);
+      c.toBlob(b => {
+        if (!b) return reject(new Error('compress failed'));
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(b);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+/* تحويل الصورة إلى Base64 مع ضغط تلقائي متعدد المراحل */
+async function imageToBase64(file, type = 'post', onProgress) {
+  // حدود مختلفة لكل نوع
+  const steps = {
+    avatar: [
+      { maxDim: 150, quality: 0.55 },  // ~15KB
+      { maxDim: 120, quality: 0.45 },  // ~10KB
+      { maxDim: 100, quality: 0.35 },  // ~7KB
+    ],
+    cover: [
+      { maxDim: 500, quality: 0.55 },  // ~40KB
+      { maxDim: 400, quality: 0.45 },  // ~25KB
+      { maxDim: 300, quality: 0.35 },  // ~15KB
+    ],
+    post: [
+      { maxDim: 700, quality: 0.6 },   // ~80KB
+      { maxDim: 600, quality: 0.5 },   // ~60KB
+      { maxDim: 500, quality: 0.4 },   // ~40KB
+    ],
+  }[type] || [{ maxDim: 700, quality: 0.6 }];
+
+  onProgress && onProgress(15);
+
+  for (let i = 0; i < steps.length; i++) {
+    const { maxDim, quality } = steps[i];
+    const base64 = await compressImage(file, maxDim, quality);
+    const sizeKB = Math.round(base64.length * 0.75 / 1024);
+    console.log(`[${type}] محاولة ${i + 1}: ${sizeKB}KB (${maxDim}px @ ${quality})`);
+    
+    // حجم مثالي — عُد فوراً
+    if (sizeKB < 250) {
+      onProgress && onProgress(100);
+      return base64;
+    }
+  }
+  
+  // حتى أصغر ضغط لم ينجح — ارفض بوضوح
+  const finalSize = Math.round((await compressImage(file, steps[steps.length-1].maxDim, steps[steps.length-1].quality)).length * 0.75 / 1024);
+  if (finalSize > 900) {
+    throw new Error(`الصورة كبيرة جداً (${finalSize}KB) — الحد الأقصى 900KB`);
+  }
+  throw new Error('الصورة كبيرة جداً، جرّب صورة أقل تفاصيل');
+}
+
+function pickImage(type, onPicked) {
+  const input = document.getElementById('globalFileInput');
+  input.value = '';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const maxSize = type === 'post' ? 8 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) { toast(`حجم الصورة كبير (الحد ${maxSize/1024/1024}MB)`); return; }
+    if (!file.type.startsWith('image/')) { toast('الرجاء اختيار صورة'); return; }
+    state.pendingImages[type] = file;
+    onPicked(URL.createObjectURL(file), file);
+  };
+  input.click();
+}
+
+/* ============ Notifications Helper ============ */
+async function notify(uid, type, text, link = '') {
+  if (!uid || uid === state.user.uid) return;
+  try {
+    await addDoc(collection(db, 'notifications', uid, 'items'), {
+      type, text, link, read: false, createdAt: serverTimestamp()
+    });
+  } catch (e) { console.warn('notify:', e); }
+}
+
 /* ============ Navigation ============ */
 function go(page, opt={}){
-  // تنظيف القناة الحالية عند مغادرة صفحة الرسائل
   if(state.page === 'messages' && page !== 'messages' && state.chatUnsub){
     try { state.chatUnsub(); } catch(e){}
-    state.chatUnsub = null;
-    state.chatWith = null;
+    state.chatUnsub = null; state.chatWith = null;
   }
   state.page = page;
   Object.assign(state, opt);
@@ -171,7 +271,7 @@ function go(page, opt={}){
   render();
 }
 
-/* ============ الشريط السفلي ============ */
+/* ============ Bottom Nav ============ */
 const NAV = [
   {id:'home', icon:'home', label:'الرئيسية'},
   {id:'messages', icon:'message', label:'الرسائل'},
@@ -187,7 +287,6 @@ function renderNav(){
     </button>`).join('');
 }
 
-/* ============ الشريط العلوي ============ */
 function renderTopbar(){
   document.getElementById('tbAvatar').innerHTML = avatar(state.profile||{}, 40);
   document.querySelectorAll('.tb-left .icon-btn').forEach(b=>{
@@ -197,7 +296,7 @@ function renderTopbar(){
   });
 }
 
-/* ============ القائمة الجانبية ============ */
+/* ============ Drawer ============ */
 const MORE_ITEMS = [
   {id:'closefriends', icon:'heart', label:'المقربون', desc:'أقرب 10 لاعبين'},
   {id:'leaderboard', icon:'trophy', label:'لوحة الصدارة', desc:'ترتيب اللاعبين'},
@@ -233,7 +332,7 @@ function openDrawer(){
         </span>
       </button>`).join('')}
     <div style="text-align:center;padding:18px 0 6px;color:#3d4864;font-size:10.5px;font-weight:700">
-      نكسوس · v1.1
+      نكسوس · v2.0
     </div>`;
   d.classList.add('open');
   document.getElementById('overlay').classList.add('show');
@@ -243,7 +342,7 @@ function closeDrawer(){
   document.getElementById('overlay').classList.remove('show');
 }
 
-/* ============ المودال (إصلاح: زر الإلغاء يعمل الآن) ============ */
+/* ============ Modal ============ */
 function openModal(html){
   const root = document.getElementById('modalRoot');
   root.innerHTML = `<div class="modal-wrap"><div class="modal">${html}</div></div>`;
@@ -254,10 +353,11 @@ function openModal(html){
 function closeModal(){
   const root = document.getElementById('modalRoot');
   if(state.mmInterval){ clearInterval(state.mmInterval); state.mmInterval = null; }
+  state.pendingImages = { avatar:null, cover:null, post:null };
   root.innerHTML = '';
 }
 
-/* ============ المصادقة ============ */
+/* ============ Auth ============ */
 function showScreen(id){
   ['loader','setupScreen','authScreen','appShell'].forEach(s=>{
     document.getElementById(s).classList.toggle('hidden', s !== id);
@@ -281,7 +381,8 @@ async function handleSignup(e){
       uid:cred.user.uid, name, username, email,
       bio:'مرحباً، أنا جديد في نكسوس!',
       avatarUrl:'', coverUrl:'', grad: pickGrad(cred.user.uid),
-      team:'', level:1, xp:0, fame:0, power:0, support:0,
+      teamId:'', teamName:'', teamEmblem:'',
+      level:1, xp:0, fame:0, power:0, support:0,
       likesProfile:0, likesGames:0, followers:0, following:0,
       coins:1000, role:'user', createdAt: serverTimestamp()
     });
@@ -313,7 +414,8 @@ async function handleGoogle(){
       await setDoc(userRef, {
         uid:cred.user.uid, name: cred.user.displayName||'مستخدم', username,
         email: cred.user.email, bio:'مرحباً!', avatarUrl: cred.user.photoURL||'',
-        coverUrl:'', grad: pickGrad(cred.user.uid), team:'',
+        coverUrl:'', grad: pickGrad(cred.user.uid),
+        teamId:'', teamName:'', teamEmblem:'',
         level:1, xp:0, fame:0, power:0, support:0,
         likesProfile:0, likesGames:0, followers:0, following:0,
         coins:1000, role:'user', createdAt: serverTimestamp()
@@ -327,7 +429,7 @@ async function handleLogout(){
   await signOut(auth);
 }
 
-/* ============ مراقبة الحالة ============ */
+/* ============ Auth State ============ */
 if (CONFIGURED) {
   onAuthStateChanged(auth, async (user) => {
     if(user){
@@ -344,7 +446,7 @@ if (CONFIGURED) {
   showScreen('setupScreen');
 }
 
-/* ============ المستمعون ============ */
+/* ============ Listeners ============ */
 function detachListeners(){
   state.unsubs.forEach(u=>{ try{u();}catch(e){} });
   state.unsubs = [];
@@ -355,16 +457,14 @@ function detachListeners(){
 function attachListeners(){
   detachListeners();
 
-  // ★ مستمع حي لملف المستخدم الحالي (يحدّث العدادات فوراً)
   state.unsubs.push(onSnapshot(doc(db,'users',state.user.uid), snap=>{
     if(snap.exists()){
       state.profile = snap.data();
       renderTopbar();
-      if(['profile','stats','settings'].includes(state.page)) render();
+      if(['profile','stats','settings','userprofile'].includes(state.page)) render();
     }
   }));
 
-  // المنشورات
   state.unsubs.push(onSnapshot(
     query(collection(db,'posts'), orderBy('createdAt','desc'), limit(50)),
     snap=>{
@@ -373,16 +473,14 @@ function attachListeners(){
     }
   ));
 
-  // المستخدمون (بدون إعادة رسم صفحة البحث أثناء الكتابة)
   state.unsubs.push(onSnapshot(collection(db,'users'), snap=>{
     const map = {};
     snap.docs.forEach(d=>{ map[d.id] = d.data(); });
     state.users = map;
-    const affectedPages = ['home','leaderboard','closefriends','userprofile'];
-    if(affectedPages.includes(state.page)) render();
+    const affected = ['home','leaderboard','closefriends','userprofile','teams','team'];
+    if(affected.includes(state.page)) render();
   }));
 
-  // المتابعات
   state.unsubs.push(onSnapshot(
     query(collection(db,'follows'), where('followerId','==',state.user.uid)),
     snap=>{
@@ -391,7 +489,6 @@ function attachListeners(){
     }
   ));
 
-  // الإعجابات
   state.unsubs.push(onSnapshot(
     query(collection(db,'postLikes'), where('uid','==',state.user.uid)),
     snap=>{
@@ -401,7 +498,15 @@ function attachListeners(){
     }
   ));
 
-  // المحفوظات
+  state.unsubs.push(onSnapshot(
+    query(collection(db,'profileLikes'), where('from','==',state.user.uid)),
+    snap=>{
+      state.profileLiked = {};
+      snap.docs.forEach(d=>{ state.profileLiked[d.data().to] = true; });
+      if(state.page==='userprofile') render();
+    }
+  ));
+
   state.unsubs.push(onSnapshot(
     query(collection(db,'saves'), where('uid','==',state.user.uid)),
     snap=>{
@@ -410,7 +515,6 @@ function attachListeners(){
     }
   ));
 
-  // المحادثات
   state.unsubs.push(onSnapshot(
     query(collection(db,'chats'), where('participants','array-contains',state.user.uid)),
     snap=>{
@@ -420,7 +524,6 @@ function attachListeners(){
     }
   ));
 
-  // الإشعارات
   state.unsubs.push(onSnapshot(
     query(collection(db,'notifications',state.user.uid,'items'), orderBy('createdAt','desc'), limit(50)),
     snap=>{
@@ -431,29 +534,39 @@ function attachListeners(){
     }
   ));
 
-  // الغرف
   state.unsubs.push(onSnapshot(collection(db,'rooms'), snap=>{
     state.rooms = snap.docs.map(d=>({id:d.id, ...d.data()}));
     if(state.page==='games' && state.activeGame) render();
   }));
+
+  state.unsubs.push(onSnapshot(collection(db,'teams'), snap=>{
+    state.teams = snap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b)=>(b.points||0)-(a.points||0));
+    if(['teams','team'].includes(state.page)) render();
+  }));
 }
 
-/* ============ العمليات ============ */
+/* ============ Likes / Follow / Save ============ */
 async function toggleLike(postId){
   const ref = doc(db,'posts',postId);
   const likeRef = doc(db,'postLikes',`${state.user.uid}_${postId}`);
   try {
+    const postSnap = await getDoc(ref);
+    const authorId = postSnap.exists() ? postSnap.data().authorId : null;
     await runTransaction(db, async tx=>{
-      const likeSnap = await tx.get(likeRef);
-      if(likeSnap.exists()){
+      const s = await tx.get(likeRef);
+      if(s.exists()){
         tx.delete(likeRef);
         tx.update(ref, { likes: increment(-1) });
       } else {
-        tx.set(likeRef, { uid: state.user.uid, postId, createdAt: new Date() });
+        tx.set(likeRef, { uid: state.user.uid, postId, createdAt: serverTimestamp() });
         tx.update(ref, { likes: increment(1) });
       }
     });
-  } catch(e){ console.error(e); toast('تعذّر تحديث الإعجاب'); }
+    if(!state.liked[postId] && authorId){
+      await notify(authorId, 'like', `<b>${esc(state.profile.name)}</b> أعجبه منشورك`);
+    }
+  } catch(e){ toast('تعذّر تحديث الإعجاب'); }
 }
 
 async function toggleSave(postId){
@@ -477,24 +590,168 @@ async function toggleFollow(targetId){
       await setDoc(followRef, { followerId: state.user.uid, followingId: targetId, createdAt: serverTimestamp() });
       await updateDoc(doc(db,'users',state.user.uid), { following: increment(1) });
       await updateDoc(doc(db,'users',targetId), { followers: increment(1) });
+      await notify(targetId, 'follow', `<b>${esc(state.profile.name)}</b> بدأ متابعتك`);
     }
   } catch(e){ toast('تعذّر التحديث'); }
 }
 
-async function createPost(data){
-  await addDoc(collection(db,'posts'), {
-    authorId: state.user.uid,
-    author: {
-      name: state.profile.name, username: state.profile.username,
-      avatarUrl: state.profile.avatarUrl || '',
-      grad: state.profile.grad || pickGrad(state.user.uid)
-    },
-    text: data.text, media: data.media || '', place: data.place || '',
-    likes: 0, comments: 0, createdAt: serverTimestamp()
-  });
-  toast('تم النشر ✓');
+async function toggleProfileLike(targetUid){
+  if(targetUid === state.user.uid) return toast('لا يمكنك إعجاب ملفك');
+  const likeRef = doc(db,'profileLikes',`${state.user.uid}_${targetUid}`);
+  const snap = await getDoc(likeRef);
+  try {
+    if(snap.exists()){
+      await deleteDoc(likeRef);
+      await updateDoc(doc(db,'users',targetUid), { likesProfile: increment(-1) });
+      toast('تم إزالة الإعجاب');
+    } else {
+      await setDoc(likeRef, { from: state.user.uid, to: targetUid, createdAt: serverTimestamp() });
+      await updateDoc(doc(db,'users',targetUid), { likesProfile: increment(1) });
+      await notify(targetUid, 'like', `<b>${esc(state.profile.name)}</b> أعجبه ملفك الشخصي`);
+      toast('تم إعجاب الملف ✓');
+    }
+  } catch(e){ toast('تعذّر التحديث'); }
 }
 
+async function sendSupport(targetUid){
+  if(targetUid === state.user.uid) return toast('لا يمكنك دعم نفسك');
+  const today = new Date().toISOString().split('T')[0];
+  const supportId = `${state.user.uid}_${targetUid}_${today}`;
+  const supportRef = doc(db,'supports',supportId);
+  const snap = await getDoc(supportRef);
+  if(snap.exists()) return toast('دعمت هذا اللاعب اليوم بالفعل');
+  try {
+    await setDoc(supportRef, { from: state.user.uid, to: targetUid, date: today, createdAt: serverTimestamp() });
+    await updateDoc(doc(db,'users',targetUid), { support: increment(10) });
+    await notify(targetUid, 'support', `<b>${esc(state.profile.name)}</b> أرسل لك 10 نقاط دعم`);
+    toast('تم إرسال 10 نقاط دعم ✓');
+  } catch(e){ toast('فشل الدعم'); }
+}
+
+/* ============ Comments ============ */
+async function loadComments(postId){
+  try {
+    const q = query(collection(db,'posts',postId,'comments'), orderBy('createdAt','asc'), limit(100));
+    const snap = await getDocs(q);
+    state.comments[postId] = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  } catch(e){ state.comments[postId] = []; }
+}
+
+async function addComment(postId, text){
+  if(!text.trim()) return;
+  try {
+    const postSnap = await getDoc(doc(db,'posts',postId));
+    const postData = postSnap.exists() ? postSnap.data() : null;
+    await addDoc(collection(db,'posts',postId,'comments'), {
+      authorId: state.user.uid,
+      author: {
+        name: state.profile.name,
+        username: state.profile.username,
+        avatarUrl: state.profile.avatarUrl || '',
+        grad: state.profile.grad || pickGrad(state.user.uid)
+      },
+      text, createdAt: serverTimestamp()
+    });
+    await updateDoc(doc(db,'posts',postId), { comments: increment(1) });
+    if(postData && postData.authorId !== state.user.uid){
+      await notify(postData.authorId, 'comment', `<b>${esc(state.profile.name)}</b> علّق على منشورك`);
+    }
+    await loadComments(postId);
+  } catch(e){ toast('فشل إضافة التعليق'); }
+}
+
+async function deleteComment(postId, commentId){
+  if(!confirm('حذف هذا التعليق؟')) return;
+  try {
+    await deleteDoc(doc(db,'posts',postId,'comments',commentId));
+    await updateDoc(doc(db,'posts',postId), { comments: increment(-1) });
+    await loadComments(postId);
+    render();
+  } catch(e){ toast('فشل الحذف'); }
+}
+
+async function openCommentsModal(postId){
+  await loadComments(postId);
+  const post = state.posts.find(p=>p.id===postId);
+  const comments = state.comments[postId] || [];
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">التعليقات (${comments.length})</h3>
+      <button class="icon-btn" data-action="modal-close">${ic('close','sm')}</button>
+    </div>
+    <div style="max-height:55vh;overflow-y:auto;padding-inline-end:4px" id="commentsList">
+      ${comments.length ? comments.map(c=>`
+        <div class="comment-item">
+          ${avatar(c.author, 36)}
+          <div class="comment-body">
+            <div class="comment-name">${esc(c.author?.name||'')} <span class="comment-time">${timeAgo(c.createdAt)}</span></div>
+            <div class="comment-text">${esc(c.text)}</div>
+          </div>
+          ${c.authorId === state.user.uid
+            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)" data-delete-comment="${c.id}" data-post-id="${postId}">${ic('trash','xs')}</button>`
+            : ''}
+        </div>`).join('') : `<div class="empty" style="padding:30px 0">${ic('comment')}<div>لا تعليقات بعد — كن الأول</div></div>`}
+    </div>
+    <div class="comment-input-wrap">
+      ${avatar(state.profile, 36)}
+      <input class="input" id="commentInput" placeholder="أضف تعليقاً…" style="flex:1" autocomplete="off">
+      <button class="btn btn-primary" style="padding:10px 14px" id="sendCommentBtn" data-post-id="${postId}">${ic('send','sm')}</button>
+    </div>`);
+}
+
+/* ============ Create Post ============ */
+async function createPost(data){
+  const btn = document.getElementById('submitPost');
+  if(btn) btn.disabled = true;
+  try {
+    let mediaUrl = '';
+    if(state.pendingImages.post){
+      const prog = document.getElementById('postUploadProgress');
+      if(prog) prog.classList.add('active');
+      try {
+        mediaUrl = await imageToBase64(state.pendingImages.post, 'post', p => {
+          const bar = prog?.querySelector('span');
+          if(bar) bar.style.width = p + '%';
+        });
+      } catch(e) {
+        toast(e.message || 'فشل رفع الصورة');
+        if(btn) btn.disabled = false;
+        return;
+      }
+    }
+    
+    await addDoc(collection(db,'posts'), {
+      authorId: state.user.uid,
+      author: {
+        name: state.profile.name,
+        username: state.profile.username,
+        avatarUrl: state.profile.avatarUrl || '',
+        grad: state.profile.grad || pickGrad(state.user.uid)
+      },
+      text: data.text,
+      media: mediaUrl,  // Base64 data URL
+      place: data.place || '',
+      likes: 0, comments: 0,
+      createdAt: serverTimestamp()
+    });
+    closeModal();
+    toast('تم النشر ✓');
+  } catch(e){
+    console.error(e);
+    toast('فشل النشر: ' + (e.message || ''));
+    if(btn) btn.disabled = false;
+  }
+}
+
+async function deletePost(postId){
+  if(!confirm('حذف هذا المنشور؟')) return;
+  try {
+    await deleteDoc(doc(db,'posts',postId));
+    toast('تم الحذف');
+  } catch(e){ toast('فشل الحذف'); }
+}
+
+/* ============ Chat ============ */
 async function sendMessage(chatId, text){
   await addDoc(collection(db,'chats',chatId,'messages'), {
     senderId: state.user.uid, text, createdAt: serverTimestamp()
@@ -518,7 +775,6 @@ async function openOrCreateChat(otherUid){
   return chatId;
 }
 
-/* ★ إصلاح جوهري: openChat يربط listener للرسائل ويلغي السابق */
 async function openChat(uid){
   if(state.chatUnsub){ try{state.chatUnsub();}catch(e){} state.chatUnsub = null; }
   const chatId = await openOrCreateChat(uid);
@@ -531,12 +787,175 @@ async function openChat(uid){
   });
 }
 
-/* ============ الصفحات ============ */
+/* ============ Games ============ */
+async function startMatchmaking(gameId){
+  openModal(`<div class="match-screen">
+    <h3>جاري البحث…</h3>
+    <div class="sub">${GAMES.find(g=>g.id===gameId).name}</div>
+    <div class="spinner"></div>
+    <div class="muted" id="mmStatus">نبحث عن خصم…</div>
+  </div>`);
+  try {
+    const q = query(
+      collection(db,'rooms'),
+      where('gameId','==',gameId),
+      where('public','==',true),
+      where('status','==','waiting'),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    if(!snap.empty){
+      const roomDoc = snap.docs[0];
+      if(roomDoc.data().hostId === state.user.uid){
+        toast('أنت بالفعل في غرفة انتظار'); closeModal(); return;
+      }
+      await updateDoc(roomDoc.ref, {
+        players: arrayUnion(state.user.uid), status: 'playing'
+      });
+      closeModal();
+      toast('تم إيجاد خصم! بدأت المباراة 🎮');
+      return;
+    }
+    const newRoom = await addDoc(collection(db,'rooms'), {
+      gameId, hostId: state.user.uid, name: 'مباراة سريعة',
+      players: [state.user.uid], maxPlayers: 2, mode: '1v1',
+      public: true, status: 'waiting', createdAt: serverTimestamp()
+    });
+    const mmEl = document.getElementById('mmStatus');
+    if(mmEl) mmEl.textContent = 'غرفتك جاهزة — انتظر خصماً…';
+    let attempts = 0;
+    state.mmInterval = setInterval(async ()=>{
+      attempts++;
+      if(attempts > 45 || !document.querySelector('.match-screen')){
+        clearInterval(state.mmInterval); state.mmInterval = null; return;
+      }
+      try {
+        const roomSnap = await getDoc(newRoom);
+        if(roomSnap.exists()){
+          const data = roomSnap.data();
+          if(data.status === 'playing' && (data.players||[]).length > 1){
+            clearInterval(state.mmInterval); state.mmInterval = null;
+            closeModal();
+            toast('بدأت المباراة! 🎮');
+          }
+        }
+      } catch(e){}
+    }, 2000);
+  } catch(e){
+    if(e.code === 'failed-precondition'){ toast('يجب إنشاء فهرس Firestore'); }
+    else { toast('خطأ: ' + (e.message||'')); }
+    closeModal();
+  }
+}
+
+async function confirmCreateRoom(gameId){
+  const name = document.getElementById('rName').value.trim() || 'غرفة بدون اسم';
+  const pub = document.getElementById('rType').value === 'public';
+  const max = parseInt(document.getElementById('rMax').value);
+  try {
+    await addDoc(collection(db,'rooms'), {
+      gameId, hostId: state.user.uid, name,
+      players: [state.user.uid], maxPlayers: max,
+      mode: max===2?'1v1':'فرق', public: pub,
+      status: 'waiting', createdAt: serverTimestamp()
+    });
+    closeModal(); toast('تم إنشاء الغرفة ✓');
+  } catch(e){ toast('فشل الإنشاء'); }
+}
+
+async function joinRoom(roomId){
+  try {
+    await updateDoc(doc(db,'rooms',roomId), {
+      players: arrayUnion(state.user.uid), status: 'playing'
+    });
+    toast('انضممت للغرفة ✓');
+  } catch(e){ toast('تعذّر الانضمام'); }
+}
+
+async function leaveRoom(roomId){
+  try {
+    await updateDoc(doc(db,'rooms',roomId), {
+      players: arrayRemove(state.user.uid), status: 'waiting'
+    });
+    toast('تم إلغاء الغرفة');
+  } catch(e){ toast('تعذّر الإلغاء'); }
+}
+
+/* ============ Teams ============ */
+async function createTeam(name, emblem, desc){
+  try {
+    const teamRef = await addDoc(collection(db,'teams'), {
+      name, emblem: emblem || '🛡️', description: desc,
+      leaderId: state.user.uid,
+      members: [state.user.uid],
+      points: 0, level: 1, createdAt: serverTimestamp()
+    });
+    await updateDoc(doc(db,'users',state.user.uid), {
+      teamId: teamRef.id, teamName: name, teamEmblem: emblem || '🛡️'
+    });
+    toast('تم إنشاء الفريق ✓');
+    return teamRef.id;
+  } catch(e){ toast('فشل الإنشاء'); throw e; }
+}
+
+async function joinTeam(teamId){
+  if(state.profile.teamId) return toast('أنت بالفعل في فريق');
+  try {
+    const teamRef = doc(db,'teams',teamId);
+    await updateDoc(teamRef, { members: arrayUnion(state.user.uid) });
+    const teamSnap = await getDoc(teamRef);
+    if(teamSnap.exists()){
+      const t = teamSnap.data();
+      await updateDoc(doc(db,'users',state.user.uid), {
+        teamId, teamName: t.name, teamEmblem: t.emblem || '🛡️'
+      });
+    }
+    toast('انضممت للفريق ✓');
+  } catch(e){ toast('فشل الانضمام'); }
+}
+
+async function leaveTeam(){
+  const tid = state.profile.teamId;
+  if(!tid) return toast('لست في فريق');
+  if(!confirm('مغادرة الفريق؟')) return;
+  try {
+    await updateDoc(doc(db,'teams',tid), { members: arrayRemove(state.user.uid) });
+    await updateDoc(doc(db,'users',state.user.uid), {
+      teamId:'', teamName:'', teamEmblem:''
+    });
+    toast('غادرت الفريق');
+  } catch(e){ toast('فشل المغادرة'); }
+}
+
+/* ============ Store ============ */
+async function buyItem(item){
+  if(!state.profile) return;
+  if((state.profile.coins || 0) < item.price) return toast('رصيد غير كافٍ');
+  try {
+    await runTransaction(db, async tx => {
+      const userRef = doc(db, 'users', state.user.uid);
+      const userSnap = await tx.get(userRef);
+      if (!userSnap.exists()) throw new Error('no user');
+      const current = userSnap.data().coins || 0;
+      if (current < item.price) throw new Error('insufficient');
+      tx.update(userRef, { coins: current - item.price });
+      const invRef = doc(collection(db, 'users', state.user.uid, 'inventory'));
+      tx.set(invRef, {
+        itemId: item.id, name: item.name, emoji: item.emoji,
+        price: item.price, purchasedAt: serverTimestamp()
+      });
+    });
+    toast(`تم شراء ${item.name} ✓`);
+  } catch (e) {
+    toast(e.message === 'insufficient' ? 'رصيد غير كافٍ' : 'فشل الشراء');
+  }
+}
+
+/* ============ Pages ============ */
 function emptyState(msg, icon='grid'){
   return `<div class="empty">${ic(icon)}<div>${msg}</div></div>`;
 }
 
-/* --- الرئيسية --- */
 function pageHome(){
   const tabs = `
     <div class="tabs">
@@ -556,7 +975,7 @@ function pageHome(){
       ${posts.length ? posts.map(p=>postCard(p)).join('') : emptyState('لا توجد منشورات بعد — كن أول من ينشر!')}`;
   } else if(state.homeTab === 'follow'){
     const posts = state.posts.filter(p=>state.followed.has(p.authorId));
-    body = posts.length ? posts.map(p=>postCard(p)).join('') : emptyState('تابع المزيد من الحسابات لتظهر منشوراتهم هنا','users');
+    body = posts.length ? posts.map(p=>postCard(p)).join('') : emptyState('تابع المزيد لتظهر منشوراتهم','users');
   } else {
     const posts = [...state.posts].sort((a,b)=>{
       const sa = ((a.likes*2)+(a.comments*3)) / Math.max(((Date.now()-(a.createdAt?.seconds*1000||0))/3600000), 0.4);
@@ -564,7 +983,7 @@ function pageHome(){
       return sb-sa;
     });
     body = `<div class="section-title">${ic('fire','sm')} الأكثر تفاعلاً</div>` +
-      (posts.length ? posts.map(p=>postCard(p,true)).join('') : emptyState('لا توجد منشورات دارجة بعد','fire'));
+      (posts.length ? posts.map(p=>postCard(p,true)).join('') : emptyState('لا توجد منشورات دارجة','fire'));
   }
   return `<h1 class="page-title">الرئيسية</h1>${tabs}${body}`;
 }
@@ -582,6 +1001,7 @@ function suggestCard(u){
 function postCard(p, trendMode=false){
   const liked = state.liked[p.id];
   const saved = state.saved[p.id];
+  const isMine = p.authorId === state.user.uid;
   const score = (((p.likes||0)*2 + (p.comments||0)*3) / Math.max(((Date.now()-(p.createdAt?.seconds*1000||0))/3600000), 0.4)).toFixed(0);
   return `<article class="post card">
     <header class="post-h">
@@ -595,19 +1015,19 @@ function postCard(p, trendMode=false){
         </div>
       </div>
       ${trendMode ? `<span class="pill pink">${ic('fire','xs')} ${nf(score)}</span>` : ''}
+      ${isMine ? `<button class="post-menu-btn" data-delete-post="${p.id}" title="حذف">${ic('trash','sm')}</button>` : ''}
     </header>
     <p class="post-text">${esc(p.text).replace(/\n/g,'<br>')}</p>
     ${p.media ? `<div class="post-media"><img src="${esc(p.media)}" alt="" onerror="this.style.display='none'"></div>` : ''}
     <div class="post-actions">
       <button class="pact ${liked?'liked':''}" data-like="${p.id}">${ic('heart','sm')} ${nf(p.likes)}</button>
-      <button class="pact" data-action="toast" data-msg="التعليقات قريباً">${ic('comment','sm')} ${nf(p.comments)}</button>
-      <button class="pact" data-action="toast" data-msg="تم نسخ الرابط"><${ic('share','sm')}</button>
+      <button class="pact" data-open-comments="${p.id}">${ic('comment','sm')} ${nf(p.comments)}</button>
+      <button class="pact" data-action="toast" data-msg="تم نسخ الرابط">${ic('share','sm')}</button>
       <button class="pact ml ${saved?'saved':''}" data-save="${p.id}">${ic('bookmark','sm')}</button>
     </div>
   </article>`;
 }
 
-/* --- الرسائل --- */
 function pageMessages(){
   if(state.chatWith){
     const other = state.users[state.chatWith];
@@ -641,7 +1061,7 @@ function pageMessages(){
           <div class="chat-last">${esc(c.lastMessage||'بداية المحادثة')}</div>
         </div>
       </button>`;
-    }).join('') : emptyState('لا توجد محادثات — ابدأ بمراسلة صديق','message')}
+    }).join('') : emptyState('لا توجد محادثات','message')}
     </div>`;
 }
 
@@ -656,7 +1076,6 @@ function renderMessages(chatId){
   box.scrollTop = box.scrollHeight;
 }
 
-/* --- الألعاب --- */
 function pageGames(){
   if(state.activeGame){
     const g = GAMES.find(x=>x.id===state.activeGame);
@@ -704,7 +1123,7 @@ function pageGames(){
               ? `<button class="btn btn-ghost btn-sm" data-leave-room="${r.id}">إلغاء</button>`
               : `<button class="btn btn-primary btn-sm" data-join-room="${r.id}">انضمام</button>`}
           </div>`;
-        }).join('') : `<div class="empty-sm">لا توجد غرف مفتوحة — أنشئ واحدة</div>`}
+        }).join('') : `<div class="empty-sm">لا توجد غرف مفتوحة</div>`}
       </div>`;
   }
   return `<h1 class="page-title">الألعاب</h1>
@@ -723,140 +1142,93 @@ function pageGames(){
     </div>`;
 }
 
-/* ★ Matchmaking مع استقصاء دوري (polling) لالتقاط الخصم */
-async function startMatchmaking(gameId){
-  openModal(`<div class="match-screen">
-    <h3>جاري البحث…</h3>
-    <div class="sub">${GAMES.find(g=>g.id===gameId).name}</div>
-    <div class="spinner"></div>
-    <div class="muted" id="mmStatus">نبحث عن خصم…</div>
-  </div>`);
-  try {
-    const q = query(
-      collection(db,'rooms'),
-      where('gameId','==',gameId),
-      where('public','==',true),
-      where('status','==','waiting'),
-      limit(1)
-    );
-    const snap = await getDocs(q);
-    if(!snap.empty){
-      const roomDoc = snap.docs[0];
-      if(roomDoc.data().hostId === state.user.uid){
-        toast('أنت بالفعل في غرفة انتظار');
-        closeModal();
-        return;
-      }
-      await updateDoc(roomDoc.ref, {
-        players: arrayUnion(state.user.uid),
-        status: 'playing'
-      });
-      closeModal();
-      toast('تم إيجاد خصم! بدأت المباراة 🎮');
-      return;
-    }
-    // لا توجد غرفة → أنشئ واحدة وراقبها
-    const newRoom = await addDoc(collection(db,'rooms'), {
-      gameId, hostId: state.user.uid, name: 'مباراة سريعة',
-      players: [state.user.uid], maxPlayers: 2, mode: '1v1',
-      public: true, status: 'waiting', createdAt: serverTimestamp()
-    });
-    const mmEl = document.getElementById('mmStatus');
-    if(mmEl) mmEl.textContent = 'غرفتك جاهزة — انتظر خصماً…';
-
-    let attempts = 0;
-    state.mmInterval = setInterval(async ()=>{
-      attempts++;
-      if(attempts > 45 || !document.querySelector('.match-screen')){
-        clearInterval(state.mmInterval); state.mmInterval = null;
-        return;
-      }
-      try {
-        const roomSnap = await getDoc(newRoom);
-        if(roomSnap.exists()){
-          const data = roomSnap.data();
-          if(data.status === 'playing' && (data.players||[]).length > 1){
-            clearInterval(state.mmInterval); state.mmInterval = null;
-            closeModal();
-            toast('بدأت المباراة! 🎮');
-          }
-        }
-      } catch(e){ /* silent */ }
-    }, 2000);
-  } catch(e){
-    console.error(e);
-    if(e.code === 'failed-precondition'){
-      toast('يجب إنشاء فهرس Firestore — راجع Console');
-    } else {
-      toast('خطأ في البحث: ' + (e.message||''));
-    }
-    closeModal();
-  }
-}
-
-async function createRoom(gameId){
-  openModal(`
-    <h3>إنشاء غرفة</h3>
-    <div class="sub">غرفة عامة أو خاصة</div>
-    <div class="field"><label>اسم الغرفة</label><input class="input" id="rName" placeholder="مثال: تحدي المساء"></div>
-    <div class="field"><label>النوع</label>
-      <select class="input" id="rType"><option value="public">🌐 عامة</option><option value="private">🔒 خاصة</option></select>
-    </div>
-    <div class="field"><label>عدد اللاعبين</label>
-      <select class="input" id="rMax"><option>2</option><option>4</option><option>8</option><option>10</option></select>
-    </div>
-    <div class="row" style="margin-top:16px">
-      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
-      <button class="btn btn-primary" style="flex:1" data-create-room="${gameId}">إنشاء</button>
-    </div>`);
-}
-
-async function confirmCreateRoom(gameId){
-  const name = document.getElementById('rName').value.trim() || 'غرفة بدون اسم';
-  const pub = document.getElementById('rType').value === 'public';
-  const max = parseInt(document.getElementById('rMax').value);
-  try {
-    await addDoc(collection(db,'rooms'), {
-      gameId, hostId: state.user.uid, name,
-      players: [state.user.uid], maxPlayers: max,
-      mode: max===2?'1v1':'فرق', public: pub,
-      status: 'waiting', createdAt: serverTimestamp()
-    });
-    closeModal(); toast('تم إنشاء الغرفة ✓');
-  } catch(e){ toast('فشل الإنشاء'); }
-}
-
-async function joinRoom(roomId){
-  try {
-    await updateDoc(doc(db,'rooms',roomId), {
-      players: arrayUnion(state.user.uid), status: 'playing'
-    });
-    toast('انضممت للغرفة ✓');
-  } catch(e){ toast('تعذّر الانضمام'); }
-}
-
-async function leaveRoom(roomId){
-  try {
-    await updateDoc(doc(db,'rooms',roomId), {
-      players: arrayRemove(state.user.uid), status: 'waiting'
-    });
-    toast('تم إلغاء الغرفة');
-  } catch(e){ toast('تعذّر الإلغاء'); }
-}
-
-/* --- الفرق --- */
+/* ============ Teams Page ============ */
 function pageTeams(){
-  return `<h1 class="page-title">الفرق</h1>
-    <div class="card" style="padding:22px;text-align:center">
-      ${ic('users')}
-      <div style="font-size:15px;font-weight:900;margin-top:10px">نظام الفرق قادم قريباً</div>
-      <div class="muted" style="margin-top:6px;line-height:1.8">
-        إنشاء الفرق، الانضمام، والحروب الدورية في التحديث القادم.
+  const myTeam = state.profile?.teamId ? state.teams.find(t=>t.id===state.profile.teamId) : null;
+
+  if(state.viewingTeamId){
+    const t = state.teams.find(x=>x.id===state.viewingTeamId);
+    if(!t) return emptyState('الفريق غير موجود','users');
+    const isMember = (t.members||[]).includes(state.user.uid);
+    const isLeader = t.leaderId === state.user.uid;
+    return `
+      <div class="row" style="margin-bottom:14px">
+        <button class="icon-btn" data-action="back-to-teams">${ic('back','sm')}</button>
+        <div style="font-size:15px;font-weight:900">الفريق</div>
       </div>
-    </div>`;
+      <div class="team-page-hero">
+        <div class="team-emblem-lg" style="background-image:${t.emblemUrl?`url(${esc(t.emblemUrl)})`:'none'}">${t.emblemUrl?'':(t.emblem||'🛡️')}</div>
+        <div class="team-name-lg">${esc(t.name)}</div>
+        <div class="team-desc-lg">${esc(t.description||'')}</div>
+        <div class="team-hero-stats">
+          <div><div class="v">${nf(t.points||0)}</div><div class="l">نقاط</div></div>
+          <div><div class="v">${(t.members||[]).length}</div><div class="l">أعضاء</div></div>
+          <div><div class="v">${t.level||1}</div><div class="l">مستوى</div></div>
+        </div>
+      </div>
+      <div class="pc-actions" style="margin-bottom:14px">
+        ${isMember
+          ? (isLeader
+              ? `<button class="btn btn-ghost" data-action="toast" data-msg="إدارة الفريق">${ic('settings','sm')} إدارة</button>
+                 <button class="btn btn-danger" data-action="leave-team">مغادرة</button>`
+              : `<button class="btn btn-danger" data-action="leave-team">مغادرة</button>`)
+          : (state.profile.teamId
+              ? `<button class="btn btn-ghost" disabled style="opacity:.5">أنت في فريق آخر</button>`
+              : `<button class="btn btn-primary" data-join-team="${t.id}" style="flex:1">${ic('plus','sm')} انضمام للفريق</button>`)}
+      </div>
+      <div class="section-title">${ic('users','sm')} الأعضاء (${(t.members||[]).length})</div>
+      ${(t.members||[]).map(uid=>{
+        const u = state.users[uid];
+        if(!u) return '';
+        return `<div class="card" style="margin-bottom:8px;padding:11px"><div class="row">
+          ${avatar(u, 40)}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800">${esc(u.name)} ${uid===t.leaderId?'<span class="pill gold" style="font-size:9px">قائد</span>':''}</div>
+            <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" data-view-profile="${uid}">عرض</button>
+        </div></div>`;
+      }).join('')}`;
+  }
+
+  return `<h1 class="page-title">الفرق</h1>
+    ${myTeam ? `
+      <div class="team-card">
+        <div class="team-row">
+          <div class="team-emblem">${myTeam.emblem||'🛡️'}</div>
+          <div style="flex:1;min-width:0">
+            <div class="team-n">${esc(myTeam.name)} <span class="pill gold" style="font-size:9px">فريقي</span></div>
+            <div class="team-m">${(myTeam.members||[]).length} عضو · نقاط ${nf(myTeam.points||0)}</div>
+          </div>
+          <button class="btn btn-primary btn-sm" data-open-team="${myTeam.id}">فتح</button>
+        </div>
+      </div>
+    ` : `
+      <div class="card" style="margin-bottom:14px;text-align:center;padding:22px">
+        ${ic('users')}
+        <div style="font-size:15px;font-weight:900;margin-top:10px">أنت لست في فريق</div>
+        <div class="muted" style="margin:6px 0 14px">انضم إلى فريق أو أنشئ واحداً</div>
+        <button class="btn btn-primary" data-action="create-team" style="width:100%">${ic('plus','sm')} إنشاء فريق جديد</button>
+      </div>
+    `}
+    <div class="section-title">${ic('trophy','sm')} ترتيب الفرق</div>
+    ${state.teams.length ? state.teams.map((t,i)=>`
+      <div class="card" style="margin-bottom:9px;padding:13px;cursor:pointer" data-open-team="${t.id}">
+        <div class="row">
+          <div class="lb-rank ${i<3?'r'+(i+1):''}">${i+1}</div>
+          <div class="team-emblem" style="width:42px;height:42px;font-size:19px;border-radius:13px">${t.emblem||'🛡️'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13.5px;font-weight:800">${esc(t.name)}</div>
+            <div class="muted" style="font-size:10.5px">${(t.members||[]).length} عضو · مستوى ${t.level||1}</div>
+          </div>
+          <div style="text-align:left">
+            <div style="font-size:13px;font-weight:900;color:var(--brand-2)">${nf(t.points||0)}</div>
+            <div class="muted" style="font-size:9.5px">نقطة</div>
+          </div>
+        </div>
+      </div>`).join('') : emptyState('لا توجد فرق بعد — كن أول من ينشئ','users')}`;
 }
 
-/* --- المتجر --- */
 function pageStore(){
   return `
     <div class="row" style="margin-bottom:14px">
@@ -871,21 +1243,17 @@ function pageStore(){
             <div class="si-n">${s.name}</div>
             <div class="si-buy">
               <div class="si-price">${ic('coin')} ${nf(s.price)}</div>
-              <button class="btn btn-primary btn-sm" data-action="toast" data-msg="الشراء قريباً">شراء</button>
+              <button class="btn btn-primary btn-sm" data-buy-item="${s.id}">شراء</button>
             </div>
           </div>
         </div>`).join('')}
     </div>`;
 }
 
-/* --- الملف الشخصي --- */
 function pageProfile(){
   const p = state.profile;
   if(!p){
-    return `<div class="empty" style="padding-top:80px">
-      <div class="spinner"></div>
-      <div>جاري تحميل الملف الشخصي…</div>
-    </div>`;
+    return `<div class="empty" style="padding-top:80px"><div class="spinner"></div><div>جاري تحميل الملف…</div></div>`;
   }
   const tabs = [
     {id:'posts', label:'المنشورات', icon:'grid'},
@@ -901,7 +1269,7 @@ function pageProfile(){
     const saved = state.posts.filter(x=>state.saved[x.id]);
     body = saved.length ? saved.map(x=>postCard(x)).join('') : emptyState('لا توجد منشورات محفوظة','bookmark');
   } else if(state.profileTab === 'history'){
-    body = `<div class="card" style="text-align:center;padding:30px"><div class="muted">سيظهر سجل مبارياتك هنا بعد لعب أول مباراة</div></div>`;
+    body = `<div class="card" style="text-align:center;padding:30px"><div class="muted">سيظهر سجل مبارياتك هنا</div></div>`;
   } else {
     body = `<div class="card" style="text-align:center;padding:30px"><div class="muted">ستظهر إحصائياتك لكل لعبة هنا</div></div>`;
   }
@@ -916,7 +1284,7 @@ function pageProfile(){
         <div class="pc-info">
           <div class="pc-nick">${esc(p.name)}</div>
           <div class="pc-user">@${esc(p.username)}</div>
-          ${p.team ? `<div class="pc-team">${esc(p.team)}</div>` : ''}
+          ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
           <div class="pc-bio">${esc(p.bio||'')}</div>
         </div>
         <div class="pc-avatar">${avatar(p, 82)}</div>
@@ -927,7 +1295,7 @@ function pageProfile(){
       </div>
     </div>
     <div class="pc-actions">
-      <button data-action="edit-profile">${ic('edit','sm')} تعديل الملف</button>
+      <button data-action="edit-profile">${ic('edit','sm')} تعديل</button>
       <button data-action="toast" data-msg="المتابِعون">${ic('users','sm')} ${nf(p.followers)}</button>
       <button data-action="toast" data-msg="يتابع">${ic('user','sm')} ${nf(p.following)}</button>
     </div>
@@ -942,11 +1310,11 @@ function pageProfile(){
     ${body}`;
 }
 
-/* ★ جديد: صفحة عرض ملف مستخدم آخر */
 function pageUserProfile(){
   const p = state.users[state.viewingUid];
   if(!p) return emptyState('المستخدم غير موجود','user');
   const on = state.followed.has(state.viewingUid);
+  const liked = state.profileLiked[state.viewingUid];
   const myPosts = state.posts.filter(x=>x.authorId === state.viewingUid);
   return `
     <div class="row" style="margin-bottom:14px">
@@ -963,7 +1331,7 @@ function pageUserProfile(){
         <div class="pc-info">
           <div class="pc-nick">${esc(p.name)}</div>
           <div class="pc-user">@${esc(p.username)}</div>
-          ${p.team ? `<div class="pc-team">${esc(p.team)}</div>` : ''}
+          ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
           <div class="pc-bio">${esc(p.bio||'')}</div>
         </div>
         <div class="pc-avatar">${avatar(p, 82)}</div>
@@ -973,9 +1341,19 @@ function pageUserProfile(){
         <div class="pc-level-num">المستوى ${p.level||1}</div>
       </div>
     </div>
-    <div class="pc-actions">
-      <button class="btn-follow-wide ${on?'on':''}" data-follow="${state.viewingUid}">${on?'متابَع ✓':'متابعة'}</button>
-      <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-open-chat="${state.viewingUid}">${ic('message','sm')} رسالة</button>
+    <div class="pc-actions" style="flex-wrap:wrap">
+      <button class="btn-follow-wide ${on?'on':''}" data-follow="${state.viewingUid}" style="flex:1 1 100%">
+        ${on?'متابَع ✓':'متابعة'}
+      </button>
+      <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-open-chat="${state.viewingUid}">
+        ${ic('message','sm')} رسالة
+      </button>
+      <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-profile-like="${state.viewingUid}">
+        ${ic('heart','sm')} ${liked?'إزالة الإعجاب':'إعجاب الملف'}
+      </button>
+      <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-support="${state.viewingUid}">
+        ${ic('star','sm')} دعم +10
+      </button>
     </div>
     <div class="pc-stats">
       <div class="pc-stat f"><div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div></div>
@@ -986,14 +1364,13 @@ function pageUserProfile(){
     ${myPosts.length ? myPosts.map(x=>postCard(x)).join('') : emptyState('لا توجد منشورات','grid')}`;
 }
 
-/* --- البحث --- */
 function pageSearch(){
   return `<h1 class="page-title">البحث</h1>
     <div class="search-bar">${ic('search','sm')}
       <input id="searchInput" placeholder="ابحث عن مستخدم، لعبة، فريق…" value="${esc(state.searchQ)}" autocomplete="off">
     </div>
     <div class="chips">
-      ${[['all','الكل'],['users','مستخدمون'],['games','ألعاب']].map(([k,l])=>
+      ${[['all','الكل'],['users','مستخدمون'],['games','ألعاب'],['teams','فرق']].map(([k,l])=>
         `<button class="chip ${state.searchCat===k?'active':''}" data-scat="${k}">${l}</button>`).join('')}
     </div>
     <div id="searchResults"></div>`;
@@ -1027,21 +1404,29 @@ function renderSearchResults(){
         <button class="btn btn-primary btn-sm" data-game-open="${g.id}">لعب</button>
         </div></div>`).join('');
   }
+  if(cat==='all' || cat==='teams'){
+    const ts = state.teams.filter(t=>t.name.toLowerCase().includes(term));
+    if(ts.length) html += `<div class="section-title">${ic('users','sm')} فرق</div>` +
+      ts.map(t=>`<div class="card" style="margin-bottom:8px;padding:11px"><div class="row">
+        <div class="team-emblem" style="width:42px;height:42px;font-size:19px">${t.emblem||'🛡️'}</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:800">${esc(t.name)}</div>
+        <div class="muted" style="font-size:10.5px">${(t.members||[]).length} عضو</div></div>
+        <button class="btn btn-primary btn-sm" data-open-team="${t.id}">فتح</button>
+        </div></div>`).join('');
+  }
   box.innerHTML = html || `<div class="empty">${ic('search')}<div>لا نتائج لـ «${esc(state.searchQ)}»</div></div>`;
 }
 
-/* --- الإشعارات --- */
 function pageNotifs(){
   state.notifRead = true;
   renderTopbar();
-  // علّم كمقروء في Firestore
   const unread = state.notifs.filter(n=>!n.read);
   if(unread.length){
     Promise.all(unread.map(n =>
       updateDoc(doc(db,'notifications',state.user.uid,'items',n.id), { read: true }).catch(()=>{})
     ));
   }
-  const icons = {like:'heart', follow:'user', game:'gamepad', comment:'comment'};
+  const icons = {like:'heart', follow:'user', game:'gamepad', comment:'comment', support:'star'};
   if(!state.notifs.length){
     return `<h1 class="page-title">الإشعارات</h1>${emptyState('لا توجد إشعارات','bell')}`;
   }
@@ -1049,16 +1434,15 @@ function pageNotifs(){
     <div class="card pad0" style="padding:6px">
     ${state.notifs.map(n=>`
       <div class="notif-item ${n.read?'':'unread'}">
-        <div class="notif-ic ${n.type}">${ic(icons[n.type]||'bell','sm')}</div>
+        <div class="notif-ic ${n.type||''}">${ic(icons[n.type]||'bell','sm')}</div>
         <div style="flex:1;min-width:0">
-          <div class="notif-txt">${n.text||''}</div>
+          <div class="notif-txt">${n.text||'إشعار جديد'}</div>
           <div class="notif-time">${timeAgo(n.createdAt)}</div>
         </div>
       </div>`).join('')}
     </div>`;
 }
 
-/* --- المقربون / إحصائيات / إنجازات --- */
 function pageCloseFriends(){
   const list = Object.values(state.users).filter(u=>u.uid !== state.user.uid).slice(0,10);
   return `<h1 class="page-title">المقربون</h1>
@@ -1084,8 +1468,7 @@ function pageStats(){
       <div class="stat-box"><div class="sv">${nf(p.likesProfile)}</div><div class="sl">إعجابات الملف</div></div>
       <div class="stat-box"><div class="sv">${nf(p.likesGames)}</div><div class="sl">إعجابات اللعب</div></div>
       <div class="stat-box"><div class="sv">${nf(p.followers)}</div><div class="sl">المتابِعون</div></div>
-    </div>
-    <div class="card"><div class="muted" style="text-align:center;padding:20px">المزيد من الإحصائيات بعد لعب مباريات</div></div>`;
+    </div>`;
 }
 
 function pageAchievements(){
@@ -1116,7 +1499,7 @@ function pageLeaderboard(){
     <div class="chips" style="margin-bottom:14px">
       ${tabs.map(([k,l])=>`<button class="chip ${state.lbTab===k?'active':''}" data-lb="${k}">${l}</button>`).join('')}
     </div>
-    ${users.length ? users.map((u,i)=>`<div class="lb-row ${u.uid===state.user.uid?'me':''}">
+    ${users.length ? users.map((u,i)=>`<div class="lb-row ${u.uid===state.user.uid?'me':''}" data-view-profile="${u.uid}" style="cursor:pointer">
       <div class="lb-rank ${i<3?'r'+(i+1):''}">${i+1}</div>
       ${avatar(u,40)}
       <div class="lb-mid"><div class="lb-n">${esc(u.name)} ${u.uid===state.user.uid?'<span class="pill" style="font-size:9px">أنت</span>':''}</div>
@@ -1152,8 +1535,8 @@ function pageSettings(){
     </div>
     <div class="set-group">
       <h4>عن التطبيق</h4>
-      <div class="set-row" data-action="toast" data-msg="الإصدار 1.1.0">
-        <div class="sr-txt"><div class="sr-n">الإصدار</div><div class="sr-d">1.1.0</div></div>
+      <div class="set-row" data-action="toast" data-msg="الإصدار 2.0.0">
+        <div class="sr-txt"><div class="sr-n">الإصدار</div><div class="sr-d">2.0.0</div></div>
         ${ic('star','sm')}
       </div>
     </div>`;
@@ -1214,7 +1597,7 @@ function pageLogout(){
   </div>`;
 }
 
-/* ============ الموجّه ============ */
+/* ============ Router ============ */
 const PAGES = {
   home:pageHome, messages:pageMessages, games:pageGames, teams:pageTeams,
   store:pageStore, profile:pageProfile, userprofile:pageUserProfile,
@@ -1228,16 +1611,13 @@ function render(){
   renderNav();
   const fn = PAGES[state.page] || pageHome;
   const result = fn();
-
-  // دعم الصفحات المزامنة وغير المزامنة
   if(result && typeof result.then === 'function'){
     result.then(html => {
       document.getElementById('app').innerHTML = html || '';
       if(state.page === 'search') renderSearchResults();
     }).catch(err => {
-      console.error('Page render error:', err);
-      document.getElementById('app').innerHTML =
-        `<div class="empty">${ic('close')}<div>حدث خطأ في تحميل الصفحة</div></div>`;
+      console.error('Render error:', err);
+      document.getElementById('app').innerHTML = `<div class="empty">${ic('close')}<div>خطأ في التحميل</div></div>`;
     });
   } else {
     document.getElementById('app').innerHTML = result || '';
@@ -1248,26 +1628,68 @@ function render(){
   }
 }
 
-/* ============ مودالات ============ */
+/* ============ Modals with Image Upload ============ */
 function composeModal(){
+  state.pendingImages.post = null;
   openModal(`
     <h3>منشور جديد</h3>
-    <div class="field"><textarea class="input" id="composeText" rows="4" placeholder="بماذا تفكر؟" style="resize:vertical"></textarea></div>
-    <div class="field"><label>رابط صورة (اختياري)</label><input class="input" id="composeMedia" placeholder="https://…"></div>
+    <div class="field">
+      <textarea class="input" id="composeText" rows="4" placeholder="بماذا تفكر؟" style="resize:vertical;max-height:200px"></textarea>
+      <div class="char-counter" id="composeCounter">0 / 1000</div>
+    </div>
+    <div class="img-field">
+      <label>صورة (اختياري)</label>
+      <div class="img-preview" id="postPreview" data-pick-image="post">
+        <div class="img-empty">${ic('camera')}<span>اضغط لاختيار صورة</span></div>
+        <span class="img-badge">تم الاختيار ✓</span>
+      </div>
+      <div class="img-upload-progress" id="postUploadProgress"><span></span></div>
+    </div>
     <div class="row" style="margin-top:14px">
       <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
       <button class="btn btn-primary" style="flex:1" id="submitPost">نشر</button>
     </div>`);
+  const textEl = document.getElementById('composeText');
+  const counter = document.getElementById('composeCounter');
+  textEl.addEventListener('input', ()=>{
+    const len = textEl.value.length;
+    counter.textContent = `${len} / 1000`;
+    counter.className = 'char-counter' + (len > 900 ? ' danger' : len > 750 ? ' warn' : '');
+    if(len > 1000) textEl.value = textEl.value.slice(0, 1000);
+  });
 }
 
 function editProfileModal(){
   const p = state.profile;
+  state.pendingImages.avatar = null;
+  state.pendingImages.cover = null;
   openModal(`
     <h3>تعديل الملف</h3>
-    <div class="field"><label>الاسم</label><input class="input" id="epName" value="${esc(p.name||'')}"></div>
-    <div class="field"><label>النبذة</label><textarea class="input" id="epBio" rows="3" style="resize:vertical">${esc(p.bio||'')}</textarea></div>
-    <div class="field"><label>رابط الصورة الشخصية</label><input class="input" id="epAvatar" value="${esc(p.avatarUrl||'')}" placeholder="https://…"></div>
-    <div class="field"><label>رابط صورة الغلاف</label><input class="input" id="epCover" value="${esc(p.coverUrl||'')}" placeholder="https://…"></div>
+    <div class="field">
+      <label>الاسم</label>
+      <input class="input" id="epName" value="${esc(p.name||'')}" maxlength="50">
+    </div>
+    <div class="field">
+      <label>النبذة</label>
+      <textarea class="input" id="epBio" rows="3" style="resize:vertical;max-height:120px" maxlength="200">${esc(p.bio||'')}</textarea>
+    </div>
+    <div class="img-field">
+      <label>الصورة الشخصية</label>
+      <div class="img-preview avatar-preview ${p.avatarUrl?'has-image':''}"
+           id="avatarPreview" data-pick-image="avatar"
+           style="background-image:${p.avatarUrl?`url(${esc(p.avatarUrl)})`:'none'}">
+        <div class="img-empty">${ic('camera')}<span style="font-size:10px">تغيير</span></div>
+      </div>
+    </div>
+    <div class="img-field">
+      <label>صورة الغلاف</label>
+      <div class="img-preview ${p.coverUrl?'has-image':''}"
+           id="coverPreview" data-pick-image="cover"
+           style="background-image:${p.coverUrl?`url(${esc(p.coverUrl)})`:'none'}">
+        <div class="img-empty">${ic('camera')}<span>اضغط لاختيار صورة غلاف</span></div>
+      </div>
+    </div>
+    <div class="img-upload-progress" id="profileUploadProgress"><span></span></div>
     <div class="row" style="margin-top:16px">
       <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
       <button class="btn btn-primary" style="flex:1" id="saveProfileBtn">حفظ</button>
@@ -1275,13 +1697,44 @@ function editProfileModal(){
 }
 
 async function saveProfileData(){
+  const btn = document.getElementById('saveProfileBtn');
   const name = document.getElementById('epName').value.trim();
   const bio = document.getElementById('epBio').value.trim();
-  const avatarUrl = document.getElementById('epAvatar').value.trim();
-  const coverUrl = document.getElementById('epCover').value.trim();
   if(!name){ toast('الاسم مطلوب'); return; }
+  btn.disabled = true;
+  btn.classList.add('loading');
   try {
+    const prog = document.getElementById('profileUploadProgress');
+    let avatarUrl = state.profile.avatarUrl || '';
+    let coverUrl = state.profile.coverUrl || '';
+
+    if(state.pendingImages.avatar){
+      prog.classList.add('active');
+      try {
+        avatarUrl = await imageToBase64(state.pendingImages.avatar, 'avatar', p => {
+          prog.querySelector('span').style.width = p + '%';
+        });
+      } catch(e) {
+        toast(e.message || 'فشل رفع الصورة');
+        btn.disabled = false; btn.classList.remove('loading');
+        return;
+      }
+    }
+    if(state.pendingImages.cover){
+      prog.classList.add('active');
+      try {
+        coverUrl = await imageToBase64(state.pendingImages.cover, 'cover', p => {
+          prog.querySelector('span').style.width = p + '%';
+        });
+      } catch(e) {
+        toast(e.message || 'فشل رفع الغلاف');
+        btn.disabled = false; btn.classList.remove('loading');
+        return;
+      }
+    }
+    
     await updateDoc(doc(db,'users',state.user.uid), { name, bio, avatarUrl, coverUrl });
+    
     // تحديث المنشورات القديمة
     try {
       const snap = await getDocs(query(collection(db,'posts'), where('authorId','==',state.user.uid)));
@@ -1289,62 +1742,121 @@ async function saveProfileData(){
         'author.name': name,
         'author.avatarUrl': avatarUrl
       })));
-    } catch(e){ /* silent */ }
+    } catch(e){}
+    
     closeModal();
     toast('تم الحفظ ✓');
-  } catch(e){ toast('فشل الحفظ'); }
+  } catch(e){
+    console.error(e);
+    toast('فشل الحفظ: ' + (e.message||''));
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
 }
 
-/* ============ الأحداث ============ */
+function createTeamModal(){
+  openModal(`
+    <h3>إنشاء فريق جديد</h3>
+    <div class="sub">اختر اسماً وشعاراً لفريقك</div>
+    <div class="field"><label>اسم الفريق</label>
+      <input class="input" id="teamName" placeholder="مثال: نسور الشرق" maxlength="30"></div>
+    <div class="field"><label>شعار (إيموجي)</label>
+      <input class="input" id="teamEmblem" placeholder="🛡️" maxlength="4" style="font-size:22px;text-align:center"></div>
+    <div class="field"><label>وصف</label>
+      <textarea class="input" id="teamDesc" rows="3" style="resize:vertical" maxlength="150" placeholder="فريق تنافسي..."></textarea></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="createTeamBtn">إنشاء</button>
+    </div>`);
+}
+
+/* ============ Event Handlers ============ */
 document.addEventListener('click', async (e)=>{
-  const t = e.target.closest('[data-nav], [data-action], [data-tab], [data-ptab], [data-follow], [data-like], [data-save], [data-chat], [data-open-chat], [data-game-open], [data-join-room], [data-leave-room], [data-create-room], [data-scat], [data-lb], [data-toggle], [data-view-profile], button');
+  // Image preview click
+  const imgEl = e.target.closest('[data-pick-image]');
+  if(imgEl){
+    const type = imgEl.dataset.pickImage;
+    pickImage(type, (previewUrl)=>{
+      const el = document.getElementById(type === 'post' ? 'postPreview' : type === 'avatar' ? 'avatarPreview' : 'coverPreview');
+      if(el){
+        el.style.backgroundImage = `url(${previewUrl})`;
+        el.classList.add('has-image');
+      }
+    });
+    return;
+  }
+
+  const t = e.target.closest('[data-nav], [data-action], [data-tab], [data-ptab], [data-follow], [data-like], [data-save], [data-chat], [data-open-chat], [data-game-open], [data-join-room], [data-leave-room], [data-create-room], [data-scat], [data-lb], [data-toggle], [data-view-profile], [data-open-comments], [data-delete-comment], [data-delete-post], [data-profile-like], [data-support], [data-buy-item], [data-open-team], [data-join-team], [data-leave-team], button');
   if(!t) return;
 
-  // Navigation
   if(t.dataset.nav){
     if(t.dataset.reset === 'chat'){ state.chatWith = null; }
     if(t.dataset.reset === 'game'){ state.activeGame = null; }
     if(t.dataset.nav === 'more'){ openDrawer(); return; }
-    go(t.dataset.nav);
-    return;
+    go(t.dataset.nav); return;
   }
-  // Actions
   if(t.dataset.action === 'close-drawer'){ closeDrawer(); return; }
   if(t.dataset.action === 'modal-close'){ closeModal(); return; }
   if(t.dataset.action === 'toast'){ toast(t.dataset.msg || ''); return; }
   if(t.dataset.action === 'compose'){ composeModal(); return; }
   if(t.dataset.action === 'edit-profile'){ editProfileModal(); return; }
-  // Tabs
+  if(t.dataset.action === 'create-team'){ createTeamModal(); return; }
+  if(t.dataset.action === 'leave-team'){ await leaveTeam(); return; }
+  if(t.dataset.action === 'back-to-teams'){ state.viewingTeamId = null; render(); return; }
+
   if(t.dataset.tab){ state.homeTab = t.dataset.tab; render(); return; }
   if(t.dataset.ptab){ state.profileTab = t.dataset.ptab; render(); return; }
-  // Follow / Like / Save
+
   if(t.dataset.follow){ await toggleFollow(t.dataset.follow); return; }
   if(t.dataset.like){ await toggleLike(t.dataset.like); return; }
   if(t.dataset.save){ await toggleSave(t.dataset.save); return; }
-  // View profile
+  if(t.dataset.profileLike){ await toggleProfileLike(t.dataset.profileLike); return; }
+  if(t.dataset.support){ await sendSupport(t.dataset.support); return; }
+
   if(t.dataset.viewProfile){
     if(t.dataset.viewProfile === state.user.uid){ go('profile'); return; }
-    go('userprofile', { viewingUid: t.dataset.viewProfile });
+    go('userprofile', { viewingUid: t.dataset.viewProfile }); return;
+  }
+
+  if(t.dataset.openComments){ await openCommentsModal(t.dataset.openComments); return; }
+  if(t.dataset.deleteComment){
+    await deleteComment(t.dataset.postId, t.dataset.deleteComment);
+    // reopen modal
+    const comments = state.comments[t.dataset.postId] || [];
+    const listEl = document.getElementById('commentsList');
+    if(listEl){
+      listEl.innerHTML = comments.length ? comments.map(c=>`
+        <div class="comment-item">
+          ${avatar(c.author, 36)}
+          <div class="comment-body">
+            <div class="comment-name">${esc(c.author?.name||'')} <span class="comment-time">${timeAgo(c.createdAt)}</span></div>
+            <div class="comment-text">${esc(c.text)}</div>
+          </div>
+          ${c.authorId === state.user.uid
+            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)" data-delete-comment="${c.id}" data-post-id="${t.dataset.postId}">${ic('trash','xs')}</button>`
+            : ''}
+        </div>`).join('') : `<div class="empty" style="padding:30px 0">${ic('comment')}<div>لا تعليقات بعد</div></div>`;
+    }
     return;
   }
-  // Chats (both open chat directly and via list)
+  if(t.dataset.deletePost){ await deletePost(t.dataset.deletePost); return; }
+
   if(t.dataset.chat){ await openChat(t.dataset.chat); return; }
   if(t.dataset.openChat){ await openChat(t.dataset.openChat); return; }
-  // Games
+
   if(t.dataset.gameOpen){ go('games', { activeGame: t.dataset.gameOpen }); return; }
   if(t.id === 'matchmakingBtn'){ startMatchmaking(t.dataset.game); return; }
   if(t.id === 'createRoomBtn'){ createRoom(t.dataset.game); return; }
   if(t.dataset.createRoom){ await confirmCreateRoom(t.dataset.createRoom); return; }
   if(t.dataset.joinRoom){ await joinRoom(t.dataset.joinRoom); return; }
   if(t.dataset.leaveRoom){ await leaveRoom(t.dataset.leaveRoom); return; }
-  // Search / Leaderboard
+
   if(t.dataset.scat){ state.searchCat = t.dataset.scat; render(); return; }
   if(t.dataset.lb){ state.lbTab = t.dataset.lb; render(); return; }
-  // Settings
   if(t.dataset.toggle){ state.settings[t.dataset.toggle] = !state.settings[t.dataset.toggle]; render(); return; }
-  // Logout
+
   if(t.id === 'confirmLogout'){ await handleLogout(); return; }
-  // Send message
+
   if(t.id === 'sendMsgBtn'){
     const inp = document.getElementById('msgInput');
     const txt = inp?.value.trim();
@@ -1354,36 +1866,82 @@ document.addEventListener('click', async (e)=>{
     try { await sendMessage(chatId, txt); } catch(e){ toast('فشل الإرسال'); }
     return;
   }
-  // Submit post
-  if(t.id === 'submitPost'){
-    const txt = document.getElementById('composeText').value.trim();
-    const media = document.getElementById('composeMedia').value.trim();
-    if(!txt){ toast('اكتب شيئاً'); return; }
-    closeModal();
-    await createPost({ text: txt, media });
+  if(t.id === 'sendCommentBtn'){
+    const inp = document.getElementById('commentInput');
+    const txt = inp?.value.trim();
+    if(!txt) return;
+    inp.value = '';
+    await addComment(t.dataset.postId, txt);
+    // refresh comments in modal
+    const comments = state.comments[t.dataset.postId] || [];
+    const listEl = document.getElementById('commentsList');
+    if(listEl){
+      listEl.innerHTML = comments.length ? comments.map(c=>`
+        <div class="comment-item">
+          ${avatar(c.author, 36)}
+          <div class="comment-body">
+            <div class="comment-name">${esc(c.author?.name||'')} <span class="comment-time">${timeAgo(c.createdAt)}</span></div>
+            <div class="comment-text">${esc(c.text)}</div>
+          </div>
+          ${c.authorId === state.user.uid
+            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)" data-delete-comment="${c.id}" data-post-id="${t.dataset.postId}">${ic('trash','xs')}</button>`
+            : ''}
+        </div>`).join('') : `<div class="empty" style="padding:30px 0">${ic('comment')}<div>لا تعليقات بعد</div></div>`;
+      listEl.scrollTop = listEl.scrollHeight;
+    }
     return;
   }
-  // Save profile
+
+  if(t.id === 'submitPost'){
+    const txt = document.getElementById('composeText').value.trim();
+    if(!txt && !state.pendingImages.post){ toast('اكتب شيئاً أو أضف صورة'); return; }
+    await createPost({ text: txt });
+    return;
+  }
   if(t.id === 'saveProfileBtn'){ await saveProfileData(); return; }
+
+  if(t.id === 'createTeamBtn'){
+    const name = document.getElementById('teamName').value.trim();
+    const emblem = document.getElementById('teamEmblem').value.trim() || '🛡️';
+    const desc = document.getElementById('teamDesc').value.trim();
+    if(!name){ toast('الاسم مطلوب'); return; }
+    await createTeam(name, emblem, desc);
+    closeModal();
+    return;
+  }
+
+  if(t.dataset.buyItem){
+    const item = STORE.find(x=>x.id === t.dataset.buyItem);
+    if(item) await buyItem(item);
+    return;
+  }
+
+  if(t.dataset.openTeam){ state.viewingTeamId = t.dataset.openTeam; render(); return; }
+  if(t.dataset.joinTeam){ await joinTeam(t.dataset.joinTeam); return; }
 });
 
-// Input: search
+/* Input events */
 document.addEventListener('input', (e)=>{
   if(e.target.id === 'searchInput'){
     state.searchQ = e.target.value;
-    renderSearchResults();
+    clearTimeout(window._searchTimer);
+    window._searchTimer = setTimeout(renderSearchResults, 200);
   }
 });
 
-// Enter to send message
+/* Enter to send */
 document.addEventListener('keydown', (e)=>{
   if(e.target.id === 'msgInput' && e.key === 'Enter' && !e.shiftKey){
     e.preventDefault();
     document.getElementById('sendMsgBtn')?.click();
   }
+  if(e.target.id === 'commentInput' && e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    document.getElementById('sendCommentBtn')?.click();
+  }
 });
 
-// Auth
+/* Auth */
 document.getElementById('loginForm').addEventListener('submit', handleLogin);
 document.getElementById('signupForm').addEventListener('submit', handleSignup);
 document.getElementById('googleBtn').addEventListener('click', handleGoogle);

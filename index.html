@@ -10,7 +10,6 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="assets/logo.png">
 <script>
-/* تعريف احتياطي مبكر لتفادي أخطاء التحميل */
 window.LOGO_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6c5ce7"/><stop offset="1" stop-color="#00d2ff"/></linearGradient></defs><rect width="100" height="100" rx="26" fill="url(#g)"/><path d="M30 72V28l40 44V28" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 );
@@ -26,10 +25,10 @@ window.LOGO_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
 <div id="setupScreen" class="setup-screen hidden">
   <div class="setup-card">
     <div class="setup-title">⚠️ إعداد Firebase مطلوب</div>
-    <p class="setup-desc">افتح ملف <code>script.js</code> واستبدل <code>firebaseConfig</code> بإعدادات مشروعك.</p>
+    <p class="setup-desc">افتح ملف <code>script.js</code> واستبدل <code>firebaseConfig</code>.</p>
     <ol class="setup-steps">
       <li>افتح <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
-      <li>فعّل: <b>Authentication</b> (Email + Google) و <b>Firestore</b></li>
+      <li>فعّل: <b>Authentication</b> + <b>Firestore</b> + <b>Storage</b></li>
       <li>انسخ إعدادات الويب والصقها في أعلى <code>script.js</code></li>
     </ol>
   </div>
@@ -70,7 +69,9 @@ window.LOGO_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
 <div id="appShell" class="app-shell hidden">
   <header class="topbar">
     <div class="topbar-in">
-<div class="tb-right"><button class="avatar-btn" id="tbAvatar" data-nav="profile" aria-label="ملفي الشخصي"></button></div>
+      <div class="tb-right">
+        <button class="avatar-btn" id="tbAvatar" data-nav="profile" aria-label="ملفي الشخصي"></button>
+      </div>
       <div class="tb-center">
         <div class="logo" data-nav="home" style="cursor:pointer">
           <img class="logo-img" src="assets/logo.png" alt="logo" onerror="this.onerror=null;this.src=window.LOGO_FALLBACK">
@@ -91,6 +92,8 @@ window.LOGO_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
 <aside class="drawer" id="drawer"></aside>
 <div id="modalRoot"></div>
 <div class="toast" id="toast"></div>
+
+<input type="file" id="globalFileInput" accept="image/*" style="display:none">
 
 <script type="module" src="script.js"></script>
 </body>
