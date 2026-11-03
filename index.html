@@ -70,7 +70,9 @@ window.LOGO_FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
 <div id="appShell" class="app-shell hidden">
   <header class="topbar">
     <div class="topbar-in">
-      <div class="tb-right"><button class="avatar-btn" id="tbAvatar"></button></div>
+<div class="tb-right">
+  <button class="avatar-btn" id="tbAvatar" data-nav="profile" aria-label="ملفي الشخصي"></button>
+</div>
       <div class="tb-center">
         <div class="logo" data-nav="home" style="cursor:pointer">
           <img class="logo-img" src="assets/logo.png" alt="logo" onerror="this.onerror=null;this.src=window.LOGO_FALLBACK">
