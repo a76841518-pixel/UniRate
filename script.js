@@ -1,7 +1,7 @@
 /* ============================================================
    نكسوس — v2.0 (Image Upload + Comments + Teams + Store)
    ============================================================ */
-
+import { Timestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
@@ -76,7 +76,7 @@ function ic(name, cls=''){ return `<svg class="ic ${cls}" viewBox="0 0 24 24" fi
 const GAMES = [
   {id:'g1', name:'Arena Clash', cat:'قتال جماعي', icon:'bolt', online:'12.4K', grad:'linear-gradient(135deg,#6c5ce7,#ff3d71)', modes:['1v1','5v5','تعاوني']},
   {id:'g2', name:'Word Duel', cat:'كلمات', icon:'comment', online:'8.1K', grad:'linear-gradient(135deg,#00d2ff,#22c55e)', modes:['1v1','فرق']},
-  {id:'g3', name:'Brain Sprint', cat:'ألغاز', icon:'star', online:'5.7K', grad:'linear-gradient(135deg,#f5b301,#ff3d71)', modes:['فردي','تعاوني']},
+  {id:'g3', name:'Quiz Clash', cat:'معلومات عامة', icon:'star', online:'5.7K', grad:'linear-gradient(135deg,#f5b301,#ff3d71)', modes:['1v1','تعاوني'], playable:true},
   {id:'g4', name:'Chess Royale', cat:'شطرنج', icon:'crown', online:'9.9K', grad:'linear-gradient(135deg,#a78bfa,#6c5ce7)', modes:['1v1','بطولات']},
   {id:'g5', name:'Trivia Titans', cat:'معلومات', icon:'globe', online:'4.2K', grad:'linear-gradient(135deg,#22c55e,#00d2ff)', modes:['فرق','سريع']},
   {id:'g6', name:'Padel Ping', cat:'رياضة', icon:'play', online:'3.1K', grad:'linear-gradient(135deg,#ff8a00,#f5b301)', modes:['1v1','2v2']},
@@ -155,6 +155,261 @@ const ITEM_CATEGORIES = {
   badge: { label: 'شارة',  icon: '⭐' },
   theme: { label: 'سكن',   icon: '🎨' },
 };
+/* ============ البطولات ============ */
+const TOURNAMENT_SIZES = [4, 8, 16];
+const TOURNAMENT_STATUS = {
+  open:     { label: 'التسجيل مفتوح', color: '#22c55e' },
+  ongoing:  { label: 'جارية',          color: '#f5b301' },
+  finished: { label: 'منتهية',         color: '#8a95ad' },
+};
+
+/* ============ حروب الفرق ============ */
+const WAR_DURATION_HOURS = 24;
+const WAR_POINTS_PER_WIN = 10;
+const WAR_POINTS_PER_LOSS = 3;
+
+/* ============ تعريفات الإنجازات ============ */
+const ACHIEVEMENT_DEFS = {
+  first_match:      { id:'first_match',      icon:'🎮', name:'أول مباراة',       desc:'العب أول مباراة',           tier:'bronze',  reward:{coins:100, xp:20},  trigger:'matches',     threshold:1 },
+  ten_wins:         { id:'ten_wins',         icon:'🏆', name:'10 انتصارات',      desc:'افز بـ10 مباريات',           tier:'silver',  reward:{coins:300, xp:80},  trigger:'wins',        threshold:10 },
+  fifty_wins:       { id:'fifty_wins',       icon:'👑', name:'50 انتصاراً',      desc:'افز بـ50 مباراة',            tier:'gold',    reward:{coins:1000, xp:300},trigger:'wins',        threshold:50 },
+  social_butterfly: { id:'social_butterfly', icon:'🦋', name:'اجتماعي',          desc:'تابع 20 مستخدماً',           tier:'bronze',  reward:{coins:150, xp:30},  trigger:'following',   threshold:20 },
+  popular:          { id:'popular',          icon:'⭐', name:'شعبي',             desc:'احصل على 50 متابع',          tier:'silver',  reward:{coins:400, xp:100}, trigger:'followers',   threshold:50 },
+  team_player:      { id:'team_player',      icon:'🛡️', name:'لاعب فريق',        desc:'انضم لفريق',                 tier:'bronze',  reward:{coins:100, xp:20},  trigger:'hasTeam',     threshold:1 },
+  team_leader:      { id:'team_leader',      icon:'⚔️', name:'قائد',             desc:'أنشئ فريقاً',                tier:'silver',  reward:{coins:300, xp:80},  trigger:'createdTeam', threshold:1 },
+  creator:          { id:'creator',          icon:'📝', name:'منشئ محتوى',       desc:'انشر 10 منشورات',            tier:'bronze',  reward:{coins:200, xp:40},  trigger:'posts',       threshold:10 },
+  tournament_rookie:{ id:'tournament_rookie',icon:'🥉', name:'مشارك بطولة',      desc:'شارك في بطولة',              tier:'bronze',  reward:{coins:150, xp:30},  trigger:'tournaments', threshold:1 },
+  tournament_champ: { id:'tournament_champ', icon:'🥇', name:'بطل بطولة',        desc:'افز ببطولة',                 tier:'gold',    reward:{coins:2000, xp:500},trigger:'tournamentWins',threshold:1 },
+  war_hero:         { id:'war_hero',         icon:'🔥', name:'بطل الحرب',        desc:'افز بحرب فريق',              tier:'gold',    reward:{coins:1500, xp:400},trigger:'warWins',     threshold:1 },
+  daily_streak_7:   { id:'daily_streak_7',   icon:'📅', name:'مواظب',            desc:'7 أيام متتالية',             tier:'gold',    reward:{coins:500, xp:150}, trigger:'streak',      threshold:7 },
+};
+
+const TIER_COLORS = {
+  bronze: { bg:'rgba(205,127,50,.18)', border:'rgba(205,127,50,.4)',  text:'#e4a76c' },
+  silver: { bg:'rgba(201,211,224,.18)',border:'rgba(201,211,224,.4)', text:'#d4dbe6' },
+  gold:   { bg:'rgba(245,179,1,.18)',  border:'rgba(245,179,1,.4)',   text:'#f5c451' },
+  diamond:{ bg:'rgba(0,210,255,.18)',  border:'rgba(0,210,255,.4)',   text:'#5fe3ff' },
+};
+/* ============ الهدايا ============ */
+const GIFT_ITEMS = [
+  { id:'g_rose',     name:'وردة',          emoji:'🌹', price:50   },
+  { id:'g_heart',    name:'قلب',           emoji:'💖', price:100  },
+  { id:'g_star',     name:'نجمة',          emoji:'⭐', price:150  },
+  { id:'g_gift',     name:'هدية صغيرة',    emoji:'🎁', price:250  },
+  { id:'g_diamond',  name:'ألماسة',        emoji:'💎', price:500  },
+  { id:'g_crown',    name:'تاج',           emoji:'👑', price:1000 },
+  { id:'g_trophy',   name:'كأس ذهبي',      emoji:'🏆', price:1500 },
+  { id:'g_rocket',   name:'صاروخ',         emoji:'🚀', price:2000 },
+];
+
+/* ============ المواسم ============ */
+const SEASON_DURATION_DAYS = 30;
+const SEASON_THEMES = [
+  { id:'s1', name:'موسم الانطلاق', emoji:'🚀', color:'#6c5ce7' },
+  { id:'s2', name:'موسم النار',    emoji:'🔥', color:'#ff3d71' },
+  { id:'s3', name:'موسم الجليد',   emoji:'❄️', color:'#00d2ff' },
+  { id:'s4', name:'موسم الذهب',    emoji:'👑', color:'#f5b301' },
+];
+
+/* ============ الثيمات ============ */
+const THEMES = {
+  default:   { name:'افتراضي',  colors:['#6c5ce7','#00d2ff'] },
+  sunset:    { name:'غروب',      colors:['#ff8a00','#ff3d71'] },
+  forest:    { name:'غابة',      colors:['#22c55e','#00d2ff'] },
+  midnight:  { name:'منتصف الليل',colors:['#4c1d95','#1e1b4b'] },
+  fire:      { name:'نار',       colors:['#ff3d71','#f5b301'] },
+  ocean:     { name:'محيط',      colors:['#0891b2','#22d3ee'] },
+};
+
+/* ============ الإطارات المتحركة ============ */
+const ANIMATED_FRAMES = {
+  none:        { name:'بدون',          class:'',                    tier:'free'   },
+  pulse:       { name:'نبض',           class:'frame-pulse',         tier:'free'   },
+  glow:        { name:'توهج',          class:'frame-glow',          tier:'plus'   },
+  stars:       { name:'نجوم',          class:'frame-stars',         tier:'plus'   },
+  rainbow:     { name:'قوس قزح',       class:'frame-rainbow',       tier:'plus'   },
+  neon:        { name:'نيون',          class:'frame-neon',          tier:'plus2'  },
+  fire:        { name:'نار',           class:'frame-fire',          tier:'plus2'  },
+  ice:         { name:'جليد',          class:'frame-ice',           tier:'plus2'  },
+  gold:        { name:'ذهبي',          class:'frame-gold',          tier:'exclusive', price:2500 },
+  galaxy:      { name:'مجرة',          class:'frame-galaxy',        tier:'exclusive', price:4000 },
+  gradient:    { name:'تدرّج متحرك',   class:'frame-gradient-anim', tier:'exclusive', price:3500 },
+  dashed:      { name:'متقطع',         class:'frame-dashed',        tier:'exclusive', price:1800 },
+  double:      { name:'مزدوج',         class:'frame-double',        tier:'exclusive', price:3000 },
+};
+
+/* ============ أشكال الصور ============ */
+const AVATAR_SHAPES = {
+  circle:  { label:'دائرية', radius:'50%' },
+  rounded: { label:'مستديرة', radius:'23px' },
+  square:  { label:'مربعة',   radius:'6px' },
+  hexagon: { label:'سداسية',  radius:'0' },
+};
+
+/* ============ تخطيطات البطاقة ============ */
+const PROFILE_LAYOUTS = {
+  default:     { label:'افتراضي' },
+  compact:     { label:'مضغوط' },
+  banner_top:  { label:'بانر أعلى' },
+};
+
+/* ============ تأثيرات الغلاف ============ */
+const BANNER_EFFECTS = {
+  none:      { label:'بدون',      emoji:'⬜' },
+  particles: { label:'جزيئات',   emoji:'✨' },
+  stars:     { label:'نجوم',      emoji:'⭐' },
+  wave:      { label:'موجة',       emoji:'🌊' },
+};
+
+/* ============ الألوان المميزة ============ */
+const ACCENT_COLORS = [
+  '#6c5ce7', '#00d2ff', '#ff3d71', '#f5b301',
+  '#22c55e', '#a78bfa', '#ff8a00', '#ec4899',
+];
+
+/* ============ خطط الاشتراك ============ */
+const SUBSCRIPTION_PLANS = {
+  free: {
+    id: 'free', name: 'مجاني', emoji: '🆓',
+    price: 0, durationDays: 0, color: '#8a95ad',
+    features: {
+      maxCustomColors: 0,
+      hasMusic: false,
+      hasBannerEffect: false,
+      hasLayoutCustomization: false,
+      hasNameColor: false,
+      hasUsernameColor: false,
+      hasTitleColor: false,
+      maxFrames: 1,
+      canCustomizeShape: false,   // ★ Plus فقط
+      canCustomizeBorder: false,  // ★ Plus فقط
+      canCustomizeTheme: false,   // ★ Plus فقط
+    }
+  },
+  plus: {
+    id: 'plus', name: 'بلس', emoji: '💎',
+    price: 1500, durationDays: 30, color: '#00d2ff',
+    features: {
+      maxCustomColors: 3,
+      hasMusic: true,
+      hasBannerEffect: true,
+      hasLayoutCustomization: false,
+      hasNameColor: true,
+      hasUsernameColor: true,
+      hasTitleColor: false,
+      maxFrames: 5,
+      canCustomizeShape: true,
+      canCustomizeBorder: true,
+      canCustomizeTheme: true,
+    }
+  },
+  plus2: {
+    id: 'plus2', name: 'بلس دبل', emoji: '👑',
+    price: 3500, durationDays: 60, color: '#f5b301',
+    features: {
+      maxCustomColors: 8,
+      hasMusic: true,
+      hasBannerEffect: true,
+      hasLayoutCustomization: true,
+      hasNameColor: true,
+      hasUsernameColor: true,
+      hasTitleColor: true,
+      maxFrames: 8,
+      canCustomizeShape: true,
+      canCustomizeBorder: true,
+      canCustomizeTheme: true,
+    }
+  },
+};
+
+/* ============ ألوان مخصصة إضافية ============ */
+const NAME_COLOR_PRESETS = [
+  '#ffffff', '#e9eefb', '#6c5ce7', '#00d2ff', '#ff3d71',
+  '#f5b301', '#22c55e', '#a78bfa', '#ff8a00', '#ec4899',
+];
+
+/* ============ إطارات لا تظهر في الاشتراكات ============ */
+function getFrameTier(frameId){
+  return ANIMATED_FRAMES[frameId]?.tier || 'free';
+}
+
+/* ============ دوال الاشتراك ============ */
+function getSubscription(profile){
+  if(!profile) return { plan:'free', expiresAt:null, active:false };
+  const sub = profile.subscription || {};
+  const plan = sub.plan || 'free';
+  const expiresAt = sub.expiresAt?.toDate?.() || null;
+  const active = plan !== 'free' && expiresAt && expiresAt > new Date();
+  return {
+    plan: active ? plan : 'free',
+    rawPlan: plan,
+    expiresAt,
+    active: !!active,
+    features: SUBSCRIPTION_PLANS[active ? plan : 'free'].features,
+  };
+}
+
+function getOwnedItems(profile){
+  return profile?.ownedItems || [];
+}
+
+/* هل يملك المستخدم إطاراً؟ */
+function canUseFrame(profile, frameId){
+  const frame = ANIMATED_FRAMES[frameId];
+  if(!frame) return false;
+  
+  /* مجاني للجميع */
+  if(frame.tier === 'free') return true;
+  
+  /* حصري: يجب شراؤه */
+  if(frame.tier === 'exclusive'){
+    return (profile?.ownedItems || []).includes(`frame_${frameId}`);
+  }
+  
+  /* اشتراك */
+  const sub = getSubscription(profile);
+  if(frame.tier === 'plus')  return sub.plan === 'plus' || sub.plan === 'plus2';
+  if(frame.tier === 'plus2') return sub.plan === 'plus2';
+  return false;
+}
+
+/* هل يمكنه تغيير لون الاسم؟ */
+function canCustomizeNameColor(profile){
+  const sub = getSubscription(profile);
+  return sub.features.hasNameColor;
+}
+
+function canCustomizeUsernameColor(profile){
+  const sub = getSubscription(profile);
+  return sub.features.hasUsernameColor;
+}
+
+function canCustomizeTitleColor(profile){
+  const sub = getSubscription(profile);
+  return sub.features.hasTitleColor;
+}
+
+function canUseMusic(profile){
+  return getSubscription(profile).features.hasMusic;
+}
+
+function canUseBannerEffect(profile){
+  return getSubscription(profile).features.hasBannerEffect;
+}
+
+function canUseLayoutCustomization(profile){
+  return getSubscription(profile).features.hasLayoutCustomization;
+}
+
+function canCustomizeShape(p){ return getSubscription(p).features.canCustomizeShape; }
+function canCustomizeBorder(p){ return getSubscription(p).features.canCustomizeBorder; }
+function canCustomizeTheme(p){ return getSubscription(p).features.canCustomizeTheme; }
+
+/* ============ حظر ============ */
+const BAN_REASONS = [
+  'سلوك مسيء', 'سبام متكرر', 'محتوى غير لائق',
+  'انتحال هوية', 'غش في الألعاب', 'مخالفة الشروط',
+];
 const AVATAR_GRADS = [
   'linear-gradient(135deg,#6c5ce7,#00d2ff)','linear-gradient(135deg,#ff3d71,#f5b301)',
   'linear-gradient(135deg,#00d2ff,#22c55e)','linear-gradient(135deg,#a78bfa,#ff3d71)',
@@ -194,6 +449,31 @@ const state = {
   challenges: [],
   myInventory: [],
   equipped: { frame: null, title: null, badge: null },
+
+    /* ===== Batch 3 ===== */
+  activeTournament: null,
+  tournamentUnsub: null,
+  viewingTournamentId: null,
+  viewingWarId: null,
+  myAchievements: {},
+  activityLog: [],
+  activityUnsub: null,
+  notifFilter: 'all',
+  challengeInProgress: false,
+
+    /* ===== Batch 4 ===== */
+  viewingPlayerUid: null,
+  adminTab: 'overview',
+  bannedUsers: [],
+  reports: [],
+  seasonInfo: null,
+  myGifts: [],
+  myGameStats: {},
+    /* ★ إصلاحات */
+  invTab: 'all',
+  giftTab: 'received',
+  mmUnsub: null,
+    _tabsScroll: null,   /* حفظ موضع تمرير التبويبات */
 };
 
 /* ============ نظام المستويات ============ */
@@ -366,7 +646,6 @@ const NAV = [
   {id:'messages', icon:'message', label:'الرسائل'},
   {id:'games', icon:'gamepad', label:'الألعاب'},
   {id:'teams', icon:'users', label:'الفرق'},
-  {id:'store', icon:'store', label:'المتجر'},
   {id:'more', icon:'menu', label:'المزيد'},
 ];
 function renderNav(){
@@ -391,16 +670,17 @@ function renderTopbar(){
     b.innerHTML = ic(b.dataset.nav === 'search' ? 'search' : 'bell') +
       (hasUnread ? '<span class="dot-badge"></span>' : '');
   });
+  updateTopbarCoins();
 }
 
 /* ============ Drawer ============ */
 const MORE_ITEMS = [
   {id:'closefriends', icon:'heart', label:'المقربون', desc:'أقرب 10 لاعبين'},
-  {id:'inventory', icon:'store', label:'مقتنياتي', desc:'كل مشترياتك وتجهيزاتك'},
   {id:'_daily', icon:'star', label:'المكافأة اليومية', desc:'استلم مكافأتك'},
   {id:'leaderboard', icon:'trophy', label:'لوحة الصدارة', desc:'ترتيب اللاعبين'},
-  {id:'achievements', icon:'medal', label:'الإنجازات', desc:'أوسمة وتحديات'},
-  {id:'stats', icon:'chart', label:'الإحصائيات', desc:'أرقامك'},
+  {id:'tournaments', icon:'trophy', label:'البطولات', desc:'تصفيات ومسابقات'},
+  {id:'war', icon:'bolt', label:'الحروب', desc:'حروب الفرق النشطة'},
+  {id:'season', icon:'trophy', label:'الموسم', desc:'موسم تنافسي'},
   {id:'settings', icon:'settings', label:'الإعدادات', desc:'تحكم بحسابك'},
   {id:'support', icon:'shield', label:'فريق الدعم', desc:'المشرفون'},
   {id:'admin', icon:'crown', label:'لوحة الإشراف', desc:'للمشرفين فقط', admin:true},
@@ -449,17 +729,13 @@ function openModal(html){
     if(e.target.classList.contains('modal-wrap')) closeModal();
   });
 }
-function closeModal(){
-  const root = document.getElementById('modalRoot');
-  if(state.mmInterval){ clearInterval(state.mmInterval); state.mmInterval = null; }
-  state.pendingImages = { avatar:null, cover:null, post:null };
-  root.innerHTML = '';
-}
 
 /* ============ Auth ============ */
 function showScreen(id){
-  ['loader','setupScreen','authScreen','appShell'].forEach(s=>{
-    document.getElementById(s).classList.toggle('hidden', s !== id);
+  /* ★ loader يُدار منفصلاً بواسطة NexusLoader — لا نلمسه هنا */
+  ['setupScreen','authScreen','appShell'].forEach(s=>{
+    const el = document.getElementById(s);
+    if(el) el.classList.toggle('hidden', s !== id);
   });
 }
 function showAuthError(msg){ document.getElementById('authError').textContent = msg || ''; }
@@ -476,15 +752,40 @@ async function handleSignup(e){
     if(unameSnap.exists()){ showAuthError('اسم المستخدم محجوز'); return; }
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(cred.user, { displayName: name });
-    await setDoc(doc(db,'users',cred.user.uid), {
-      uid:cred.user.uid, name, username, email,
-      bio:'مرحباً، أنا جديد في نكسوس!',
-      avatarUrl:'', coverUrl:'', grad: pickGrad(cred.user.uid),
-      teamId:'', teamName:'', teamEmblem:'',
-      level:1, xp:0, fame:0, power:0, support:0,
-      likesProfile:0, likesGames:0, followers:0, following:0,
-      coins:1000, role:'user', createdAt: serverTimestamp()
-    });
+await setDoc(doc(db,'users',cred.user.uid), {
+  uid: cred.user.uid,
+  name,
+  username,
+  email,
+  bio: 'مرحباً، أنا جديد في نكسوس!',
+  avatarUrl: '',
+  coverUrl: '',
+  grad: pickGrad(cred.user.uid),
+  teamId: '',
+  teamName: '',
+  teamEmblem: '',
+  level: 1,
+  xp: 0,
+  fame: 0,
+  power: 0,
+  support: 0,
+  likesProfile: 0,
+  likesGames: 0,
+  followers: 0,
+  following: 0,
+  coins: 1000,
+  role: 'user',
+  status: 'available',
+  statusMsg: '',
+  themeId: 'default',
+  frameId: 'none',
+  equipped: { frame: null, title: null, badge: null },
+  settings: { notif: true, sound: false, privateAcc: false, twofa: false, location: true, autoplay: true },
+  dailyStreak: 0,
+  lastDailyReward: null,
+  achievements: {},
+  createdAt: serverTimestamp()
+});
     await setDoc(doc(db,'usernames',username), { uid: cred.user.uid });
   } catch(err){
     const msgs = {'auth/email-already-in-use':'البريد مستخدم','auth/weak-password':'كلمة المرور ضعيفة','auth/invalid-email':'بريد غير صالح'};
@@ -510,15 +811,40 @@ async function handleGoogle(){
     if(!snap.exists()){
       const base = (cred.user.email||'user').split('@')[0].replace(/[^a-z0-9]/gi,'').toLowerCase();
       const username = base + Math.floor(Math.random()*1000);
-      await setDoc(userRef, {
-        uid:cred.user.uid, name: cred.user.displayName||'مستخدم', username,
-        email: cred.user.email, bio:'مرحباً!', avatarUrl: cred.user.photoURL||'',
-        coverUrl:'', grad: pickGrad(cred.user.uid),
-        teamId:'', teamName:'', teamEmblem:'',
-        level:1, xp:0, fame:0, power:0, support:0,
-        likesProfile:0, likesGames:0, followers:0, following:0,
-        coins:1000, role:'user', createdAt: serverTimestamp()
-      });
+await setDoc(userRef, {
+  uid: cred.user.uid,
+  name: cred.user.displayName || 'مستخدم',
+  username,
+  email: cred.user.email,
+  bio: 'مرحباً!',
+  avatarUrl: cred.user.photoURL || '',
+  coverUrl: '',
+  grad: pickGrad(cred.user.uid),
+  teamId: '',
+  teamName: '',
+  teamEmblem: '',
+  level: 1,
+  xp: 0,
+  fame: 0,
+  power: 0,
+  support: 0,
+  likesProfile: 0,
+  likesGames: 0,
+  followers: 0,
+  following: 0,
+  coins: 1000,
+  role: 'user',
+  status: 'available',
+  statusMsg: '',
+  themeId: 'default',
+  frameId: 'none',
+  equipped: { frame: null, title: null, badge: null },
+  settings: { notif: true, sound: false, privateAcc: false, twofa: false, location: true, autoplay: true },
+  dailyStreak: 0,
+  lastDailyReward: null,
+  achievements: {},
+  createdAt: serverTimestamp()
+});
       await setDoc(doc(db,'usernames',username), { uid: cred.user.uid });
     }
   } catch(err){ showAuthError(err.message); }
@@ -535,15 +861,15 @@ onAuthStateChanged(auth, async (user) => {
     state.user = user;
     showScreen('appShell');
 
-    // ★ جديد: تحميل الملف الشخصي مباشرة (getDoc) قبل أي شيء
-    // هذا يعمل من الكاش المحلي = فوري، ويضمن أن state.profile ليس null
+    // ★ تقدّم 20%: بدأ تحميل الملف
+    window.NexusLoader?.setProgress?.(20);
+
     try {
       const snap = await getDoc(doc(db, 'users', user.uid));
       if (snap.exists()) {
         state.profile = snap.data();
       } else {
         console.warn('User document missing, creating placeholder...');
-        // إنشاء مستند احتياطي إذا لم يوجد
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
           name: user.displayName || 'مستخدم',
@@ -566,26 +892,41 @@ onAuthStateChanged(auth, async (user) => {
       console.error('Initial profile load failed:', e);
     }
 
+    // ★★★ [الموقع رقم 1] بعد تحميل الملف الشخصي ★★★
+    window.NexusLoader?.setProgress?.(40);
+
     // الآن أنشئ المستمعين
     attachListeners();
 
+    // ★★★ [الموقع رقم 2] بعد attachListeners ★★★
+    window.NexusLoader?.setProgress?.(75);
+
     // ★ الإصلاح الأساسي: اعرض الصفحة فوراً
     render();
+
+    // ★★★ انتظر 1.2 ثانية حتى تصل بيانات onSnapshot قبل إغلاق الشاشة ★★★
+    setTimeout(() => window.NexusLoader?.finish?.(), 1200);
+
+    // ★ حمل الموسم
+    setTimeout(loadSeasonInfo, 500);
     // افحص وجود مباراة نشطة
-setTimeout(checkActiveMatch, 2000);
-// ★ افحص المكافأة اليومية وأظهرها
-setTimeout(async ()=>{
-  await checkDailyReward();
-  if(state.dailyReward?.available){
-    // انتظر قليلاً ثم افتح النافذة
-    setTimeout(openDailyRewardModal, 1500);
-  }
-}, 1000);
+    setTimeout(checkActiveMatch, 2000);
+    // ★ افحص المكافأة اليومية وأظهرها
+    setTimeout(async ()=>{
+      await checkDailyReward();
+      if(state.dailyReward?.available){
+        setTimeout(openDailyRewardModal, 1500);
+      }
+    }, 1000);
+
   } else {
     state.user = null;
     state.profile = null;
     detachListeners();
     showScreen('authScreen');
+
+    // ★★★ حالة عدم تسجيل الدخول — إغلاق شاشة التحميل ★★★
+    window.NexusLoader?.finish?.();
   }
 });
 } else {
@@ -596,8 +937,26 @@ setTimeout(async ()=>{
 function detachListeners(){
   state.unsubs.forEach(u=>{ try{u();}catch(e){} });
   state.unsubs = [];
-  if(state.chatUnsub){ try{state.chatUnsub();}catch(e){} state.chatUnsub = null; }
-  if(state.mmInterval){ clearInterval(state.mmInterval); state.mmInterval = null; }
+  ['chatUnsub','matchUnsub','matchChatUnsub','teamChatUnsub','activityUnsub','tournamentUnsub','mmUnsub']
+    .forEach(k=>{ if(state[k]){ try{state[k]();}catch(e){} state[k]=null; } });
+  if(state.matchTimer){ clearInterval(state.matchTimer); state.matchTimer = null; }
+  if(state.mmInterval && typeof state.mmInterval === 'number'){
+    clearInterval(state.mmInterval);
+  }
+  state.mmInterval = null;
+}
+
+function closeModal(){
+  const root = document.getElementById('modalRoot');
+  // نظّف المستمع إن وُجد
+  if(state.mmUnsub){ try{state.mmUnsub();}catch(e){} state.mmUnsub = null; }
+  if(state.mmInterval){
+    if(typeof state.mmInterval === 'function'){ try{state.mmInterval();}catch(e){} }
+    else clearInterval(state.mmInterval);
+    state.mmInterval = null;
+  }
+  state.pendingImages = { avatar:null, cover:null, post:null };
+  root.innerHTML = '';
 }
 
 function attachListeners(){
@@ -608,6 +967,7 @@ state.unsubs.push(onSnapshot(
   snap => {
     if (snap.exists()) {
       state.profile = snap.data();
+      updateTopbarCoins();
       renderTopbar();
       if (['profile','stats','settings','userprofile'].includes(state.page)) render();
     } else {
@@ -711,6 +1071,7 @@ state.unsubs.push(onSnapshot(
       .sort((a,b)=>(b.points||0)-(a.points||0));
     if(['teams','team'].includes(state.page)) render();
   }));
+  subscribeToActivity();
 }
 
 /* ============ Likes / Follow / Save ============ */
@@ -886,7 +1247,7 @@ async function createPost(data){
         return;
       }
     }
-    
+    setTimeout(checkAchievements, 500);
     await addDoc(collection(db,'posts'), {
       authorId: state.user.uid,
       author: {
@@ -1073,11 +1434,62 @@ async function confirmCreateRoom(gameId){
 
 async function joinRoom(roomId){
   try {
-    await updateDoc(doc(db,'rooms',roomId), {
-      players: arrayUnion(state.user.uid), status: 'playing'
-    });
+    const roomRef = doc(db,'rooms',roomId);
+    const snap = await getDoc(roomRef);
+    if(!snap.exists()) return toast('الغرفة غير موجودة');
+    const data = snap.data();
+    const players = data.players || [];
+    if(players.length >= (data.maxPlayers||2)) return toast('الغرفة ممتلئة');
+    if(players.includes(state.user.uid)) return toast('أنت بالفعل في الغرفة');
+
+    // إذا كانت Quiz → استخدم مسار اللعبة الصحيح
+    if(data.gameId === 'g3'){
+      await updateDoc(roomRef, { players: arrayUnion(state.user.uid) });
+      await startQuizMatch(roomId, false);
+      return;
+    }
+
+    await updateDoc(roomRef, { players: arrayUnion(state.user.uid) });
     toast('انضممت للغرفة ✓');
   } catch(e){ toast('تعذّر الانضمام'); }
+}
+
+async function checkActiveMatch(){
+  try {
+    const snap = await getDocs(query(
+      collection(db,'rooms'),
+      where('players','array-contains',state.user.uid)
+    ));
+    const active = snap.docs.find(d=>{
+      const data = d.data();
+      return data.gameId === 'g3' && (data.status === 'waiting' || data.status === 'playing');
+    });
+    if(!active){
+      document.getElementById('resumeBanner')?.classList.add('hidden');
+      return;
+    }
+
+    const data = active.data();
+    const isHost = data.hostId === state.user.uid;
+
+    if(data.status === 'playing'){
+      subscribeToMatch(active.id);
+      return;
+    }
+
+    const banner = document.getElementById('resumeBanner');
+    const text = document.getElementById('resumeBannerText');
+    if(banner && text){
+      text.textContent = `Quiz Clash · ${(data.players||[]).length}/2 لاعب`;
+      banner.classList.remove('hidden');
+      document.getElementById('resumeMatchBtn').onclick = ()=> startQuizMatch(active.id, isHost);
+      document.getElementById('leaveMatchBtn').onclick = async ()=>{
+        try { await updateDoc(active.ref, { players: arrayRemove(state.user.uid) }); } catch(e){}
+        banner.classList.add('hidden');
+        toast('غادرت المباراة');
+      };
+    }
+  } catch(e){ console.error(e); }
 }
 
 async function leaveRoom(roomId){
@@ -1102,6 +1514,7 @@ async function createTeam(name, emblem, desc){
       teamId: teamRef.id, teamName: name, teamEmblem: emblem || '🛡️'
     });
     toast('تم إنشاء الفريق ✓');
+    setTimeout(checkAchievements, 500);
     return teamRef.id;
   } catch(e){ toast('فشل الإنشاء'); throw e; }
 }
@@ -1198,6 +1611,7 @@ async function claimDailyReward(){
       lastDailyReward: serverTimestamp(),
     });
     toast(`🎁 حصلت على ${r.coins} عملة + ${r.xp} XP`);
+    setTimeout(checkAchievements, 500);
     state.dailyReward = { available: false, nextDay: Math.min(day+1,7), streak: day };
     closeModal();
     render();
@@ -1515,6 +1929,620 @@ async function kickMember(teamId, uid){
   } catch(e){ toast('فشل'); }
 }
 
+/* ============================================================
+   🏆 نظام البطولات
+   ============================================================ */
+async function createTournament(name, size, entryCoins){
+  if(!state.profile.teamId) return toast('انضم لفريق أولاً');
+  const team = state.teams.find(t => t.id === state.profile.teamId);
+  if(!team || team.leaderId !== state.user.uid) return toast('فقط القائد ينشئ بطولة');
+  
+  try {
+    const tRef = await addDoc(collection(db,'tournaments'), {
+      name, size: parseInt(size),
+      entryCoins: parseInt(entryCoins) || 0,
+      organizerId: state.user.uid,
+      organizerTeamId: state.profile.teamId,
+      organizerName: state.profile.name,
+      participants: [],
+      bracket: [],
+      status: 'open',
+      currentRound: 0,
+      createdAt: serverTimestamp(),
+    });
+    toast('تم إنشاء البطولة ✓');
+    return tRef.id;
+  } catch(e){ console.error(e); toast('فشل الإنشاء'); }
+}
+
+/* ============================================================
+   💰 تحديث الرصيد في الشريط العلوي
+   ============================================================ */
+function updateTopbarCoins(){
+  const el = document.getElementById('tbCoinsValue');
+  if(el && state.profile){
+    el.textContent = nf(state.profile.coins || 0);
+  }
+}
+
+async function joinTournament(tournamentId){
+  try {
+    const tRef = doc(db,'tournaments',tournamentId);
+    const snap = await getDoc(tRef);
+    if(!snap.exists()) return toast('البطولة غير موجودة');
+    const data = snap.data();
+    if(data.status !== 'open') return toast('التسجيل مغلق');
+    if((data.participants||[]).includes(state.user.uid)) return toast('أنت مسجل بالفعل');
+    if((data.participants||[]).length >= data.size) return toast('البطولة ممتلئة');
+    
+    // خصم رسوم الدخول
+    if(data.entryCoins > 0){
+      if((state.profile.coins||0) < data.entryCoins) return toast('رصيد غير كافٍ');
+      await updateDoc(doc(db,'users',state.user.uid), {
+        coins: increment(-data.entryCoins)
+      });
+    }
+    
+    await updateDoc(tRef, {
+      participants: arrayUnion(state.user.uid),
+    });
+    
+    // تحقق من الامتلاء — ابدأ تلقائياً
+    const newSnap = await getDoc(tRef);
+    const newData = newSnap.data();
+    if((newData.participants||[]).length >= newData.size){
+      await startTournament(tournamentId);
+    }
+    
+    toast('تم التسجيل ✓');
+  } catch(e){ console.error(e); toast('فشل التسجيل'); }
+}
+
+async function startTournament(tournamentId){
+  try {
+    const tRef = doc(db,'tournaments',tournamentId);
+    const snap = await getDoc(tRef);
+    const data = snap.data();
+    const participants = [...(data.participants||[])];
+    
+    // shuffle
+    for(let i = participants.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [participants[i], participants[j]] = [participants[j], participants[i]];
+    }
+    
+    // round 1 pairs
+    const round1 = [];
+    for(let i = 0; i < participants.length; i += 2){
+      round1.push({
+        p1: participants[i],
+        p2: participants[i+1],
+        score1: 0, score2: 0,
+        winner: null,
+        status: 'pending',
+      });
+    }
+    
+    await updateDoc(tRef, {
+      status: 'ongoing',
+      currentRound: 0,
+      bracket: [round1],
+      startedAt: serverTimestamp(),
+    });
+    
+    toast('بدأت البطولة! 🏆');
+  } catch(e){ console.error(e); toast('فشل البدء'); }
+}
+
+async function reportTournamentResult(tournamentId, round, matchIdx, winnerUid){
+  try {
+    const tRef = doc(db,'tournaments',tournamentId);
+    const snap = await getDoc(tRef);
+    const data = snap.data();
+    const bracket = JSON.parse(JSON.stringify(data.bracket));
+    
+    bracket[round][matchIdx].winner = winnerUid;
+    bracket[round][matchIdx].status = 'done';
+    
+    // هل انتهت الجولة؟
+    const roundDone = bracket[round].every(m => m.winner);
+    
+    let newRound = round;
+    if(roundDone && round + 1 < Math.log2(data.size)){
+      // ولّد الجولة التالية
+      const winners = bracket[round].map(m => m.winner);
+      const nextRound = [];
+      for(let i = 0; i < winners.length; i += 2){
+        nextRound.push({
+          p1: winners[i],
+          p2: winners[i+1],
+          score1: 0, score2: 0,
+          winner: null,
+          status: 'pending',
+        });
+      }
+      bracket.push(nextRound);
+      newRound = round + 1;
+    }
+    
+    // هل انتهت البطولة؟
+    const finalMatch = bracket[bracket.length - 1][0];
+    const isFinished = bracket.length === Math.log2(data.size) && finalMatch?.winner;
+    
+    await updateDoc(tRef, {
+      bracket,
+      currentRound: newRound,
+      status: isFinished ? 'finished' : 'ongoing',
+      winnerId: isFinished ? finalMatch.winner : null,
+      finishedAt: isFinished ? serverTimestamp() : null,
+    });
+    
+    if(isFinished){
+      // مكافآت
+      try {
+        await updateDoc(doc(db,'users',finalMatch.winner), {
+          coins: increment(500),
+          xp: increment(300),
+          fame: increment(100),
+        });
+      } catch(e){}
+      toast(`🏆 فاز البطولة: ${state.users[finalMatch.winner]?.name || 'لاعب'}`);
+    }
+  } catch(e){ console.error(e); }
+}
+
+/* ============================================================
+   ⚔️ نظام حروب الفرق
+   ============================================================ */
+async function declareWar(opponentTeamId){
+  const myTeam = state.teams.find(t => t.id === state.profile.teamId);
+  if(!myTeam) return toast('انضم لفريق أولاً');
+  if(myTeam.leaderId !== state.user.uid) return toast('فقط القائد يعلن الحرب');
+  
+  const opponent = state.teams.find(t => t.id === opponentTeamId);
+  if(!opponent) return toast('الفريق غير موجود');
+  if(opponent.id === myTeam.id) return toast('لا يمكنك محاربة نفسك');
+  
+  // تحقق: هل توجد حرب نشطة؟
+  try {
+    const q = query(
+      collection(db,'wars'),
+      where('teamAId','==',myTeam.id),
+      where('status','==','active')
+    );
+    const q2 = query(
+      collection(db,'wars'),
+      where('teamBId','==',myTeam.id),
+      where('status','==','active')
+    );
+    const [snap1, snap2] = await Promise.all([getDocs(q), getDocs(q2)]);
+    if(!snap1.empty || !snap2.empty) return toast('لديك حرب نشطة بالفعل');
+  } catch(e){}
+  
+  try {
+    const wRef = await addDoc(collection(db,'wars'), {
+      teamAId: myTeam.id,
+      teamAName: myTeam.name,
+      teamAEmblem: myTeam.emblem || '🛡️',
+      teamBId: opponent.id,
+      teamBName: opponent.name,
+      teamBEmblem: opponent.emblem || '🛡️',
+      scoreA: 0, scoreB: 0,
+      status: 'active',
+      contributions: {},
+      startedAt: serverTimestamp(),
+      endsAt: new Date(Date.now() + WAR_DURATION_HOURS * 60 * 60 * 1000),
+    });
+    
+    // إشعار لقادة الفريق الآخر
+    await notify(opponent.leaderId, 'war', `<b>${esc(myTeam.name)}</b> أعلن الحرب على فريقك! ⚔️`);
+    
+    toast('🔥 بدأت الحرب! لديك 24 ساعة');
+    go('war', { viewingWarId: wRef.id });
+  } catch(e){ console.error(e); toast('فشل'); }
+}
+
+async function contributeToWar(warId, teamSide, points){
+  try {
+    const wRef = doc(db,'wars',warId);
+    const snap = await getDoc(wRef);
+    if(!snap.exists()) return;
+    const data = snap.data();
+    if(data.status !== 'active') return;
+    
+    const endsAt = data.endsAt?.toDate?.() || new Date(0);
+    if(endsAt < new Date()){
+      await finishWar(warId);
+      return;
+    }
+    
+    const field = teamSide === 'A' ? 'scoreA' : 'scoreB';
+    await updateDoc(wRef, {
+      [field]: increment(points),
+      [`contributions.${state.user.uid}`]: increment(points),
+    });
+  } catch(e){ console.error(e); }
+}
+
+async function finishWar(warId){
+  try {
+    const wRef = doc(db,'wars',warId);
+    const snap = await getDoc(wRef);
+    const data = snap.data();
+    if(data.status !== 'active') return;
+    
+    const winner = data.scoreA > data.scoreB ? 'A' :
+                   data.scoreB > data.scoreA ? 'B' : null;
+    const winnerTeamId = winner === 'A' ? data.teamAId :
+                         winner === 'B' ? data.teamBId : null;
+    
+    await updateDoc(wRef, {
+      status: 'finished',
+      winnerId: winnerTeamId,
+      finishedAt: serverTimestamp(),
+    });
+    
+    if(winnerTeamId){
+      // مكافآت
+      try {
+        await updateDoc(doc(db,'teams',winnerTeamId), {
+          points: increment(500),
+          warsWon: increment(1),
+        });
+      } catch(e){}
+    }
+  } catch(e){ console.error(e); }
+}
+
+/* ============================================================
+   🏅 نظام الإنجازات الديناميكي
+   ============================================================ */
+async function checkAchievements(){
+  if(!state.profile) return;
+  const p = state.profile;
+  
+  // اجمع الإحصائيات الحالية
+  try {
+    const matchesSnap = await getDocs(collection(db,'users',state.user.uid,'matchHistory'));
+    const matches = matchesSnap.docs.map(d=>d.data());
+    const wins = matches.filter(m=>m.result === 'win').length;
+    const postsCount = state.posts.filter(x=>x.authorId === state.user.uid).length;
+    
+    const stats = {
+      matches: matches.length,
+      wins,
+      following: p.following || 0,
+      followers: p.followers || 0,
+      hasTeam: p.teamId ? 1 : 0,
+      createdTeam: 0, // يُحدد لاحقاً
+      posts: postsCount,
+      tournaments: 0,
+      tournamentWins: 0,
+      warWins: 0,
+      streak: p.dailyStreak || 0,
+    };
+    
+    // تحقق من إنشاء فريق
+    try {
+      const tq = query(collection(db,'teams'), where('leaderId','==',state.user.uid));
+      const ts = await getDocs(tq);
+      stats.createdTeam = ts.size;
+    } catch(e){}
+    
+    // تحقق من البطولات
+    try {
+      const tq = query(collection(db,'tournaments'), where('winnerId','==',state.user.uid));
+      const ts = await getDocs(tq);
+      stats.tournamentWins = ts.size;
+    } catch(e){}
+    
+    // تحقق من كل إنجاز
+    const unlocked = p.achievements || {};
+    for(const [id, def] of Object.entries(ACHIEVEMENT_DEFS)){
+      if(unlocked[id]) continue;
+      const current = stats[def.trigger] || 0;
+      if(current >= def.threshold){
+        // افتحه
+        await updateDoc(doc(db,'users',state.user.uid), {
+          [`achievements.${id}`]: {
+            unlockedAt: new Date().toISOString(),
+          },
+          coins: increment(def.reward.coins),
+          xp: increment(def.reward.xp),
+        });
+        await notify(state.user.uid, 'achievement',
+          `🏅 إنجاز جديد: <b>${def.name}</b> — ${def.reward.coins} عملة + ${def.reward.xp} XP`);
+      }
+    }
+  } catch(e){ console.error('checkAchievements:', e); }
+}
+
+/* ============================================================
+   📋 سجل النشاطات
+   ============================================================ */
+async function logActivity(type, text, icon = '📌'){
+  try {
+    await addDoc(collection(db,'users',state.user.uid,'activity'), {
+      type, text, icon,
+      createdAt: serverTimestamp(),
+    });
+  } catch(e){}
+}
+
+function subscribeToActivity(){
+  if(state.activityUnsub){ try{state.activityUnsub();}catch(e){} }
+  state.activityUnsub = onSnapshot(
+    query(collection(db,'users',state.user.uid,'activity'), orderBy('createdAt','desc'), limit(30)),
+    snap=>{
+      state.activityLog = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(state.page === 'activity') render();
+    }
+  );
+}
+
+/* ============================================================
+   🚨 نظام الإبلاغ
+   ============================================================ */
+async function reportContent(targetType, targetId, reason, details){
+  try {
+    await addDoc(collection(db,'reports'), {
+      reporterId: state.user.uid,
+      reporterName: state.profile.name,
+      targetType, targetId, reason, details,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+    });
+    toast('تم إرسال البلاغ — شكراً لك ✓');
+  } catch(e){ toast('فشل الإرسال'); }
+}
+
+/* ============================================================
+   💾 حفظ الإعدادات
+   ============================================================ */
+async function saveSettings(){
+  try {
+    await updateDoc(doc(db,'users',state.user.uid), {
+      settings: state.settings,
+    });
+    toast('تم الحفظ ✓');
+  } catch(e){ toast('فشل'); }
+}
+
+async function loadSettings(){
+  if(state.profile?.settings){
+    state.settings = { ...state.settings, ...state.profile.settings };
+  }
+}
+
+async function pageTournaments(){
+  const snap = await getDocs(
+    query(collection(db,'tournaments'), orderBy('createdAt','desc'), limit(20))
+  );
+  const tournaments = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  
+  if(state.viewingTournamentId){
+    const t = tournaments.find(x => x.id === state.viewingTournamentId);
+    if(!t) return emptyState('البطولة غير موجودة','trophy');
+    return renderTournamentView(t);
+  }
+  
+  return `
+    <div class="row" style="margin-bottom:14px">
+      <h1 class="page-title" style="margin:0;flex:1">🏆 البطولات</h1>
+      <button class="btn btn-primary btn-sm" data-action="create-tournament">
+        ${ic('plus','xs')} إنشاء
+      </button>
+    </div>
+    ${tournaments.length ? tournaments.map(t => `
+      <div class="tournament-card">
+        <div class="row" style="margin-bottom:10px;position:relative;z-index:1">
+          <div style="font-size:28px">🏆</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:900">${esc(t.name)}</div>
+            <div class="muted" style="font-size:11px">${t.size} لاعب · بواسطة ${esc(t.organizerName||'?')}</div>
+          </div>
+          <span class="tournament-status ${t.status}">
+            ${TOURNAMENT_STATUS[t.status]?.label || t.status}
+          </span>
+        </div>
+        <div class="row" style="position:relative;z-index:1">
+          <div class="pill">${ic('users','xs')} ${(t.participants||[]).length} / ${t.size}</div>
+          ${t.entryCoins > 0 ? `<div class="pill gold">${ic('coin','xs')} ${t.entryCoins}</div>` : ''}
+          <div style="flex:1"></div>
+          <button class="btn btn-primary btn-sm" data-view-tournament="${t.id}">عرض</button>
+        </div>
+      </div>
+    `).join('') : emptyState('لا توجد بطولات — كن أول من ينشئ','trophy')}
+  `;
+}
+
+function renderTournamentView(t){
+  const isParticipant = (t.participants||[]).includes(state.user.uid);
+  const canJoin = t.status === 'open' && !isParticipant && (t.participants||[]).length < t.size;
+  const bracket = t.bracket || [];
+  
+  return `
+    <div class="row" style="margin-bottom:14px">
+      <button class="icon-btn" data-action="back-from-tournament">${ic('back','sm')}</button>
+      <h1 class="page-title" style="margin:0;flex:1">${esc(t.name)}</h1>
+      <span class="tournament-status ${t.status}">${TOURNAMENT_STATUS[t.status]?.label || t.status}</span>
+    </div>
+    
+    <div class="card" style="margin-bottom:14px;padding:16px">
+      <div class="row" style="margin-bottom:8px">
+        <div style="flex:1"><div class="muted" style="font-size:10.5px">الحجم</div><div style="font-size:14px;font-weight:800">${t.size} لاعب</div></div>
+        <div style="flex:1"><div class="muted" style="font-size:10.5px">المسجلون</div><div style="font-size:14px;font-weight:800">${(t.participants||[]).length}</div></div>
+        ${t.entryCoins > 0 ? `<div style="flex:1"><div class="muted" style="font-size:10.5px">رسوم</div><div style="font-size:14px;font-weight:800;color:var(--gold)">${t.entryCoins}</div></div>` : ''}
+      </div>
+      ${t.winnerId ? `
+        <div class="card" style="background:rgba(245,179,1,.15);border-color:rgba(245,179,1,.4);text-align:center;padding:14px">
+          <div style="font-size:32px;margin-bottom:6px">🥇</div>
+          <div style="font-size:14px;font-weight:900;color:var(--gold)">البطل: ${esc(state.users[t.winnerId]?.name || '?')}</div>
+        </div>
+      ` : ''}
+    </div>
+
+    ${canJoin ? `
+      <button class="btn btn-primary" style="width:100%;margin-bottom:14px" data-join-tournament="${t.id}">
+        ${ic('plus','sm')} سجّل في البطولة
+      </button>
+    ` : ''}
+    
+    ${bracket.length ? `
+      <div class="section-title">${ic('trophy','sm')} شجرة البطولة</div>
+      <div class="bracket">
+        ${bracket.map((round, ri) => `
+          <div class="bracket-round">
+            <div class="bracket-round-title">
+              ${ri === bracket.length-1 ? 'النهائي' : ri === bracket.length-2 ? 'نصف النهائي' : `جولة ${ri+1}`}
+            </div>
+            ${round.map((m, mi) => `
+              <div class="bracket-match ${m.winner?'winner':''}">
+                <div class="bracket-player ${m.winner && m.winner !== m.p1 ? 'loser' : ''}">
+                  <span>${esc(state.users[m.p1]?.name?.split(' ')[0] || 'TBD')}</span>
+                  <span class="score">${m.score1 || 0}</span>
+                </div>
+                <div class="bracket-player ${m.winner && m.winner !== m.p2 ? 'loser' : ''}">
+                  <span>${esc(state.users[m.p2]?.name?.split(' ')[0] || 'TBD')}</span>
+                  <span class="score">${m.score2 || 0}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('')}
+      </div>
+    ` : `<div class="muted" style="text-align:center;padding:24px">البطولة ستبدأ عند اكتمال التسجيل</div>`}
+  `;
+}
+
+/* ============================================================
+   ⚔️ صفحة الحرب
+   ============================================================ */
+async function pageWar(){
+  if(!state.viewingWarId) {
+    // عرض كل الحروب النشطة
+    const snap = await getDocs(
+      query(collection(db,'wars'), where('status','==','active'), limit(20))
+    );
+    const wars = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    return `
+      <h1 class="page-title">⚔️ الحروب</h1>
+      ${wars.length ? wars.map(w => `
+        <div class="card" style="margin-bottom:10px;padding:14px;cursor:pointer" data-view-war="${w.id}">
+          <div class="row" style="margin-bottom:8px">
+            <div style="font-size:20px">${w.teamAEmblem||'🛡️'}</div>
+            <div style="flex:1;text-align:center;font-size:12px;font-weight:800">
+              ${esc(w.teamAName)} <span style="color:var(--pink)">⚔️</span> ${esc(w.teamBName)}
+            </div>
+            <div style="font-size:20px">${w.teamBEmblem||'⚔️'}</div>
+          </div>
+          <div class="row">
+            <div class="pill">${w.scoreA || 0}</div>
+            <div style="flex:1;text-align:center" class="muted">حتى ${timeAgo(w.endsAt)}</div>
+            <div class="pill">${w.scoreB || 0}</div>
+          </div>
+        </div>
+      `).join('') : emptyState('لا توجد حروب نشطة — ابدأ حرباً من صفحة الفريق','bolt')}
+    `;
+  }
+  
+  // عرض حرب محددة
+  const snap = await getDoc(doc(db,'wars',state.viewingWarId));
+  if(!snap.exists()) return emptyState('الحرب غير موجودة','bolt');
+  const w = {id:snap.id, ...snap.data()};
+  
+  const myTeamId = state.profile?.teamId;
+  const isSideA = w.teamAId === myTeamId;
+  const isSideB = w.teamBId === myTeamId;
+  const mySide = isSideA ? 'A' : isSideB ? 'B' : null;
+  const myScore = isSideA ? w.scoreA : isSideB ? w.scoreB : 0;
+  const oppScore = isSideA ? w.scoreB : isSideB ? w.scoreA : 0;
+  const total = (w.scoreA || 0) + (w.scoreB || 0);
+  const pctA = total > 0 ? ((w.scoreA || 0) / total * 100) : 50;
+  
+  return `
+    <div class="row" style="margin-bottom:14px">
+      <button class="icon-btn" data-action="back-from-war">${ic('back','sm')}</button>
+      <h1 class="page-title" style="margin:0;flex:1">⚔️ الحرب</h1>
+    </div>
+    
+    <div class="war-hero">
+      <div class="muted" style="font-size:11px;position:relative;z-index:1">
+        ${w.status === 'active' ? `تنتهي ${timeAgo(w.endsAt)}` : 'انتهت الحرب'}
+      </div>
+      <div class="war-teams">
+        <div class="war-team">
+          <div class="emblem">${w.teamAEmblem||'🛡️'}</div>
+          <div class="tname">${esc(w.teamAName)}</div>
+          <div class="tscore">${w.scoreA || 0}</div>
+        </div>
+        <div class="war-vs">VS</div>
+        <div class="war-team">
+          <div class="emblem">${w.teamBEmblem||'⚔️'}</div>
+          <div class="tname">${esc(w.teamBName)}</div>
+          <div class="tscore">${w.scoreB || 0}</div>
+        </div>
+      </div>
+      <div class="war-progress">
+        <div class="left-part" style="width:${pctA}%"></div>
+        <div class="right-part" style="width:${100-pctA}%"></div>
+      </div>
+      ${w.winnerId ? `
+        <div style="margin-top:12px;font-size:15px;font-weight:900;color:var(--gold);position:relative;z-index:1">
+          🏆 الفائز: ${esc(w.winnerId === w.teamAId ? w.teamAName : w.teamBName)}
+        </div>
+      ` : ''}
+    </div>
+    
+    ${mySide && w.status === 'active' ? `
+      <div class="card" style="margin-bottom:12px;text-align:center">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+          ساهم بفوز فريقك — العب مباريات واربح نقاط
+        </div>
+        <button class="btn btn-primary" style="width:100%" data-play-war-match="${w.id}">
+          ${ic('play','sm')} العب مباراة الآن
+        </button>
+      </div>
+    ` : ''}
+    
+    <div class="section-title">${ic('chart','sm')} المساهمات</div>
+    <div class="card">
+      ${Object.entries(w.contributions || {}).sort((a,b)=>b[1]-a[1]).map(([uid, pts])=>{
+        const u = state.users[uid];
+        if(!u) return '';
+        return `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+          ${avatar(u, 32)}
+          <div style="flex:1;font-size:12.5px;font-weight:700">${esc(u.name)}</div>
+          <div class="pill ok">${pts} نقطة</div>
+        </div>`;
+      }).join('') || `<div class="muted" style="text-align:center;padding:16px">لا مساهمات بعد</div>`}
+    </div>
+  `;
+}
+
+/* ============================================================
+   📋 صفحة سجل النشاطات
+   ============================================================ */
+function pageActivity(){
+  if(!state.activityLog.length){
+    return `<h1 class="page-title">📋 النشاطات</h1>${emptyState('لا نشاطات بعد','clock')}`;
+  }
+  return `
+    <h1 class="page-title">📋 النشاطات</h1>
+    <div class="card">
+      ${state.activityLog.map(a=>`
+        <div class="activity-item">
+          <div class="activity-icon" style="background:rgba(108,92,231,.15)">${a.icon || '📌'}</div>
+          <div class="activity-text">
+            <div class="activity-desc">${esc(a.text || '')}</div>
+            <div class="activity-time">${timeAgo(a.createdAt)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 /* ============ Pages ============ */
 function emptyState(msg, icon='grid'){
   return `<div class="empty">${ic(icon)}<div>${msg}</div></div>`;
@@ -1588,6 +2616,14 @@ function postCard(p, trendMode=false){
       <button class="pact" data-open-comments="${p.id}">${ic('comment','sm')} ${nf(p.comments)}</button>
       <button class="pact" data-action="toast" data-msg="تم نسخ الرابط">${ic('share','sm')}</button>
       <button class="pact ml ${saved?'saved':''}" data-save="${p.id}">${ic('bookmark','sm')}</button>
+      ${!isMine ? `
+  <button class="post-menu-btn" 
+          data-report-target="${p.id}" 
+          data-report-type="post" 
+          title="إبلاغ">
+    ${ic('dots','sm')}
+  </button>
+` : ''}
     </div>
   </article>`;
 }
@@ -1974,10 +3010,770 @@ async function pageInventory(){
   `;
 }
 
+/* ============================================================
+   📅 تنسيق تاريخ الانضمام
+   ============================================================ */
+function formatJoinDate(ts){
+  if(!ts) return 'حديثاً';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  try {
+    return d.toLocaleDateString('ar-EG', { month:'long', year:'numeric' });
+  } catch(e){
+    return d.toLocaleDateString('ar-SA');
+  }
+}
+
+/* ============================================================
+   🎯 مودال إجراءات اللاعب (لسِواه)
+   ============================================================ */
+function openProfileActionsModal(uid){
+  const u = state.users[uid];
+  if(!u) return;
+  if(uid === state.user.uid){
+    toast('هذا ملفك الشخصي — استخدم زر تعديل');
+    return;
+  }
+  const blocked = (state.profile.blockedUsers || []).includes(uid);
+  const liked = state.profileLiked[uid];
+
+  openModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      ${avatar(u, 60)}
+      <div style="font-size:14px;font-weight:900;margin-top:8px">${esc(u.name)}</div>
+      <div class="muted" style="font-size:11px">@${esc(u.username)}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button class="set-row" data-open-chat="${uid}" data-close-modal="1">
+        ${ic('message','sm')} <span class="sr-txt"><span class="sr-n">مراسلة</span></span>
+      </button>
+      <button class="set-row" data-profile-like="${uid}" data-close-modal="1">
+        ${ic('heart','sm')} <span class="sr-txt"><span class="sr-n">${liked?'إزالة الإعجاب':'إعجاب الملف'}</span></span>
+      </button>
+      <button class="set-row" data-support="${uid}" data-close-modal="1">
+        ${ic('star','sm')} <span class="sr-txt"><span class="sr-n">دعم +10</span></span>
+      </button>
+      <button class="set-row" data-send-gift="${uid}" data-close-modal="1">
+        ${ic('crown','sm')} <span class="sr-txt"><span class="sr-n">إهداء</span></span>
+      </button>
+      <button class="set-row" data-send-challenge="${uid}" data-close-modal="1">
+        ${ic('bolt','sm')} <span class="sr-txt"><span class="sr-n">تحدي</span></span>
+      </button>
+      <button class="set-row" data-report-target="${uid}" data-report-type="user" data-close-modal="1">
+        ${ic('shield','sm')} <span class="sr-txt"><span class="sr-n">إبلاغ</span></span>
+      </button>
+      <button class="set-row" data-block-user="${uid}" data-close-modal="1"
+              style="${blocked?'color:#ff7b9d':''}">
+        ${ic('lock','sm')} <span class="sr-txt"><span class="sr-n" style="${blocked?'color:#ff7b9d':''}">${blocked?'إلغاء الحظر':'حظر'}</span></span>
+      </button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إغلاق</button>
+    </div>
+  `);
+}
+
+/* ============================================================
+   🖼️ مودال إجراءات الصورة (أفاتار / غلاف)
+   ============================================================ */
+function openImageActionsModal(type){
+  const isAvatar = type === 'avatar';
+  const url = isAvatar ? (state.profile.avatarUrl || '') : (state.profile.coverUrl || '');
+  const label = isAvatar ? 'الصورة الشخصية' : 'صورة الغلاف';
+
+  openModal(`
+    <h3>${label}</h3>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">
+      ${url ? `
+        <button class="set-row" data-view-image="${type}">
+          ${ic('image','sm')} <span class="sr-txt"><span class="sr-n">عرض الصورة</span></span>
+        </button>` : ''}
+      <button class="set-row" data-change-image="${type}">
+        ${ic('camera','sm')} <span class="sr-txt"><span class="sr-n">${url ? 'تغيير الصورة' : 'إضافة صورة'}</span></span>
+      </button>
+      ${url ? `
+        <button class="set-row" data-delete-image="${type}">
+          ${ic('trash','sm')} <span class="sr-txt"><span class="sr-n" style="color:#ff7b9d">حذف الصورة</span></span>
+        </button>` : ''}
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إغلاق</button>
+    </div>
+  `);
+}
+
+function openImageViewerModal(url){
+  if(!url) return toast('لا توجد صورة');
+  openModal(`
+    <div style="margin-bottom:14px;border-radius:14px;overflow:hidden;background:#000">
+      <img src="${esc(url)}" style="width:100%;display:block;max-height:65vh;object-fit:contain">
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إغلاق</button>
+    </div>
+  `);
+}
+
+async function changeProfileImage(type){
+  pickImage(type, async (previewUrl, file) => {
+    try {
+      const base64 = await imageToBase64(file, type);
+      const field = type === 'avatar' ? 'avatarUrl' : 'coverUrl';
+      await updateDoc(doc(db, 'users', state.user.uid), { [field]: base64 });
+      // حدّث صور المنشورات إذا تغيّر الأفاتار
+      if(type === 'avatar'){
+        try {
+          const snap = await getDocs(query(collection(db,'posts'), where('authorId','==',state.user.uid)));
+          await Promise.all(snap.docs.map(d => updateDoc(d.ref, { 'author.avatarUrl': base64 })));
+        } catch(e){}
+      }
+      closeModal();
+      toast('تم التحديث ✓');
+    } catch(e){
+      toast(e.message || 'فشل رفع الصورة');
+    }
+  });
+}
+
+async function deleteProfileImage(type){
+  if(!confirm('حذف الصورة؟')) return;
+  const field = type === 'avatar' ? 'avatarUrl' : 'coverUrl';
+  try {
+    await updateDoc(doc(db, 'users', state.user.uid), { [field]: '' });
+    closeModal();
+    toast('تم الحذف');
+  } catch(e){ toast('فشل'); }
+}
+
+/* ============================================================
+   🚫 حظر لاعب
+   ============================================================ */
+async function toggleBlockUser(uid){
+  if(uid === state.user.uid) return toast('لا يمكنك حظر نفسك');
+  const blocked = state.profile.blockedUsers || [];
+  try {
+    if(blocked.includes(uid)){
+      await updateDoc(doc(db,'users',state.user.uid), { blockedUsers: arrayRemove(uid) });
+      toast('تم إلغاء الحظر');
+    } else {
+      await updateDoc(doc(db,'users',state.user.uid), { blockedUsers: arrayUnion(uid) });
+      toast('تم الحظر');
+    }
+  } catch(e){ toast('فشل'); }
+}
+
+/* ============================================================
+   🎒 محتوى تبويب المقتنيات (يُعاد استخدامه)
+   ============================================================ */
+async function renderInventoryContent(){
+  await loadMyInventory();
+  const equipped = state.profile?.equipped || {};
+  const categories = ['frame','title','badge','theme'];
+  const activeCat = state.invTab || 'all';
+  const filtered = activeCat === 'all'
+    ? state.myInventory
+    : state.myInventory.filter(i => (i.category || 'theme') === activeCat);
+
+  return `
+    <div class="inv-tabs">
+      <button class="inv-tab ${activeCat==='all'?'active':''}" data-inv-tab="all">الكل (${state.myInventory.length})</button>
+      ${categories.map(c=>{
+        const count = state.myInventory.filter(i => (i.category||'theme') === c).length;
+        return `<button class="inv-tab ${activeCat===c?'active':''}" data-inv-tab="${c}">
+          ${ITEM_CATEGORIES[c].icon}
+        </button>`;
+      }).join('')}
+    </div>
+    ${filtered.length ? `
+      <div class="inv-grid">
+        ${filtered.map(item=>{
+          const cat = item.category || 'theme';
+          const isEquipped = equipped[cat] === item.id;
+          return `
+            <div class="inv-item ${isEquipped?'equipped':''}" data-inv-item="${item.id}" data-inv-cat="${cat}">
+              ${isEquipped ? '<div class="ii-equipped-badge">مُجهّز</div>' : ''}
+              <div class="ii-emoji">${item.emoji || '🎁'}</div>
+              <div class="ii-name">${esc(item.name)}</div>
+            </div>`;
+        }).join('')}
+      </div>
+    ` : emptyState('لا توجد مقتنيات في هذه الفئة','store')}
+    ${Object.entries(equipped).filter(([k,v])=>v).length ? `
+      <div class="section-title" style="margin-top:20px">${ic('check','sm')} المُجهّز حالياً</div>
+      <div class="card">
+        ${Object.entries(equipped).filter(([k,v])=>v).map(([cat, id])=>{
+          const item = state.myInventory.find(i => i.id === id);
+          if(!item) return '';
+          return `
+            <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+              <span style="font-size:20px">${item.emoji}</span>
+              <div style="flex:1">
+                <div style="font-size:12.5px;font-weight:800">${esc(item.name)}</div>
+                <div class="muted" style="font-size:10px">${ITEM_CATEGORIES[cat]?.label || cat}</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" data-unequip="${cat}">إزالة</button>
+            </div>`;
+        }).join('')}
+      </div>
+    ` : ''}
+  `;
+}
+
+/* ============================================================
+   🏅 محتوى تبويب الإنجازات
+   ============================================================ */
+function renderAchievementsContent(){
+  const p = state.profile || {};
+  const unlocked = p.achievements || {};
+  const all = Object.entries(ACHIEVEMENT_DEFS);
+  const done = all.filter(([id]) => unlocked[id]).length;
+
+  return `
+    <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:14px">
+      <div class="ach-icon" style="width:56px;height:56px;font-size:26px">🏅</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:900">${done} / ${all.length}</div>
+        <div class="ach-prog" style="margin-top:8px">
+          <span style="width:${(done/all.length*100).toFixed(0)}%"></span>
+        </div>
+      </div>
+    </div>
+    ${all.map(([id, def])=>{
+      const isUnlocked = !!unlocked[id];
+      const tier = TIER_COLORS[def.tier] || TIER_COLORS.bronze;
+      return `
+        <div class="achievement-card ${isUnlocked?'unlocked':'locked'}">
+          <div class="ach-tier-icon ${def.tier}">${def.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800">${def.name}</div>
+            <div class="ach-d">${def.desc}</div>
+            <div style="margin-top:5px;font-size:10px;color:${tier.text};font-weight:800">
+              ${def.tier.toUpperCase()} · ${def.reward.coins} عملة + ${def.reward.xp} XP
+            </div>
+          </div>
+          ${isUnlocked
+            ? `<span class="pill ok" style="font-size:9.5px">✓</span>`
+            : `<span class="muted" style="font-size:10px">مقفل</span>`}
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+/* ============================================================
+   📊 محتوى تبويب الإحصائيات (مدموج: أساسية + تفصيلية)
+   ============================================================ */
+async function renderStatsContent(){
+  const p = state.profile || {};
+  let historyHtml = '';
+
+  try {
+    const snap = await getDocs(
+      query(collection(db,'users',state.user.uid,'matchHistory'),
+            orderBy('playedAt','desc'), limit(100))
+    );
+    const matches = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    const byGame = {};
+    matches.forEach(m => {
+      const gid = m.gameId || 'g3';
+      if(!byGame[gid]) byGame[gid] = { played:0, wins:0, losses:0 };
+      byGame[gid].played++;
+      if(m.result === 'win') byGame[gid].wins++;
+      else byGame[gid].losses++;
+    });
+
+    historyHtml = `
+      <div class="section-title" style="margin-top:20px">${ic('trophy','sm')} سجل المباريات</div>
+      <div class="stat-grid" style="margin-bottom:16px">
+        <div class="stat-box"><div class="sv">${matches.length}</div><div class="sl">إجمالي المباريات</div></div>
+        <div class="stat-box"><div class="sv">${matches.filter(m=>m.result==='win').length}</div><div class="sl">انتصارات</div></div>
+        <div class="stat-box"><div class="sv">${matches.filter(m=>m.result==='loss').length}</div><div class="sl">خسائر</div></div>
+        <div class="stat-box"><div class="sv">${matches.length ? Math.round(matches.filter(m=>m.result==='win').length / matches.length * 100) : 0}%</div><div class="sl">نسبة الفوز</div></div>
+      </div>
+
+      ${Object.keys(byGame).length ? `
+        <div class="section-title">${ic('gamepad','sm')} حسب اللعبة</div>
+        ${Object.entries(byGame).map(([gid, stats])=>{
+          const g = GAMES.find(x => x.id === gid);
+          if(!g) return '';
+          const wr = Math.round(stats.wins / stats.played * 100);
+          return `
+            <div class="game-stat-card">
+              <div class="gs-header">
+                <div class="gs-icon" style="background:${g.grad}">${ic(g.icon,'sm')}</div>
+                <div style="flex:1">
+                  <div class="gs-title">${g.name}</div>
+                  <div class="gs-sub">${g.cat}</div>
+                </div>
+              </div>
+              <div class="gs-grid">
+                <div class="gs-cell"><div class="v">${stats.played}</div><div class="l">مباراة</div></div>
+                <div class="gs-cell"><div class="v" style="color:var(--ok)">${stats.wins}</div><div class="l">فوز</div></div>
+                <div class="gs-cell"><div class="v" style="color:var(--pink)">${stats.losses}</div><div class="l">خسارة</div></div>
+                <div class="gs-cell"><div class="v">${wr}%</div><div class="l">نسبة</div></div>
+              </div>
+              <div class="gs-wr"><span style="width:${wr}%"></span></div>
+            </div>
+          `;
+        }).join('')}
+      ` : ''}
+
+      <div class="section-title">${ic('clock','sm')} آخر 10 مباريات</div>
+      ${matches.slice(0, 10).map(m=>`
+        <div class="card" style="margin-bottom:8px;padding:11px">
+          <div class="row">
+            <div style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+              background:${m.result==='win'?'rgba(34,197,94,.15)':'rgba(255,61,113,.15)'};
+              color:${m.result==='win'?'var(--ok)':'var(--pink)'};font-weight:900;font-size:14px">
+              ${m.result==='win'?'✓':'✗'}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:800">${esc(m.gameName || 'Quiz Clash')}</div>
+              <div class="muted" style="font-size:10px">${timeAgo(m.playedAt)}</div>
+            </div>
+            <div style="text-align:left">
+              <div style="font-size:13px;font-weight:900;color:${m.result==='win'?'var(--ok)':'var(--pink)'}">
+                ${m.myScore || 0} - ${m.opponentScore || 0}
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('') || emptyState('لا مباريات بعد','gamepad')}
+    `;
+  } catch(e){ console.error(e); }
+
+  return `
+    <div class="stat-grid" style="margin-bottom:16px">
+      <div class="stat-box"><div class="sv">${nf(p.fame)}</div><div class="sl">الشهرة</div></div>
+      <div class="stat-box"><div class="sv">${nf(p.power)}</div><div class="sl">القوة</div></div>
+      <div class="stat-box"><div class="sv">${nf(p.support)}</div><div class="sl">الدعم</div></div>
+      <div class="stat-box"><div class="sv">${nf(p.likesProfile)}</div><div class="sl">إعجابات الملف</div></div>
+      <div class="stat-box"><div class="sv">${nf(p.likesGames)}</div><div class="sl">إعجابات اللعب</div></div>
+      <div class="stat-box"><div class="sv">${nf(p.followers)}</div><div class="sl">المتابِعون</div></div>
+    </div>
+    ${historyHtml}
+  `;
+}
+
+/* ============================================================
+   📋 محتوى تبويب النشاطات
+   ============================================================ */
+function renderActivityContent(){
+  if(!state.activityLog.length){
+    return emptyState('لا نشاطات بعد','clock');
+  }
+  return `
+    <div class="card">
+      ${state.activityLog.map(a=>`
+        <div class="activity-item">
+          <div class="activity-icon" style="background:rgba(108,92,231,.15)">${a.icon || '📌'}</div>
+          <div class="activity-text">
+            <div class="activity-desc">${esc(a.text || '')}</div>
+            <div class="activity-time">${timeAgo(a.createdAt)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/* ============================================================
+   🎁 محتوى تبويب الهدايا
+   ============================================================ */
+async function renderGiftsContent(){
+  try {
+    const [rSnap, sSnap] = await Promise.all([
+      getDocs(query(collection(db,'gifts'), where('to','==',state.user.uid),
+                    orderBy('createdAt','desc'), limit(50))),
+      getDocs(query(collection(db,'gifts'), where('from','==',state.user.uid),
+                    orderBy('createdAt','desc'), limit(50))),
+    ]);
+    const received = rSnap.docs.map(d=>({id:d.id, ...d.data()}));
+    const sent = sSnap.docs.map(d=>({id:d.id, ...d.data()}));
+    const tab = state.giftTab || 'received';
+    const list = tab === 'received' ? received : sent;
+
+    return `
+      <div class="inv-tabs" style="margin-bottom:14px">
+        <button class="inv-tab ${tab==='received'?'active':''}" data-gift-tab="received">
+          مستلمة (${received.length})
+        </button>
+        <button class="inv-tab ${tab==='sent'?'active':''}" data-gift-tab="sent">
+          مرسلة (${sent.length})
+        </button>
+      </div>
+      ${list.length ? list.map(g=>`
+        <div class="gift-history-item ${tab==='sent'?'sent':'received'}">
+          <div style="font-size:26px">${g.giftEmoji || '🎁'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:800">
+              ${tab === 'received' ? esc(g.fromName || 'مجهول') : esc(state.users[g.to]?.name || 'لاعب')}
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(g.message || g.giftName || '')}</div>
+            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">${timeAgo(g.createdAt)}</div>
+          </div>
+          <div class="pill gold">${ic('coin','xs')} ${nf(g.price || 0)}</div>
+        </div>
+      `).join('') : emptyState('لا هدايا هنا بعد','star')}
+    `;
+  } catch(e){
+    console.error(e);
+    return emptyState('خطأ في التحميل','star');
+  }
+}
+
+/* ============================================================
+   🕒 محتوى تبويب سجل اللعب
+   ============================================================ */
+async function renderHistoryContent(){
+  try {
+    const snap = await getDocs(
+      query(collection(db,'users',state.user.uid,'matchHistory'),
+            orderBy('playedAt','desc'), limit(30))
+    );
+    const history = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    if(!history.length) return emptyState('لم تلعب أي مباراة بعد','gamepad');
+
+    return history.map(h=>`
+      <div class="card" style="margin-bottom:8px;padding:12px">
+        <div class="row">
+          <div style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+            background:${h.result==='win'?'rgba(34,197,94,.15)':'rgba(255,61,113,.15)'};
+            color:${h.result==='win'?'var(--ok)':'var(--pink)'};font-weight:900;flex:0 0 auto">
+            ${h.result==='win'?'✓':'✗'}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800">${esc(h.gameName||'Quiz Clash')}</div>
+            <div class="muted" style="font-size:10.5px">${timeAgo(h.playedAt)}</div>
+          </div>
+          <div style="text-align:left">
+            <div style="font-size:14px;font-weight:900;color:${h.result==='win'?'var(--ok)':'var(--pink)'}">
+              ${h.myScore || 0} - ${h.opponentScore || 0}
+            </div>
+            <div class="muted" style="font-size:9.5px">${h.result==='win'?'فوز':'خسارة'}</div>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e){
+    console.error(e);
+    return emptyState('خطأ في التحميل','gamepad');
+  }
+}
+
+async function purchaseExclusiveItem(itemId, itemType, price){
+  const p = state.profile;
+  if((p.ownedItems || []).includes(itemId)){
+    return toast('تملك هذا العنصر بالفعل');
+  }
+  if((p.coins || 0) < price){
+    return toast(`رصيد غير كافٍ — تحتاج ${nf(price)} عملة`);
+  }
+  if(!confirm(`شراء هذا العنصر بـ ${nf(price)} عملة؟`)) return;
+  
+  try {
+    await updateDoc(doc(db, 'users', state.user.uid), {
+      coins: increment(-price),
+      ownedItems: arrayUnion(itemId),
+    });
+    toast('✨ تم الشراء — يمكنك استخدامه الآن');
+  } catch(e){
+    console.error(e);
+    toast('فشل الشراء');
+  }
+}
+
+/* ============================================================
+   🎮 محتوى تبويب الألعاب
+   ============================================================ */
+/* ============================================================
+   🎮 محتوى تبويب الألعاب — إحصائيات مفصلة لكل لعبة + مستوى
+   ============================================================ */
+async function renderGamesContent(){
+  try {
+    const snap = await getDocs(
+      query(collection(db,'users',state.user.uid,'matchHistory'),
+            orderBy('playedAt','desc'), limit(500))
+    );
+    const matches = snap.docs.map(d=>({id:d.id, ...d.data()}));
+
+    /* ★ XP افتراضي لكل لعبة: فوز = 100 · خسارة = 30 · 500 XP لكل مستوى */
+    const XP_PER_WIN  = 100;
+    const XP_PER_LOSS = 30;
+    const XP_PER_LVL  = 500;
+
+    // ابنِ إحصائيات كل لعبة (شاملة غير الملعوبة)
+    const byGame = {};
+    GAMES.forEach(g => {
+      byGame[g.id] = {
+        played: 0, wins: 0, losses: 0,
+        totalScore: 0, bestScore: 0,
+        lastPlayed: null, xp: 0,
+      };
+    });
+
+    matches.forEach(m => {
+      const gid = m.gameId || 'g3';
+      if(!byGame[gid]) byGame[gid] = {
+        played:0, wins:0, losses:0, totalScore:0, bestScore:0, lastPlayed:null, xp:0
+      };
+      const s = byGame[gid];
+      const score = m.myScore || 0;
+      s.played++;
+      s.totalScore += score;
+      if(score > s.bestScore) s.bestScore = score;
+      if(m.result === 'win'){ s.wins++;  s.xp += XP_PER_WIN;  }
+      else                  { s.losses++; s.xp += XP_PER_LOSS; }
+      const ts = m.playedAt?.seconds || 0;
+      if(!s.lastPlayed || ts > (s.lastPlayed?.seconds || 0)){
+        s.lastPlayed = m.playedAt;
+      }
+    });
+
+    // فرز: الملعوبة أولاً حسب XP تنازلياً، ثم غير الملعوبة
+    const sorted = [...GAMES].sort((a,b)=>{
+      const sa = byGame[a.id], sb = byGame[b.id];
+      if((sa.played>0) !== (sb.played>0)) return sa.played>0 ? -1 : 1;
+      return sb.xp - sa.xp;
+    });
+
+    // ملخص علوي
+    const totalMatches = matches.length;
+    const totalWins = matches.filter(m=>m.result==='win').length;
+    const totalXP = Object.values(byGame).reduce((a,s)=>a+s.xp, 0);
+
+    return `
+      <div class="stat-grid" style="margin-bottom:16px">
+        <div class="stat-box"><div class="sv">${totalMatches}</div><div class="sl">إجمالي المباريات</div></div>
+        <div class="stat-box"><div class="sv">${totalWins}</div><div class="sl">انتصارات</div></div>
+        <div class="stat-box"><div class="sv">${totalXP}</div><div class="sl">XP من الألعاب</div></div>
+        <div class="stat-box"><div class="sv">${
+          totalMatches ? Math.round(totalWins / totalMatches * 100) : 0
+        }%</div><div class="sl">نسبة الفوز</div></div>
+      </div>
+
+      ${sorted.map(g => {
+        const s = byGame[g.id];
+        const wr  = s.played ? Math.round(s.wins / s.played * 100) : 0;
+        const lvl = Math.floor(s.xp / XP_PER_LVL) + 1;
+        const curXp = s.xp % XP_PER_LVL;
+        const pct   = Math.round(curXp / XP_PER_LVL * 100);
+        const avg   = s.played ? Math.round(s.totalScore / s.played) : 0;
+
+        return `
+          <div class="game-stat-card game-stat-clickable" data-game-open="${g.id}">
+            <div class="gs-header">
+              <div class="gs-icon" style="background:${g.grad}">${ic(g.icon,'sm')}</div>
+              <div style="flex:1;min-width:0">
+                <div class="gs-title">${g.name}</div>
+                <div class="gs-sub">
+                  ${g.cat}
+                  ${s.played
+                    ? ` · آخر لعب ${timeAgo(s.lastPlayed)}`
+                    : ' · لم تُلعب بعد'}
+                </div>
+              </div>
+              <div class="game-level-badge" style="background:${g.grad}">
+                <span class="glb-l">LV</span>
+                <span class="glb-v">${lvl}</span>
+              </div>
+            </div>
+
+            <div class="gs-grid">
+              <div class="gs-cell"><div class="v">${s.played}</div><div class="l">مباراة</div></div>
+              <div class="gs-cell"><div class="v" style="color:var(--ok)">${s.wins}</div><div class="l">فوز</div></div>
+              <div class="gs-cell"><div class="v" style="color:var(--pink)">${s.losses}</div><div class="l">خسارة</div></div>
+              <div class="gs-cell"><div class="v">${wr}%</div><div class="l">نسبة فوز</div></div>
+            </div>
+
+            <div class="gs-grid" style="margin-top:8px">
+              <div class="gs-cell"><div class="v">${nf(s.totalScore)}</div><div class="l">إجمالي النقاط</div></div>
+              <div class="gs-cell"><div class="v" style="color:var(--gold)">${nf(s.bestScore)}</div><div class="l">أفضل نتيجة</div></div>
+              <div class="gs-cell"><div class="v">${nf(avg)}</div><div class="l">متوسط النقاط</div></div>
+              <div class="gs-cell"><div class="v">${nf(s.xp)}</div><div class="l">XP</div></div>
+            </div>
+
+            <div class="game-level-progress">
+              <div class="glp-top">
+                <span>المستوى ${lvl}</span>
+                <span>${curXp} / ${XP_PER_LVL} XP</span>
+              </div>
+              <div class="glp-bar">
+                <span style="width:${pct}%;background:${g.grad}"></span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
+  } catch(e){
+    console.error(e);
+    return emptyState('خطأ في التحميل','gamepad');
+  }
+}
+
+/* ============================================================
+   🧭 موجّه محتوى تبويبات الملف
+   ============================================================ */
+/* ============================================================
+   🧭 موجّه محتوى تبويبات الملف
+   ============================================================ */
+async function renderProfileTabBody(){
+  const tab = state.profileTab || 'posts';
+
+  /* ★ المنشورات */
+  if(tab === 'posts'){
+    const myPosts = state.posts.filter(x => x.authorId === state.user.uid);
+    return myPosts.length
+      ? myPosts.map(x => postCard(x)).join('')
+      : emptyState('لم تنشر بعد','grid');
+  }
+
+  /* ★ المحفوظات */
+  if(tab === 'saved'){
+    const saved = state.posts.filter(x => state.saved[x.id]);
+    return saved.length
+      ? saved.map(x => postCard(x)).join('')
+      : emptyState('لا توجد منشورات محفوظة','bookmark');
+  }
+
+  if(tab === 'history')      return await renderHistoryContent();
+  if(tab === 'games')        return await renderGamesContent();
+  if(tab === 'inventory')    return await renderInventoryContent();
+  if(tab === 'achievements') return renderAchievementsContent();
+  if(tab === 'stats')        return await renderStatsContent();
+  if(tab === 'activity')     return renderActivityContent();
+  if(tab === 'gifts')        return await renderGiftsContent();
+
+  return emptyState('اختر تبويباً','grid');
+}
+
+/* ============================================================
+   📛 الحصول على بيانات التخصيص من الملف (مع defaults)
+   ============================================================ */
+function getProfileCustomization(p){
+  if(!p) return {};
+  return {
+    avatarShape:       p.avatarShape       || 'circle',
+    avatarBorder:      p.avatarBorder      || 'gradient',
+    avatarBorderColor: p.avatarBorderColor || '#6c5ce7',
+    profileLayout:     p.profileLayout     || 'default',
+    bannerEffect:      p.bannerEffect      || 'none',
+    accentColor:       p.accentColor       || '#6c5ce7',
+    musicUrl:          p.musicUrl          || '',
+    pronouns:          p.pronouns          || '',
+    location:          p.location          || '',
+    website:           p.website           || '',
+    birthday:          p.birthday          || '',
+    discord:           p.discord           || '',
+    twitter:           p.twitter           || '',
+    /* ★ جديدة */
+    nameColor:         p.nameColor         || '#ffffff',
+    usernameColor:     p.usernameColor     || '#00d2ff',
+    titleColor:        p.titleColor        || '#f5b301',
+  };
+}
+
+/* ============================================================
+   👁️ بطاقة المعاينة في استوديو التخصيص
+   ============================================================ */
+function renderCustomizationPreview(){
+  const p = state.profile;
+  if(!p) return '';
+
+  const cust = getProfileCustomization(p);
+  const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
+  const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+
+  const borderClass = `border-${cust.avatarBorder}`;
+  const shapeClass = cust.avatarShape;
+
+  return `
+    <div class="preview-card">
+      <div class="preview-cover" style="background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})">
+        ${cust.bannerEffect !== 'none'
+          ? `<div class="preview-effect effect-${cust.bannerEffect}"></div>`
+          : ''}
+      </div>
+      <div class="preview-body">
+        <div class="preview-avatar ${shapeClass} ${borderClass} ${frameClass}"
+             style="${cust.avatarBorder === 'solid' ? `--border-color:${cust.avatarBorderColor}` : ''}">
+          ${avatar(p, 52)}
+        </div>
+        <div class="preview-info">
+<div class="preview-name" style="color:${cust.nameColor}">${esc(p.name)}</div>
+<div class="preview-user" style="color:${cust.usernameColor}">@${esc(p.username)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   🔍 فحص توفر اسم المستخدم
+   ============================================================ */
+let _usernameCheckTimer = null;
+async function checkUsernameAvailability(username, statusEl){
+  if(!statusEl) return;
+  username = (username || '').trim().toLowerCase();
+
+  if(!username){
+    statusEl.className = 'username-status idle';
+    statusEl.textContent = '';
+    return;
+  }
+
+  // نفس اسمه الحالي — متاح
+  if(username === (state.profile.username || '').toLowerCase()){
+    statusEl.className = 'username-status available';
+    statusEl.textContent = '✓';
+    return;
+  }
+
+  // تنسيق
+  if(!/^[a-z0-9_]{3,20}$/.test(username)){
+    statusEl.className = 'username-status taken';
+    statusEl.textContent = '✗';
+    return;
+  }
+
+  statusEl.className = 'username-status checking';
+  statusEl.textContent = '…';
+
+  clearTimeout(_usernameCheckTimer);
+  _usernameCheckTimer = setTimeout(async () => {
+    try {
+      const snap = await getDoc(doc(db, 'usernames', username));
+      if(snap.exists() && snap.data().uid !== state.user.uid){
+        statusEl.className = 'username-status taken';
+        statusEl.textContent = '✗';
+      } else {
+        statusEl.className = 'username-status available';
+        statusEl.textContent = '✓';
+      }
+    } catch(e){
+      statusEl.className = 'username-status idle';
+      statusEl.textContent = '';
+    }
+  }, 350);
+}
+
+/* ============================================================
+   💾 حفظ حقل تخصيص واحد
+   ============================================================ */
+async function saveCustomField(field, value){
+  try {
+    await updateDoc(doc(db, 'users', state.user.uid), { [field]: value });
+    if(state.profile) state.profile[field] = value;
+    return true;
+  } catch(e){
+    console.error(e);
+    toast('فشل الحفظ');
+    return false;
+  }
+}
+
 async function pageProfile(){
   const p = state.profile;
   if(!p){
-    // إذا مر وقت طويل، اعرض زر إعادة محاولة
     setTimeout(() => {
       const el = document.getElementById('app');
       if(el && state.page === 'profile' && !state.profile){
@@ -1998,83 +3794,99 @@ async function pageProfile(){
       <div>جاري تحميل الملف الشخصي…</div>
     </div>`;
   }
+
   const tabs = [
-    {id:'posts', label:'المنشورات', icon:'grid'},
-    {id:'saved', label:'المحفوظات', icon:'bookmark'},
-    {id:'history', label:'سجل اللعب', icon:'clock'},
-    {id:'games', label:'الألعاب', icon:'gamepad'},
+    {id:'posts',        label:'المنشورات', icon:'grid'},
+    {id:'saved',        label:'المحفوظات', icon:'bookmark'},
+    {id:'history',      label:'سجل اللعب',  icon:'clock'},
+    {id:'games',        label:'الألعاب',    icon:'gamepad'},
+    {id:'inventory',    label:'المقتنيات', icon:'store'},
+    {id:'achievements', label:'الإنجازات', icon:'medal'},
+    {id:'stats',        label:'الإحصائيات', icon:'chart'},
+    {id:'activity',     label:'النشاطات', icon:'clock'},
+    {id:'gifts',        label:'الهدايا',    icon:'star'},
   ];
-  let body = '';
-  if(state.profileTab === 'posts'){
-    const myPosts = state.posts.filter(x=>x.authorId === state.user.uid);
-    body = myPosts.length ? myPosts.map(x=>postCard(x)).join('') : emptyState('لم تنشر بعد','grid');
-  } else if(state.profileTab === 'saved'){
-    const saved = state.posts.filter(x=>state.saved[x.id]);
-    body = saved.length ? saved.map(x=>postCard(x)).join('') : emptyState('لا توجد منشورات محفوظة','bookmark');
-} else if(state.profileTab === 'history'){
-  // اجلب سجل المباريات
-  const historySnap = await getDocs(
-    query(collection(db,'users',state.user.uid,'matchHistory'), orderBy('playedAt','desc'), limit(20))
-  ).catch(()=>null);
-  const history = historySnap ? historySnap.docs.map(d=>({id:d.id, ...d.data()})) : [];
-  body = history.length ? history.map(h=>`
-    <div class="card" style="margin-bottom:8px;padding:12px">
-      <div class="row">
-        <div style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
-          background:${h.result==='win'?'rgba(34,197,94,.15)':'rgba(255,61,113,.15)'};
-          color:${h.result==='win'?'var(--ok)':'var(--pink)'};font-weight:900">
-          ${h.result==='win'?'✓':'✗'}
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:800">${esc(h.gameName||'Quiz Clash')}</div>
-          <div class="muted" style="font-size:10.5px">${timeAgo(h.playedAt)}</div>
-        </div>
-        <div style="text-align:left">
-          <div style="font-size:14px;font-weight:900;color:${h.result==='win'?'var(--ok)':'var(--pink)'}">
-            ${h.myScore} - ${h.opponentScore}
-          </div>
-          <div class="muted" style="font-size:9.5px">${h.result==='win'?'فوز':'خسارة'}</div>
-        </div>
-      </div>
-    </div>`).join('') : emptyState('لم تلعب أي مباراة بعد','gamepad');
-} else {
-    body = `<div class="card" style="text-align:center;padding:30px"><div class="muted">ستظهر إحصائياتك لكل لعبة هنا</div></div>`;
-  }
+
+  const validIds = tabs.map(t=>t.id);
+  if(!validIds.includes(state.profileTab)) state.profileTab = 'posts';
+
+  const body = await renderProfileTabBody();
+  const prog = xpProgress(p.xp || 0);
+  const cust = getProfileCustomization(p);
+
+  // بيانات إضافية
+  const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
+  const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+  const avatarShapeClass = `shape-${cust.avatarShape}`;
+  const avatarBorderClass = `border-${cust.avatarBorder}`;
+
   return `
     <div class="player-card">
-      <div class="pc-cover" style="background:${p.coverUrl?`url(${esc(p.coverUrl)})`:p.grad||'linear-gradient(135deg,#6c5ce7,#00d2ff 55%,#ff3d71)'}"></div>
+      <div class="pc-cover" data-action="cover-click" style="cursor:pointer;background:${
+        p.coverUrl ? `url(${esc(p.coverUrl)})` : `linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})`
+      }">
+        ${cust.bannerEffect !== 'none'
+          ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0"></div>`
+          : ''}
+      </div>
+
+      <div class="pc-card-actions">
+        <button class="pc-act-btn" data-action="edit-profile">${ic('edit','xs')} تعديل</button>
+        <button class="pc-act-btn" data-nav="customization">${ic('image','xs')} تخصيص</button>
+      </div>
+
       <div class="pc-topright">
         <div class="pc-like-chip">${ic('heart')} ${nf(p.likesProfile)}</div>
         <div class="pc-like-chip gp">${ic('gamepad')} ${nf(p.likesGames)}</div>
       </div>
+
       <div class="pc-body">
         <div class="pc-info">
-          <div class="pc-nick">${esc(p.name)}</div>
-          <div class="pc-user">@${esc(p.username)}</div>
+<div class="pc-nick" style="color:${cust.nameColor}">
+  ${esc(p.name)}
+  ${cust.pronouns ? `<span class="pc-pronouns">${esc(cust.pronouns)}</span>` : ''}
+</div>
+<div class="pc-user" style="color:${cust.usernameColor}">@${esc(p.username)}</div>
+          <div class="pc-joined">${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}</div>
+
+          <div class="pc-social">
+            <span><b>${nf(p.followers)}</b> متابع</span>
+            <span><b>${nf(p.following)}</b> متابَع</span>
+          </div>
+
           ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
-          <div class="pc-bio">${esc(p.bio||'')}</div>
+
+          ${(cust.location || cust.website || cust.twitter || cust.discord) ? `
+            <div class="pc-meta-row">
+              ${cust.location ? `<span>${ic('location','xs')} ${esc(cust.location)}</span>` : ''}
+              ${cust.website ? `<a href="${esc(cust.website)}" target="_blank" rel="noopener">${ic('globe','xs')} ${esc(cust.website.replace(/^https?:\/\//,'').replace(/\/$/,'').slice(0,30))}</a>` : ''}
+              ${cust.twitter ? `<span>${ic('share','xs')} ${esc(cust.twitter)}</span>` : ''}
+              ${cust.discord ? `<span>${ic('message','xs')} ${esc(cust.discord)}</span>` : ''}
+            </div>
+          ` : ''}
+
+          <div class="pc-bio">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
         </div>
-        <div class="pc-avatar">${avatar(p, 82)}</div>
+
+<div class="pc-avatar ${avatarShapeClass} ${avatarBorderClass} ${frameClass}"
+     data-action="avatar-click"
+     style="cursor:pointer;${cust.avatarBorder==='solid'?`--border-color:${cust.avatarBorderColor}`:''}">
+  ${avatar(p, 82)}
+</div>
       </div>
+
       <div class="pc-level">
         <div class="pc-level-bar"><span style="width:${Math.min(100,(p.xp||0)%100)}%"></span></div>
         <div class="pc-level-num">المستوى ${p.level||1}</div>
       </div>
     </div>
-    <div class="pc-actions">
-      <button data-action="edit-profile">${ic('edit','sm')} تعديل</button>
-      <button data-action="toast" data-msg="المتابِعون">${ic('users','sm')} ${nf(p.followers)}</button>
-      <button data-action="toast" data-msg="يتابع">${ic('user','sm')} ${nf(p.following)}</button>
-    </div>
+
     <div class="pc-stats">
       <div class="pc-stat f"><div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div></div>
       <div class="pc-stat p"><div class="v">${nf(p.power)}</div><div class="l">القوة</div></div>
       <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
     </div>
-    <!-- ★ شريط المستوى -->
-${(() => {
-  const prog = xpProgress(p.xp || 0);
-  return `
+
     <div class="level-widget">
       <div class="level-top">
         <div class="level-badge">${prog.level}</div>
@@ -2090,69 +3902,86 @@ ${(() => {
       <div class="level-bar"><span style="width:${prog.pct}%"></span></div>
       ${p.statusMsg ? `<div class="muted" style="font-size:11px;margin-top:8px;text-align:center">"${esc(p.statusMsg)}"</div>` : ''}
     </div>
-  `;
-})()}
-    <div class="tabs" style="margin-top:16px">
-      ${tabs.map(t=>`<button class="tab ${state.profileTab===t.id?'active':''}" data-ptab="${t.id}">${ic(t.icon,'sm')} ${t.label}</button>`).join('')}
+
+    <div class="tabs scrollable" id="profileTabs" style="margin-top:16px">
+      ${tabs.map(t=>`<button class="tab ${state.profileTab===t.id?'active':''}" data-ptab="${t.id}">
+        ${ic(t.icon,'xs')} ${t.label}
+      </button>`).join('')}
     </div>
-    ${body}`;
+
+    <div id="profileTabBody">${body}</div>
+  `;
 }
 
 function pageUserProfile(){
   const p = state.users[state.viewingUid];
   if(!p) return emptyState('المستخدم غير موجود','user');
   const on = state.followed.has(state.viewingUid);
-  const liked = state.profileLiked[state.viewingUid];
-  const myPosts = state.posts.filter(x=>x.authorId === state.viewingUid);
+  const myPosts = state.posts.filter(x => x.authorId === state.viewingUid);
+
   return `
     <div class="row" style="margin-bottom:14px">
       <button class="icon-btn" data-nav="home">${ic('back','sm')}</button>
       <div style="font-size:15px;font-weight:900">الملف الشخصي</div>
     </div>
+
     <div class="player-card">
-      <div class="pc-cover" style="background:${p.coverUrl?`url(${esc(p.coverUrl)})`:p.grad||'linear-gradient(135deg,#6c5ce7,#00d2ff 55%,#ff3d71)'}"></div>
+      <div class="pc-cover" style="background:${
+        p.coverUrl ? `url(${esc(p.coverUrl)})` : (p.grad || 'linear-gradient(135deg,#6c5ce7,#00d2ff 55%,#ff3d71)')
+      }"></div>
+
+      <!-- ★ زر المتابعة + الإجراءات في الزاوية العلوية اليسرى -->
+      <div class="pc-card-actions">
+        <button class="pc-act-btn pc-act-follow ${on?'on':''}" data-follow="${state.viewingUid}">
+          ${on ? '✓ متابَع' : '+ متابعة'}
+        </button>
+        <button class="pc-act-btn pc-act-more"
+                data-action="profile-actions" data-uid="${state.viewingUid}"
+                aria-label="إجراءات">
+          ${ic('dots','sm')}
+        </button>
+      </div>
+
       <div class="pc-topright">
         <div class="pc-like-chip">${ic('heart')} ${nf(p.likesProfile)}</div>
         <div class="pc-like-chip gp">${ic('gamepad')} ${nf(p.likesGames)}</div>
       </div>
+
       <div class="pc-body">
         <div class="pc-info">
-          <div class="pc-nick">${esc(p.name)}</div>
-          <div class="pc-user">@${esc(p.username)}</div>
+${(() => {
+  const pu = getProfileCustomization(p);
+  return `
+    <div class="pc-nick" style="color:${pu.nameColor}">${esc(p.name)}</div>
+    <div class="pc-user" style="color:${pu.usernameColor}">@${esc(p.username)}</div>
+  `;
+})()}
+          <div class="pc-joined">${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}</div>
+          <div class="pc-social">
+            <span><b>${nf(p.followers)}</b> متابع</span>
+            <span><b>${nf(p.following)}</b> متابَع</span>
+          </div>
           ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
           <div class="pc-bio">${esc(p.bio||'')}</div>
         </div>
         <div class="pc-avatar">${avatar(p, 82)}</div>
       </div>
+
       <div class="pc-level">
         <div class="pc-level-bar"><span style="width:${Math.min(100,(p.xp||0)%100)}%"></span></div>
         <div class="pc-level-num">المستوى ${p.level||1}</div>
       </div>
     </div>
-    <div class="pc-actions" style="flex-wrap:wrap">
-      <button class="btn-follow-wide ${on?'on':''}" data-follow="${state.viewingUid}" style="flex:1 1 100%">
-        ${on?'متابَع ✓':'متابعة'}
-      </button>
-      <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-open-chat="${state.viewingUid}">
-        ${ic('message','sm')} رسالة
-      </button>
-      <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-profile-like="${state.viewingUid}">
-        ${ic('heart','sm')} ${liked?'إزالة الإعجاب':'إعجاب الملف'}
-      </button>
-      <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-weight:800" data-support="${state.viewingUid}">
-        ${ic('star','sm')} دعم +10
-      </button>
-      <button class="challenge-btn" data-send-challenge="${state.viewingUid}">
-  ${ic('bolt','sm')} تحدي
-</button>
-    </div>
+
     <div class="pc-stats">
       <div class="pc-stat f"><div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div></div>
       <div class="pc-stat p"><div class="v">${nf(p.power)}</div><div class="l">القوة</div></div>
       <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
     </div>
+
     <div class="section-title" style="margin-top:16px">${ic('grid','sm')} منشوراته</div>
-    ${myPosts.length ? myPosts.map(x=>postCard(x)).join('') : emptyState('لا توجد منشورات','grid')}`;
+    ${myPosts.length ? myPosts.map(x=>postCard(x)).join('') : emptyState('لا توجد منشورات','grid')}
+  `;
 }
 
 function pageSearch(){
@@ -2217,29 +4046,59 @@ function pageNotifs(){
       updateDoc(doc(db,'notifications',state.user.uid,'items',n.id), { read: true }).catch(()=>{})
     ));
   }
-const icons = {
-  like:'heart', follow:'user', game:'gamepad',
-  comment:'comment', support:'star',
-  challenge:'bolt', team_request:'users',
-  team_accepted:'check', team_rejected:'close',
-  team_kick:'logout', team_role:'crown',
-};
-  if(!state.notifs.length){
-    return `<h1 class="page-title">الإشعارات</h1>${emptyState('لا توجد إشعارات','bell')}`;
-  }
-  return `<h1 class="page-title">الإشعارات</h1>
-    <div class="card pad0" style="padding:6px">
-${state.notifs.map(n=>`
-  <div class="notif-item ${n.read?'':'unread'}" 
-       ${n.type === 'challenge' ? `data-action="show-challenges" style="cursor:pointer"` : ''}>
-    <div class="notif-ic ${n.type||''}">${ic(icons[n.type]||'bell','sm')}</div>
-    <div style="flex:1;min-width:0">
-      <div class="notif-txt">${n.text||'إشعار جديد'}</div>
-      <div class="notif-time">${timeAgo(n.createdAt)}</div>
-    </div>
-    ${n.type === 'challenge' ? `<span class="pill pink">اضغط للعرض</span>` : ''}
-  </div>`).join('')}
-    </div>`;
+
+  const icons = {
+    like:'heart', follow:'user', game:'gamepad',
+    comment:'comment', support:'star', challenge:'bolt',
+    team_request:'users', team_accepted:'check', team_rejected:'close',
+    team_kick:'logout', team_role:'crown',
+    achievement:'medal', war:'shield', game_invite:'bolt',
+  };
+
+  const filters = [
+    {k:'all', l:'الكل'},
+    {k:'social', l:'اجتماعي', types:['like','follow','comment','support']},
+    {k:'games', l:'ألعاب', types:['game','challenge','game_invite','achievement']},
+    {k:'teams', l:'فرق', types:['team_request','team_accepted','team_rejected','team_kick','team_role','war']},
+  ];
+
+  const activeFilter = filters.find(f => f.k === state.notifFilter) || filters[0];
+  const filtered = activeFilter.types
+    ? state.notifs.filter(n => activeFilter.types.includes(n.type))
+    : state.notifs;
+
+  const clickMap = {
+    challenge: 'data-action="show-challenges"',
+    war: 'data-nav="war"',
+    gift: 'data-nav="gifts"',
+    achievement: 'data-nav="achievements"',
+    team_request: 'data-nav="teams"',
+    game: 'data-nav="games"',
+    game_invite: 'data-nav="games"',
+    season_end: 'data-nav="season"',
+  };
+
+  const items = filtered.map(function(n){
+    const clickAttr = clickMap[n.type] ? clickMap[n.type] + ' style="cursor:pointer"' : '';
+    return '<div class="notif-item ' + (n.read ? '' : 'unread') + '" ' + clickAttr + '>'
+      + '<div class="notif-ic ' + (n.type || '') + '">' + ic(icons[n.type] || 'bell', 'sm') + '</div>'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div class="notif-txt">' + (n.text || 'إشعار جديد') + '</div>'
+      +   '<div class="notif-time">' + timeAgo(n.createdAt) + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  return '<h1 class="page-title">🔔 الإشعارات</h1>'
+    + '<div class="notif-filters">'
+    +   filters.map(function(f){
+          return '<button class="notif-filter-btn ' + (state.notifFilter === f.k ? 'active' : '')
+            + '" data-notif-filter="' + f.k + '">' + f.l + '</button>';
+        }).join('')
+    + '</div>'
+    + (filtered.length
+        ? '<div class="card pad0" style="padding:6px">' + items + '</div>'
+        : emptyState('لا إشعارات في هذه الفئة', 'bell'));
 }
 
 function pageCloseFriends(){
@@ -2271,24 +4130,41 @@ function pageStats(){
 }
 
 function pageAchievements(){
-  const done = ACHIEVEMENTS.filter(a=>a.done).length;
-  return `<h1 class="page-title">الإنجازات</h1>
+  const p = state.profile || {};
+  const unlocked = p.achievements || {};
+  const all = Object.entries(ACHIEVEMENT_DEFS);
+  const done = all.filter(([id]) => unlocked[id]).length;
+  
+  return `<h1 class="page-title">🏅 الإنجازات</h1>
     <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:14px">
       <div class="ach-icon" style="width:56px;height:56px;font-size:26px">🏅</div>
       <div style="flex:1">
-        <div style="font-size:15px;font-weight:900">${done} / ${ACHIEVEMENTS.length}</div>
-        <div class="ach-prog" style="margin-top:8px"><span style="width:${(done/ACHIEVEMENTS.length*100).toFixed(0)}%"></span></div>
+        <div style="font-size:15px;font-weight:900">${done} / ${all.length}</div>
+        <div class="ach-prog" style="margin-top:8px">
+          <span style="width:${(done/all.length*100).toFixed(0)}%"></span>
+        </div>
       </div>
     </div>
-    ${ACHIEVEMENTS.map(a=>`<div class="ach-item">
-      <div class="ach-icon ${a.done?'':'locked'}">${a.icon}</div>
-      <div class="ach-mid">
-        <div class="ach-n">${a.name}</div>
-        <div class="ach-d">${a.desc}</div>
-        ${a.done?'':`<div class="ach-prog"><span style="width:${a.p||0}%"></span></div>`}
-      </div>
-      <div class="muted" style="font-size:11px;font-weight:800">${a.done?'✓':(a.p||0)+'%'}</div>
-    </div>`).join('')}`;
+    ${all.map(([id, def])=>{
+      const isUnlocked = !!unlocked[id];
+      const tier = TIER_COLORS[def.tier] || TIER_COLORS.bronze;
+      return `
+        <div class="achievement-card ${isUnlocked?'unlocked':'locked'}">
+          <div class="ach-tier-icon ${def.tier}">${def.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800">${def.name}</div>
+            <div class="ach-d">${def.desc}</div>
+            <div style="margin-top:5px;font-size:10px;color:${tier.text};font-weight:800">
+              ${def.tier.toUpperCase()} · ${def.reward.coins} عملة + ${def.reward.xp} XP
+            </div>
+          </div>
+          ${isUnlocked
+            ? `<span class="pill ok" style="font-size:9.5px">✓</span>`
+            : `<span class="muted" style="font-size:10px">مقفل</span>`}
+        </div>
+      `;
+    }).join('')}
+  `;
 }
 
 function pageLeaderboard(){
@@ -2313,7 +4189,7 @@ function pageSettings(){
     <div class="sr-txt"><div class="sr-n">${n}</div><div class="sr-d">${d}</div></div>
     <div class="switch ${S[k]?'on':''}"></div>
   </div>`;
-  return `<h1 class="page-title">الإعدادات</h1>
+  return `<h1 class="page-title">⚙️ الإعدادات</h1>
     <div class="set-group">
       <h4>الحساب</h4>
       <div class="set-row" data-action="edit-profile">
@@ -2332,10 +4208,13 @@ function pageSettings(){
       <h4>الخصوصية</h4>
       ${row('location','مشاركة الموقع','للمنشورات القريبة')}
     </div>
-    <div class="set-group">
+    <button class="btn btn-primary" style="width:100%;margin-top:16px" data-action="save-settings">
+      ${ic('check','sm')} حفظ الإعدادات
+    </button>
+    <div class="set-group" style="margin-top:24px">
       <h4>عن التطبيق</h4>
-      <div class="set-row" data-action="toast" data-msg="الإصدار 2.0.0">
-        <div class="sr-txt"><div class="sr-n">الإصدار</div><div class="sr-d">2.0.0</div></div>
+      <div class="set-row" data-action="toast" data-msg="الإصدار 3.0.0">
+        <div class="sr-txt"><div class="sr-n">الإصدار</div><div class="sr-d">3.0.0</div></div>
         ${ic('star','sm')}
       </div>
     </div>`;
@@ -2355,33 +4234,185 @@ function pageSupport(){
     </div>`).join('') : emptyState('لا يوجد مشرفون بعد','shield')}`;
 }
 
-function pageAdmin(){
+async function pageAdmin(){
   if(state.profile?.role !== 'admin'){
     return `<div class="empty">${ic('lock')}<div>هذه الصفحة للمشرفين فقط</div></div>`;
   }
-  const cards = [
-    {ic:'users', t:'إدارة المستخدمين', v:Object.keys(state.users).length},
-    {ic:'grid', t:'إدارة المحتوى', v:state.posts.length + ' منشور'},
-    {ic:'gamepad', t:'إدارة الألعاب', v:state.rooms.length + ' غرفة'},
-    {ic:'shield', t:'فريق الإشراف', v:'—'},
-    {ic:'chart', t:'الإحصائيات', v:'—'},
-  ];
-  return `<h1 class="page-title">لوحة الإشراف</h1>
-    <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(245,179,1,.14),rgba(255,61,113,.06));border-color:rgba(245,179,1,.28)">
-      <div class="row">
-        <div class="ach-icon" style="background:rgba(245,179,1,.2)">${ic('crown','sm')}</div>
-        <div style="flex:1"><div style="font-size:14px;font-weight:900">المشرف العام</div>
-        <div class="muted" style="font-size:11px">صلاحيات كاملة</div></div>
-        <span class="role-badge admin">ADMIN</span>
-      </div>
+  
+  const tab = state.adminTab || 'overview';
+  
+  // حمّل البيانات
+  if(tab === 'reports' && !state.reports.length){
+    try {
+      const snap = await getDocs(
+        query(collection(db,'reports'), where('status','==','pending'),
+              orderBy('createdAt','desc'), limit(50))
+      );
+      state.reports = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    } catch(e){}
+  }
+  
+  if(tab === 'users'){
+    state.bannedUsers = Object.values(state.users).filter(u => u.banned);
+  }
+  
+  return `
+    <h1 class="page-title">👑 لوحة الإدارة</h1>
+    
+    <div class="admin-tabs">
+      <button class="admin-tab ${tab==='overview'?'active':''}" data-admin-tab="overview">نظرة</button>
+      <button class="admin-tab ${tab==='users'?'active':''}" data-admin-tab="users">المستخدمون</button>
+      <button class="admin-tab ${tab==='reports'?'active':''}" data-admin-tab="reports">البلاغات</button>
+      <button class="admin-tab ${tab==='content'?'active':''}" data-admin-tab="content">المحتوى</button>
+      <button class="admin-tab ${tab==='season'?'active':''}" data-admin-tab="season">الموسم</button>
     </div>
-    <div class="games-grid">
-    ${cards.map(c=>`<button class="card" style="text-align:right" data-action="toast" data-msg="${c.t}">
-      <div class="mi-ic" style="margin-bottom:10px">${ic(c.ic,'sm')}</div>
-      <div style="font-size:12.5px;font-weight:800">${c.t}</div>
-      <div class="pill" style="margin-top:9px;display:inline-block">${c.v}</div>
-    </button>`).join('')}
-    </div>`;
+    
+    ${tab === 'overview' ? `
+      <div class="stat-grid" style="margin-bottom:16px">
+        <div class="stat-box"><div class="sv">${Object.keys(state.users).length}</div><div class="sl">مستخدم</div></div>
+        <div class="stat-box"><div class="sv">${state.posts.length}</div><div class="sl">منشور</div></div>
+        <div class="stat-box"><div class="sv">${state.teams.length}</div><div class="sl">فريق</div></div>
+        <div class="stat-box"><div class="sv">${state.rooms.length}</div><div class="sl">غرفة</div></div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:900;margin-bottom:10px">إجراءات سريعة</div>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-action="admin-refresh">
+          ${ic('check','sm')} تحديث البيانات
+        </button>
+        <button class="btn btn-ghost" style="width:100%" data-action="admin-season-end">
+          ${ic('trophy','sm')} إنهاء الموسم الحالي
+        </button>
+      </div>
+    ` : ''}
+    
+    ${tab === 'users' ? `
+      <div class="section-title">${ic('users','sm')} إدارة المستخدمين (${Object.keys(state.users).length})</div>
+      ${Object.values(state.users).slice(0, 30).map(u=>`
+        <div class="admin-user-row">
+          ${avatar(u, 40)}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px">
+              ${esc(u.name)}
+              ${u.banned ? '<span class="admin-badge banned">محظور</span>' : ''}
+              ${u.role === 'admin' ? '<span class="admin-badge admin">مشرف</span>' : ''}
+            </div>
+            <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+          </div>
+          ${u.uid !== state.user.uid ? `
+            <button class="btn btn-sm ${u.banned?'btn-ghost':'btn-danger'}"
+                    data-admin-ban="${u.uid}" data-admin-banned="${u.banned?'1':'0'}">
+              ${u.banned ? 'إلغاء الحظر' : 'حظر'}
+            </button>
+          ` : '<span class="pill gold">أنت</span>'}
+        </div>
+      `).join('')}
+    ` : ''}
+    
+    ${tab === 'reports' ? `
+      <div class="section-title">${ic('shield','sm')} البلاغات المعلقة (${state.reports.length})</div>
+      ${state.reports.length ? state.reports.map(r=>`
+        <div class="report-card pending">
+          <div class="row" style="margin-bottom:8px">
+            <span class="report-reason">${esc(r.reason)}</span>
+            <div style="flex:1"></div>
+            <div class="muted" style="font-size:10px">${timeAgo(r.createdAt)}</div>
+          </div>
+          <div style="font-size:12.5px;line-height:1.6;margin-bottom:10px">
+            <b style="color:var(--txt)">من:</b> ${esc(r.reporterName || '?')}<br>
+            <b style="color:var(--txt)">النوع:</b> ${r.targetType}<br>
+            ${r.details ? `<b style="color:var(--txt)">التفاصيل:</b> ${esc(r.details)}` : ''}
+          </div>
+          <div class="row">
+            ${r.targetType === 'post' ? `
+              <button class="btn btn-danger btn-sm" style="flex:1" data-admin-delete-post="${r.targetId}" data-admin-report="${r.id}">
+                حذف المنشور
+              </button>
+            ` : ''}
+            ${r.targetType === 'user' ? `
+              <button class="btn btn-danger btn-sm" style="flex:1" data-admin-ban="${r.targetId}" data-admin-banned="0" data-admin-report="${r.id}">
+                حظر المستخدم
+              </button>
+            ` : ''}
+            <button class="btn btn-ghost btn-sm" style="flex:1" data-admin-dismiss="${r.id}">
+              تجاهل
+            </button>
+          </div>
+        </div>
+      `).join('') : emptyState('لا بلاغات معلقة ✅','shield')}
+    ` : ''}
+    
+    ${tab === 'content' ? `
+      <div class="section-title">${ic('grid','sm')} آخر المنشورات</div>
+      ${state.posts.slice(0, 20).map(p=>`
+        <div class="card" style="margin-bottom:8px;padding:11px">
+          <div class="row" style="margin-bottom:6px">
+            ${avatar(p.author, 32)}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:800">${esc(p.author?.name || '?')}</div>
+              <div class="muted" style="font-size:10px">${timeAgo(p.createdAt)}</div>
+            </div>
+            <button class="btn btn-danger btn-sm" data-admin-delete-post="${p.id}">
+              ${ic('trash','xs')}
+            </button>
+          </div>
+          <div style="font-size:12px;color:#b7c2d8;line-height:1.6;max-height:60px;overflow:hidden">
+            ${esc((p.text||'').substring(0, 150))}
+          </div>
+        </div>
+      `).join('')}
+    ` : ''}
+    
+    ${tab === 'season' ? `
+      <div class="card">
+        <div style="font-size:14px;font-weight:900;margin-bottom:10px">🏆 إدارة الموسم</div>
+        <div class="muted" style="font-size:12px;line-height:1.8;margin-bottom:14px">
+          الموسم الحالي: ${state.seasonInfo?.number || '?'}<br>
+          بدأ: ${state.seasonInfo?.startedAt ? timeAgo(state.seasonInfo.startedAt) : '?'}<br>
+          ينتهي: ${state.seasonInfo?.endsAt ? timeAgo(state.seasonInfo.endsAt) : '?'}
+        </div>
+        <button class="btn btn-danger" style="width:100%" data-action="admin-season-end">
+          إنهاء الموسم وبدء جديد
+        </button>
+      </div>
+    ` : ''}
+  `;
+}
+
+async function adminBanUser(uid, currentlyBanned){
+  if(uid === state.user.uid) return toast('لا يمكنك حظر نفسك');
+  try {
+    await updateDoc(doc(db,'users',uid), {
+      banned: !currentlyBanned,
+    });
+    toast(currentlyBanned ? 'تم إلغاء الحظر' : 'تم الحظر ✓');
+    render();
+  } catch(e){ toast('فشل'); }
+}
+
+async function adminDeletePost(postId, reportId){
+  if(!confirm('حذف هذا المنشور نهائياً؟')) return;
+  try {
+    await deleteDoc(doc(db,'posts',postId));
+    if(reportId){
+      await updateDoc(doc(db,'reports',reportId), { status: 'resolved', resolvedBy: state.user.uid, resolvedAt: serverTimestamp() });
+    }
+    toast('تم الحذف');
+    state.reports = state.reports.filter(r => r.id !== reportId);
+    render();
+  } catch(e){ toast('فشل'); }
+}
+
+async function adminDismissReport(reportId){
+  try {
+    await updateDoc(doc(db,'reports',reportId), {
+      status: 'dismissed',
+      resolvedBy: state.user.uid,
+      resolvedAt: serverTimestamp(),
+    });
+    toast('تم التجاهل');
+    state.reports = state.reports.filter(r => r.id !== reportId);
+    render();
+  } catch(e){ toast('فشل'); }
 }
 
 function pageLogout(){
@@ -2404,6 +4435,13 @@ const PAGES = {
   stats:pageStats, achievements:pageAchievements, leaderboard:pageLeaderboard,
   settings:pageSettings, support:pageSupport, admin:pageAdmin, logout:pageLogout,
   inventory: pageInventory,
+  tournaments: pageTournaments,
+  war: pageWar,
+  activity: pageActivity,
+  season: pageSeason,
+customization: pageCustomization,
+gifts: pageGifts,
+gamestats: pageGameStats,
 };
 
 function render(){
@@ -2412,31 +4450,61 @@ function render(){
   const fn = PAGES[state.page] || pageHome;
   const result = fn();
 
-  if(result && typeof result.then === 'function'){
-    result.then(html => {
-      document.getElementById('app').innerHTML = html || '';
-      if(state.page === 'search') renderSearchResults();
-      
-      /* ★ جديد: رسم محادثة الفريق بعد تحديث الصفحة */
-      if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
-        setTimeout(renderTeamChat, 50);
-      }
-    }).catch(err => {
-      console.error('Render error:', err);
-      document.getElementById('app').innerHTML = `<div class="empty">${ic('close')}<div>خطأ في التحميل</div></div>`;
-    });
-  } else {
-    document.getElementById('app').innerHTML = result || '';
-    if(state.page === 'search'){
-      const inp = document.getElementById('searchInput');
-      if(inp && document.activeElement !== inp) renderSearchResults();
-    }
-    
-    /* ★ جديد: رسم محادثة الفريق بعد تحديث الصفحة */
+  const afterRender = () => {
+    if(state.page === 'search') renderSearchResults();
     if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
       setTimeout(renderTeamChat, 50);
     }
+    restoreTabsScroll();   /* ★ استعادة التمرير بعد اكتمال كل شيء */
+  };
+
+  if(result && typeof result.then === 'function'){
+    result.then(html => {
+      document.getElementById('app').innerHTML = html || '';
+      afterRender();
+}).catch(err => {
+  console.error('Render error:', err);
+  const eb = document.getElementById('errorBoundary');
+  const ebMsg = document.getElementById('errorBoundaryMsg');
+  if(eb && ebMsg){
+    ebMsg.textContent = err?.message || 'خطأ في تحميل الصفحة';
+    eb.classList.add('show');
+  } else {
+    document.getElementById('app').innerHTML =
+      `<div class="empty">${ic('close')}<div>خطأ في التحميل</div></div>`;
   }
+  afterRender();
+});
+  } else {
+    document.getElementById('app').innerHTML = result || '';
+    afterRender();
+  }
+}
+
+/* ============================================================
+   🔁 استعادة موضع تمرير التبويبات بعد إعادة الرسم
+   ============================================================ */
+function restoreTabsScroll(){
+  if(state._tabsScroll === null || state._tabsScroll === undefined) return;
+
+  const el = document.querySelector('.tabs.scrollable');
+  if(!el){ state._tabsScroll = null; return; }
+
+  const saved = state._tabsScroll;
+  state._tabsScroll = null;
+
+  // انتظر إطارين لضمان اكتمال layout + scrollWidth
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if(el.scrollWidth <= el.clientWidth) return;   // لا شيء للتمرير
+      el.scrollLeft = saved;
+
+      // تحقق من نجاح الإسناد (RTL قد يعكس الإشارة)
+      if(Math.abs(el.scrollLeft - saved) > 2){
+        el.scrollLeft = -saved;
+      }
+    });
+  });
 }
 
 /* ============ Modals with Image Upload ============ */
@@ -2472,94 +4540,193 @@ function composeModal(){
 
 function editProfileModal(){
   const p = state.profile;
-  state.pendingImages.avatar = null;
-  state.pendingImages.cover = null;
+  const cust = getProfileCustomization(p);
+  const pronouns = cust.pronouns;
+
   openModal(`
-    <h3>تعديل الملف</h3>
-    <div class="field">
-      <label>الاسم</label>
-      <input class="input" id="epName" value="${esc(p.name||'')}" maxlength="50">
+    <h3>✏️ تعديل الملف</h3>
+    <div class="sub">حدّث معلوماتك الأساسية</div>
+
+    <div class="edit-tabs">
+      <button class="edit-tab active" data-edit-tab="basic">أساسي</button>
+      <button class="edit-tab" data-edit-tab="details">تفاصيل</button>
     </div>
-    <div class="field">
-      <label>النبذة</label>
-      <textarea class="input" id="epBio" rows="3" style="resize:vertical;max-height:120px" maxlength="200">${esc(p.bio||'')}</textarea>
-    </div>
-    <div class="img-field">
-      <label>الصورة الشخصية</label>
-      <div class="img-preview avatar-preview ${p.avatarUrl?'has-image':''}"
-           id="avatarPreview" data-pick-image="avatar"
-           style="background-image:${p.avatarUrl?`url(${esc(p.avatarUrl)})`:'none'}">
-        <div class="img-empty">${ic('camera')}<span style="font-size:10px">تغيير</span></div>
+
+    <!-- ===== تبويب أساسي ===== -->
+    <div id="editTab_basic" class="edit-panel">
+      <div class="field">
+        <label>الاسم <span class="field-hint">(يظهر بجانب منشوراتك)</span></label>
+        <input class="input" id="epName" value="${esc(p.name||'')}" maxlength="50" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>اسم المستخدم</label>
+        <div class="username-input-wrap">
+          <span class="username-prefix">@</span>
+          <input class="input" id="epUsername" value="${esc(p.username||'')}"
+                 maxlength="20" pattern="[a-z0-9_]{3,20}" autocomplete="off">
+          <span class="username-status idle" id="epUsernameStatus"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>النبذة</label>
+        <textarea class="input" id="epBio" rows="3"
+                  style="resize:vertical;max-height:120px"
+                  maxlength="200">${esc(p.bio||'')}</textarea>
+        <div class="char-counter" id="epBioCounter">0 / 200</div>
+      </div>
+
+      <div class="field">
+        <label>الضمائر</label>
+        <select class="input" id="epPronouns">
+          <option value="">غير محدد</option>
+          ${[
+            ['هو/له','هو / له'],
+            ['هي/لها','هي / لها'],
+            ['هم/لهم','هم / لهم'],
+            ['هو/هي','هو / هي'],
+          ].map(([v,l])=>`<option value="${v}" ${pronouns===v?'selected':''}>${l}</option>`).join('')}
+        </select>
       </div>
     </div>
-    <div class="img-field">
-      <label>صورة الغلاف</label>
-      <div class="img-preview ${p.coverUrl?'has-image':''}"
-           id="coverPreview" data-pick-image="cover"
-           style="background-image:${p.coverUrl?`url(${esc(p.coverUrl)})`:'none'}">
-        <div class="img-empty">${ic('camera')}<span>اضغط لاختيار صورة غلاف</span></div>
+
+    <!-- ===== تبويب تفاصيل ===== -->
+    <div id="editTab_details" class="edit-panel hidden">
+      <div class="field">
+        <label>الموقع</label>
+        <input class="input" id="epLocation" value="${esc(cust.location)}"
+               placeholder="مثال: القاهرة، مصر" maxlength="50">
+      </div>
+      <div class="field">
+        <label>تاريخ الميلاد</label>
+        <input class="input" type="date" id="epBirthday" value="${esc(cust.birthday)}">
+      </div>
+      <div class="field">
+        <label>رسالة الحالة</label>
+        <input class="input" id="epStatusMsg" value="${esc(p.statusMsg||'')}"
+               placeholder="رسالة قصيرة تظهر على ملفك" maxlength="60">
       </div>
     </div>
-    <div class="img-upload-progress" id="profileUploadProgress"><span></span></div>
+
     <div class="row" style="margin-top:16px">
       <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
       <button class="btn btn-primary" style="flex:1" id="saveProfileBtn">حفظ</button>
-    </div>`);
+    </div>
+  `);
+
+  // ===== ربط الأحداث =====
+  document.querySelectorAll('[data-edit-tab]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-edit-tab]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      ['basic','details'].forEach(k => {
+        const el = document.getElementById('editTab_' + k);
+        if(el) el.classList.toggle('hidden', k !== tab.dataset.editTab);
+      });
+    });
+  });
+
+  // عدّاد النبذة
+  const bioEl = document.getElementById('epBio');
+  const bioCounter = document.getElementById('epBioCounter');
+  const updateBioCounter = () => {
+    const len = bioEl.value.length;
+    bioCounter.textContent = `${len} / 200`;
+    bioCounter.className = 'char-counter' + (len > 180 ? ' danger' : len > 150 ? ' warn' : '');
+  };
+  bioEl.addEventListener('input', updateBioCounter);
+  updateBioCounter();
+
+  // فحص اسم المستخدم
+  const unameEl = document.getElementById('epUsername');
+  const unameStatus = document.getElementById('epUsernameStatus');
+  checkUsernameAvailability(unameEl.value, unameStatus);
+  unameEl.addEventListener('input', () => {
+    unameEl.value = unameEl.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    checkUsernameAvailability(unameEl.value, unameStatus);
+  });
 }
 
 async function saveProfileData(){
   const btn = document.getElementById('saveProfileBtn');
   const name = document.getElementById('epName').value.trim();
+  const username = document.getElementById('epUsername').value.trim().toLowerCase();
   const bio = document.getElementById('epBio').value.trim();
-  if(!name){ toast('الاسم مطلوب'); return; }
+  const pronouns = document.getElementById('epPronouns').value;
+  const location = document.getElementById('epLocation').value.trim();
+  const birthday = document.getElementById('epBirthday').value;
+  const statusMsg = document.getElementById('epStatusMsg').value.trim();
+
+  if(!name) return toast('الاسم مطلوب');
+  if(username && !/^[a-z0-9_]{3,20}$/.test(username)){
+    return toast('اسم المستخدم: 3–20 حرفاً/رقماً/شرطة سفلية');
+  }
+
   btn.disabled = true;
   btn.classList.add('loading');
-  try {
-    const prog = document.getElementById('profileUploadProgress');
-    let avatarUrl = state.profile.avatarUrl || '';
-    let coverUrl = state.profile.coverUrl || '';
 
-    if(state.pendingImages.avatar){
-      prog.classList.add('active');
-      try {
-        avatarUrl = await imageToBase64(state.pendingImages.avatar, 'avatar', p => {
-          prog.querySelector('span').style.width = p + '%';
-        });
-      } catch(e) {
-        toast(e.message || 'فشل رفع الصورة');
+  try {
+    const updates = {};
+    const p = state.profile;
+
+    if(name !== p.name) updates.name = name;
+    if(bio !== (p.bio || '')) updates.bio = bio;
+    if(pronouns !== (p.pronouns || '')) updates.pronouns = pronouns;
+    if(location !== (p.location || '')) updates.location = location;
+    if(birthday !== (p.birthday || '')) updates.birthday = birthday;
+    if(statusMsg !== (p.statusMsg || '')) updates.statusMsg = statusMsg;
+
+    let usernameChanged = false;
+    if(username && username !== p.username){
+      const uSnap = await getDoc(doc(db, 'usernames', username));
+      if(uSnap.exists() && uSnap.data().uid !== state.user.uid){
+        toast('اسم المستخدم محجوز');
         btn.disabled = false; btn.classList.remove('loading');
         return;
       }
+      updates.username = username;
+      usernameChanged = true;
     }
-    if(state.pendingImages.cover){
-      prog.classList.add('active');
+
+    if(Object.keys(updates).length === 0){
+      toast('لم تغيّر شيئاً');
+      btn.disabled = false; btn.classList.remove('loading');
+      closeModal();
+      return;
+    }
+
+    console.log('📤 Sending updates:', updates);
+    await updateDoc(doc(db, 'users', state.user.uid), updates);
+
+    if(usernameChanged){
       try {
-        coverUrl = await imageToBase64(state.pendingImages.cover, 'cover', p => {
-          prog.querySelector('span').style.width = p + '%';
-        });
-      } catch(e) {
-        toast(e.message || 'فشل رفع الغلاف');
-        btn.disabled = false; btn.classList.remove('loading');
-        return;
-      }
+        await setDoc(doc(db, 'usernames', username), { uid: state.user.uid });
+        if(p.username){
+          try { await deleteDoc(doc(db, 'usernames', p.username)); } catch(e){}
+        }
+      } catch(e){ console.warn('username sync failed:', e); }
     }
-    
-    await updateDoc(doc(db,'users',state.user.uid), { name, bio, avatarUrl, coverUrl });
-    
-    // تحديث المنشورات القديمة
-    try {
-      const snap = await getDocs(query(collection(db,'posts'), where('authorId','==',state.user.uid)));
-      await Promise.all(snap.docs.map(d => updateDoc(d.ref, {
-        'author.name': name,
-        'author.avatarUrl': avatarUrl
-      })));
-    } catch(e){}
-    
+
+    if(updates.name || updates.username){
+      try {
+        const snap = await getDocs(query(collection(db,'posts'), where('authorId','==',state.user.uid)));
+        const postUpdates = {};
+        if(updates.name) postUpdates['author.name'] = name;
+        if(updates.username) postUpdates['author.username'] = username;
+        if(Object.keys(postUpdates).length){
+          await Promise.all(snap.docs.map(d => updateDoc(d.ref, postUpdates)));
+        }
+      } catch(e){ console.warn('posts sync failed:', e); }
+    }
+
+    Object.assign(state.profile, updates);
     closeModal();
     toast('تم الحفظ ✓');
   } catch(e){
-    console.error(e);
-    toast('فشل الحفظ: ' + (e.message||''));
+    console.error('❌ saveProfileData error:', e);
+    toast('فشل الحفظ: ' + (e.message || e.code || ''));
+  } finally {
     btn.disabled = false;
     btn.classList.remove('loading');
   }
@@ -2581,20 +4748,74 @@ function createTeamModal(){
     </div>`);
 }
 
+function openCreateTournamentModal(){
+  openModal(`
+    <h3>إنشاء بطولة</h3>
+    <div class="sub">اختر الحجم والرسوم</div>
+    <div class="field"><label>اسم البطولة</label>
+      <input class="input" id="tnName" placeholder="مثال: كأس نكسوس" maxlength="40"></div>
+    <div class="field"><label>عدد المشاركين</label>
+      <select class="input" id="tnSize">
+        <option value="4">4 لاعبين</option>
+        <option value="8">8 لاعبين</option>
+        <option value="16">16 لاعباً</option>
+      </select></div>
+    <div class="field"><label>رسوم الدخول (اختياري)</label>
+      <input class="input" id="tnCoins" type="number" placeholder="0" min="0" max="1000"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="confirmCreateTournament">إنشاء</button>
+    </div>
+  `);
+}
+
+function openReportModal(type, id){
+  openModal(`
+    <h3>🚨 إبلاغ</h3>
+    <div class="sub">اختر سبب الإبلاغ</div>
+    ${[
+      {k:'spam', l:'سبام'},
+      {k:'harassment', l:'تحرش/إساءة'},
+      {k:'inappropriate', l:'محتوى غير لائق'},
+      {k:'misinformation', l:'معلومات مضللة'},
+      {k:'other', l:'أخرى'},
+    ].map(r=>`
+      <div class="report-option" data-reason="${r.k}" onclick="this.parentNode.querySelectorAll('.report-option').forEach(o=>o.classList.remove('selected'));this.classList.add('selected')">
+        <span>${r.l}</span>
+      </div>
+    `).join('')}
+    <div class="field" style="margin-top:12px"><label>تفاصيل إضافية (اختياري)</label>
+      <textarea class="input" id="reportDetails" rows="3" maxlength="300" placeholder="اشرح المشكلة..."></textarea></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="confirmReport" data-report-type="${type}" data-report-target="${id}">
+        إرسال البلاغ
+      </button>
+    </div>
+  `);
+}
+
 /* ============================================================
    🎮 محرك اللعبة - Quiz Clash
    ============================================================ */
-
-/** بدء مباراة Quiz Clash */
+/* ===== بدء مباراة Quiz Clash (FIXED) ===== */
 async function startQuizMatch(roomId, isHost){
   try {
     const roomRef = doc(db, 'rooms', roomId);
     const snap = await getDoc(roomRef);
     if(!snap.exists()) return toast('الغرفة غير موجودة');
     const room = snap.data();
+    const players = room.players || [];
 
-    // Host يولد الأسئلة عشوائياً مرة واحدة
-    if(isHost && !room.quizQuestions){
+    if(room.status === 'finished') return toast('انتهت هذه المباراة');
+
+    // تأكد أن اللاعب في الغرفة
+    if(!players.includes(state.user.uid)){
+      await updateDoc(roomRef, { players: arrayUnion(state.user.uid) });
+    }
+
+    // المضيف يولد الأسئلة عند اكتمال اللاعبين
+    if(isHost && players.length >= 2 && !room.quizQuestions){
       const selected = [...QUIZ_QUESTIONS].sort(()=>Math.random()-0.5)
         .slice(0, QUIZ_CONFIG.totalQuestions);
       await updateDoc(roomRef, {
@@ -2602,40 +4823,53 @@ async function startQuizMatch(roomId, isHost){
         status: 'playing',
         currentIndex: 0,
         questionStartedAt: Date.now(),
-        startedAt: serverTimestamp()
+        startedAt: serverTimestamp(),
+        scores: {},
+        answers: {}
       });
     }
 
-    // استمع للغرفة
     subscribeToMatch(roomId);
   } catch(e){ console.error(e); toast('خطأ في بدء المباراة'); }
 }
 
-/** الاشتراك في غرفة المباراة (بما فيها محادثتها) */
+/* ===== الاشتراك في غرفة المباراة ===== */
 function subscribeToMatch(roomId){
-  // تنظيف سابق
   if(state.matchUnsub){ try{state.matchUnsub();}catch(e){} state.matchUnsub = null; }
   if(state.matchChatUnsub){ try{state.matchChatUnsub();}catch(e){} state.matchChatUnsub = null; }
   if(state.matchTimer){ clearInterval(state.matchTimer); state.matchTimer = null; }
 
-  state.activeMatch = { roomId };
+  state.activeMatch = { roomId, _resultCalculated: false };
   document.getElementById('gameOverlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
-  // مستمع بيانات الغرفة
   state.matchUnsub = onSnapshot(doc(db,'rooms',roomId), snap=>{
     if(!snap.exists()){ exitMatch(); return; }
     const data = snap.data();
-    state.activeMatch = { roomId, ...data };
+    state.activeMatch = { ...(state.activeMatch||{}), roomId, ...data };
+
+    // ★ حالة انتظار
+    if(!data.quizQuestions){
+      const c = document.getElementById('gameContainer');
+      if(c) c.innerHTML = `
+        <div class="match-screen" style="padding:60px 20px;text-align:center">
+          <div class="spinner"></div>
+          <h3 style="margin-top:20px">بانتظار بدء المباراة…</h3>
+          <div class="muted">المضيف يجهّز الأسئلة</div>
+          <button class="btn btn-ghost" style="margin-top:20px" onclick="exitMatch()">خروج</button>
+        </div>`;
+      return;
+    }
+
     renderGameUI();
 
-    // إذا انتهت المباراة — أعرض النتيجة واحفظها
-    if(data.status === 'finished' && !data._resultRendered){
+    // ★ نهاية المباراة — مرة واحدة لكل لاعب
+    if(data.status === 'finished' && !state.activeMatch._resultCalculated){
+      state.activeMatch._resultCalculated = true;
       finalizeMatch(roomId, data);
     }
   });
 
-  // مستمع محادثة المباراة
   state.matchChatUnsub = onSnapshot(
     query(collection(db,'rooms',roomId,'chat'), orderBy('createdAt','asc'), limit(100)),
     snap=>{
@@ -2643,6 +4877,105 @@ function subscribeToMatch(roomId){
       renderMatchChat();
     }
   );
+}
+
+/* ===== حفظ النتيجة (PER USER — لا تكرار) ===== */
+async function finalizeMatch(roomId, data){
+  const uid = state.user.uid;
+  const scores = data.scores || {};
+  const winnerId = data.winnerId;
+  const isWinner = winnerId === uid;
+  const myScore = scores[uid] || 0;
+  const opp = (data.players||[]).find(p=>p!==uid);
+  const oppScore = scores[opp] || 0;
+
+  // احفظ سجل للمستخدم الحالي فقط
+  try {
+    await addDoc(collection(db,'users',uid,'matchHistory'), {
+      gameId: data.gameId || 'g3',
+      gameName: 'Quiz Clash',
+      roomId, opponent: opp,
+      myScore, opponentScore: oppScore,
+      result: isWinner ? 'win' : 'loss',
+      playedAt: serverTimestamp()
+    });
+  } catch(e){ console.error('save history:', e); }
+
+  // XP/شهرة
+  try {
+    if(isWinner){
+      await updateDoc(doc(db,'users',uid), {
+        fame: increment(50), xp: increment(100), power: increment(2)
+      });
+    } else {
+      await updateDoc(doc(db,'users',uid), { xp: increment(25) });
+    }
+  } catch(e){ console.error('reward:', e); }
+
+  setTimeout(checkAchievements, 800);
+  await logActivity('match',
+    isWinner ? `فزت بمباراة Quiz Clash (${myScore}-${oppScore})`
+             : `خسرت مباراة Quiz Clash (${myScore}-${oppScore})`,
+    isWinner?'🏆':'🎮');
+
+  // شاشة النتيجة
+  const container = document.getElementById('gameContainer');
+  if(!container) return;
+  const totalScore = Object.values(scores).reduce((a,b)=>a+b,0);
+  container.innerHTML = `
+    <div class="result-screen">
+      <span class="result-icon">${isWinner?'🏆':'😔'}</span>
+      <div class="result-title" style="color:${isWinner?'var(--gold)':'var(--muted)'}">${isWinner?'فوز رائع!':'خسارة شريفة'}</div>
+      <div class="result-subtitle">${isWinner?'+50 شهرة +100 XP +2 قوة':'+25 XP'}</div>
+      <div class="result-stats">
+        <div class="result-stat"><div class="v">${myScore}</div><div class="l">نقاطك</div></div>
+        <div class="result-stat"><div class="v">${oppScore}</div><div class="l">نقاط الخصم</div></div>
+        <div class="result-stat"><div class="v">${totalScore}</div><div class="l">الإجمالي</div></div>
+      </div>
+      <div class="row" style="gap:10px;justify-content:center;margin-top:24px">
+        <button class="btn btn-primary" id="playAgainBtn" style="flex:1;max-width:200px">${ic('play','sm')} مباراة أخرى</button>
+        <button class="btn btn-ghost" id="backHomeBtn" style="flex:1;max-width:200px">العودة للرئيسية</button>
+      </div>
+    </div>`;
+  document.getElementById('playAgainBtn')?.addEventListener('click', ()=>{
+    exitMatch(); go('games', { activeGame: 'g3' });
+  });
+  document.getElementById('backHomeBtn')?.addEventListener('click', ()=>{
+    exitMatch(); go('home');
+  });
+}
+
+/* ===== الانتقال للسؤال التالي (Fallback للمضيف الغائب) ===== */
+async function autoAdvanceQuestion(){
+  const m = state.activeMatch;
+  if(!m || m.status !== 'playing') return;
+
+  const isHost = m.hostId === state.user.uid;
+  const answers = m.answers || {};
+  const allAnswered = (m.players||[]).every(uid=>answers[`${uid}_${m.currentIndex}`] !== undefined);
+  const timeUp = Date.now() - m.questionStartedAt >= (QUIZ_CONFIG.secondsPerQuestion + 2) * 1000;
+
+  // الضيف يتقدم فقط بعد انتهاء الوقت + ثانيتين (fallback)
+  if(!isHost && !timeUp) return;
+  if(isHost && !allAnswered && !timeUp) return;
+
+  const nextIdx = m.currentIndex + 1;
+  const roomRef = doc(db,'rooms',m.roomId);
+  try {
+    await runTransaction(db, async tx=>{
+      const snap = await tx.get(roomRef);
+      const data = snap.data();
+      if(data.status !== 'playing' || data.currentIndex !== m.currentIndex) return;
+      
+      if(nextIdx >= QUIZ_CONFIG.totalQuestions){
+        const scores = data.scores || {};
+        const winnerId = Object.entries(scores).sort((a,b)=>b[1]-a[1])[0]?.[0] || null;
+        tx.update(roomRef, { status: 'finished', finishedAt: serverTimestamp(), winnerId });
+      } else {
+        tx.update(roomRef, { currentIndex: nextIdx, questionStartedAt: Date.now() });
+      }
+    });
+  } catch(e){ console.error(e); }
 }
 
 /** رسم واجهة اللعبة كاملة */
@@ -2788,121 +5121,6 @@ async function answerQuestion(idx){
   } catch(e){ console.error(e); }
 }
 
-/** الانتقال للسؤال التالي (يتم من الـ host تلقائياً) */
-async function autoAdvanceQuestion(){
-  const m = state.activeMatch;
-  if(!m || m.status !== 'playing') return;
-  if(m.hostId !== state.user.uid) return; // فقط المضيف يقدم
-
-  // تحقق: هل أجاب الجميع؟ أو انتهى الوقت؟
-  const answers = m.answers || {};
-  const allAnswered = (m.players||[]).every(uid=>answers[`${uid}_${m.currentIndex}`] !== undefined);
-  const timeUp = Date.now() - m.questionStartedAt >= QUIZ_CONFIG.secondsPerQuestion * 1000;
-
-  if(!allAnswered && !timeUp) return;
-
-  const nextIdx = m.currentIndex + 1;
-  const roomRef = doc(db,'rooms',m.roomId);
-
-  if(nextIdx >= QUIZ_CONFIG.totalQuestions){
-    // انتهت اللعبة
-    const scores = m.scores || {};
-    const winnerId = Object.entries(scores).sort((a,b)=>b[1]-a[1])[0]?.[0] || null;
-    await updateDoc(roomRef, {
-      status: 'finished',
-      finishedAt: serverTimestamp(),
-      winnerId
-    });
-  } else {
-    await updateDoc(roomRef, {
-      currentIndex: nextIdx,
-      questionStartedAt: Date.now()
-    });
-  }
-}
-
-/** حفظ النتيجة عند انتهاء المباراة */
-async function finalizeMatch(roomId, data){
-  if(data._finalizedBy === state.user.uid) return;
-  await updateDoc(doc(db,'rooms',roomId), { _resultRendered: true });
-
-  const scores = data.scores || {};
-  const winnerId = data.winnerId;
-  const isWinner = winnerId === state.user.uid;
-  const myScore = scores[state.user.uid] || 0;
-
-  // احفظ النتيجة في سجل كل لاعب
-  try {
-    await Promise.all((data.players||[]).map(uid=>{
-      const result = uid === winnerId ? 'win' : 'loss';
-      return addDoc(collection(db,'users',uid,'matchHistory'), {
-        gameId: data.gameId, gameName: 'Quiz Clash',
-        roomId, opponent: (data.players||[]).find(p=>p!==uid) || null,
-        myScore: scores[uid]||0,
-        opponentScore: scores[(data.players||[]).find(p=>p!==uid)] || 0,
-        result, playedAt: serverTimestamp()
-      });
-    }));
-  } catch(e){ console.error(e); }
-
-  // منح نقاط خبرة/شهرة
-  if(isWinner){
-    try {
-      await updateDoc(doc(db,'users',state.user.uid), {
-        fame: increment(50),
-        xp: increment(100),
-        power: increment(2)
-      });
-    } catch(e){}
-  } else {
-    try {
-      await updateDoc(doc(db,'users',state.user.uid), {
-        xp: increment(25)
-      });
-    } catch(e){}
-  }
-
-  // عرض شاشة النتيجة
-  const container = document.getElementById('gameContainer');
-  container.innerHTML = `
-    <div class="result-screen">
-      <span class="result-icon">${isWinner ? '🏆' : '😔'}</span>
-      <div class="result-title" style="color:${isWinner?'var(--gold)':'var(--muted)'}">
-        ${isWinner ? 'فوز رائع!' : 'خسارة شريفة'}
-      </div>
-      <div class="result-subtitle">
-        ${isWinner ? 'أضفت 50 شهرة + 100 XP' : 'حصلت على 25 XP'}
-      </div>
-      <div class="result-stats">
-        <div class="result-stat">
-          <div class="v">${myScore}</div>
-          <div class="l">نقاطك</div>
-        </div>
-        <div class="result-stat">
-          <div class="v">${Object.values(scores).reduce((a,b)=>a+b,0)}</div>
-          <div class="l">إجمالي</div>
-        </div>
-      </div>
-      <div class="row" style="gap:10px;justify-content:center;margin-top:24px">
-        <button class="btn btn-primary" id="playAgainBtn" style="flex:1;max-width:200px">
-          ${ic('play','sm')} مباراة أخرى
-        </button>
-        <button class="btn btn-ghost" id="backHomeBtn" style="flex:1;max-width:200px">
-          العودة للرئيسية
-        </button>
-      </div>
-    </div>
-  `;
-  document.getElementById('playAgainBtn')?.addEventListener('click', ()=>{
-    exitMatch();
-    go('games', { activeGame: 'g3' });
-  });
-  document.getElementById('backHomeBtn')?.addEventListener('click', ()=>{
-    exitMatch();
-    go('home');
-  });
-}
-
 /** الخروج من المباراة */
 function exitMatch(){
   if(state.matchUnsub){ try{state.matchUnsub();}catch(e){} state.matchUnsub = null; }
@@ -2965,45 +5183,6 @@ function renderMatchChat(){
     </div>`;
   }).join('');
   box.scrollTop = box.scrollHeight;
-}
-
-/* ============================================================
-   🔄 نظام إعادة الاتصال
-   ============================================================ */
-
-/** فحص هل المستخدم في مباراة نشطة */
-async function checkActiveMatch(){
-  try {
-    const q = query(
-      collection(db,'rooms'),
-      where('players','array-contains',state.user.uid),
-      where('status','in',['waiting','playing'])
-    );
-    const snap = await getDocs(q);
-    if(snap.empty){ 
-      document.getElementById('resumeBanner')?.classList.add('hidden');
-      return;
-    }
-    const match = snap.docs[0];
-    const data = match.data();
-    if(data.gameId !== 'g3') return; // Quiz Clash فقط حالياً
-
-    // اعرض البانر
-    const banner = document.getElementById('resumeBanner');
-    const text = document.getElementById('resumeBannerText');
-    if(banner && text){
-      text.textContent = `Quiz Clash · ${(data.players||[]).length} لاعب`;
-      banner.classList.remove('hidden');
-      document.getElementById('resumeMatchBtn').onclick = ()=> startQuizMatch(match.id, false);
-      document.getElementById('leaveMatchBtn').onclick = async ()=>{
-        try {
-          await updateDoc(match.ref, { players: arrayRemove(state.user.uid) });
-        } catch(e){}
-        banner.classList.add('hidden');
-        toast('غادرت المباراة');
-      };
-    }
-  } catch(e){ console.error(e); }
 }
 
 /* ============================================================
@@ -3099,6 +5278,838 @@ async function openInviteMatchModal(roomId){
   `);
 }
 
+/* ============================================================
+   🎁 نظام الهدايا
+   ============================================================ */
+function openSendGiftModal(recipientUid){
+  const recipient = state.users[recipientUid];
+  if(!recipient) return toast('المستخدم غير موجود');
+  if(recipientUid === state.user.uid) return toast('لا يمكنك إهداء نفسك');
+  
+  openModal(`
+    <div style="text-align:center;margin-bottom:14px">
+      ${avatar(recipient, 56)}
+      <div style="font-size:14px;font-weight:900;margin-top:8px">إهداء إلى ${esc(recipient.name)}</div>
+    </div>
+    <div class="field">
+      <label>اختر هدية</label>
+      <div class="gift-picker">
+        ${GIFT_ITEMS.map(g=>`
+          <div class="gift-option" data-gift-id="${g.id}" data-gift-price="${g.price}">
+            <div class="ge">${g.emoji}</div>
+            <div class="gn">${g.name}</div>
+            <div class="gp">${nf(g.price)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="field">
+      <label>رسالة مع الهدية (اختياري)</label>
+      <input class="input" id="giftMsg" maxlength="80" placeholder="مثال: مبروك على الفوز!">
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="giftAnonymous" style="width:auto">
+        <span style="font-size:12px">إرسال مجهول</span>
+      </label>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="confirmGiftBtn" data-recipient="${recipientUid}" disabled>
+        إرسال
+      </button>
+    </div>
+  `);
+  
+  // اختيار هدية
+  let selectedGift = null;
+  document.querySelectorAll('[data-gift-id]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.querySelectorAll('[data-gift-id]').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedGift = {
+        id: el.dataset.giftId,
+        price: parseInt(el.dataset.giftPrice),
+      };
+      const btn = document.getElementById('confirmGiftBtn');
+      btn.disabled = false;
+      btn.textContent = `إرسال (${nf(selectedGift.price)} عملة)`;
+    });
+  });
+  
+  document.getElementById('confirmGiftBtn').onclick = async ()=>{
+    if(!selectedGift) return;
+    const msg = document.getElementById('giftMsg').value.trim();
+    const anon = document.getElementById('giftAnonymous').checked;
+    await sendGift(recipientUid, selectedGift, msg, anon);
+    closeModal();
+  };
+}
+
+async function sendGift(toUid, gift, message, anonymous){
+  if((state.profile.coins || 0) < gift.price) return toast('رصيد غير كافٍ');
+  
+  try {
+    // خصم العملات
+    await updateDoc(doc(db,'users',state.user.uid), {
+      coins: increment(-gift.price),
+    });
+    
+    // سجل الهدية
+    await addDoc(collection(db,'gifts'), {
+      from: state.user.uid,
+      fromName: anonymous ? 'مجهول' : state.profile.name,
+      to: toUid,
+      giftId: gift.id,
+      giftName: GIFT_ITEMS.find(g=>g.id===gift.id)?.name,
+      giftEmoji: GIFT_ITEMS.find(g=>g.id===gift.id)?.emoji,
+      price: gift.price,
+      message: message || '',
+      anonymous: !!anonymous,
+      createdAt: serverTimestamp(),
+    });
+    
+    // إشعار
+    await notify(toUid, 'gift',
+      `${anonymous ? 'مجهول' : `<b>${esc(state.profile.name)}</b>`} أرسل لك هدية ${gift.emoji}${message ? ' — ' + esc(message) : ''}`);
+    
+    // سجل نشاط
+    await logActivity('gift_sent', `أرسلت ${gift.emoji} إلى ${state.users[toUid]?.name || 'لاعب'}`, '🎁');
+    
+    toast(`🎁 تم إرسال الهدية!`);
+  } catch(e){ console.error(e); toast('فشل الإرسال'); }
+}
+
+async function pageGifts(){
+  try {
+    // استلمت
+    const rSnap = await getDocs(
+      query(collection(db,'gifts'), where('to','==',state.user.uid),
+            orderBy('createdAt','desc'), limit(50))
+    );
+    const received = rSnap.docs.map(d=>({id:d.id, ...d.data()}));
+    
+    // أرسلت
+    const sSnap = await getDocs(
+      query(collection(db,'gifts'), where('from','==',state.user.uid),
+            orderBy('createdAt','desc'), limit(50))
+    );
+    const sent = sSnap.docs.map(d=>({id:d.id, ...d.data()}));
+    
+    const tab = state.giftTab || 'received';
+    const list = tab === 'received' ? received : sent;
+    
+    return `
+      <h1 class="page-title">🎁 الهدايا</h1>
+      
+      <div class="inv-tabs" style="margin-bottom:14px">
+        <button class="inv-tab ${tab==='received'?'active':''}" data-gift-tab="received">
+          مستلمة (${received.length})
+        </button>
+        <button class="inv-tab ${tab==='sent'?'active':''}" data-gift-tab="sent">
+          مرسلة (${sent.length})
+        </button>
+      </div>
+      
+      ${list.length ? list.map(g=>`
+        <div class="gift-history-item ${tab==='sent'?'sent':'received'}">
+          <div style="font-size:26px">${g.giftEmoji || '🎁'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:800">
+              ${tab === 'received' ? esc(g.fromName || 'مجهول') : esc(state.users[g.to]?.name || 'لاعب')}
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(g.message || g.giftName || '')}</div>
+            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">${timeAgo(g.createdAt)}</div>
+          </div>
+          <div class="pill gold">${ic('coin','xs')} ${nf(g.price || 0)}</div>
+        </div>
+      `).join('') : emptyState('لا هدايا هنا بعد','gift' in ICONS ? 'star' : 'star')}
+    `;
+  } catch(e){
+    console.error(e);
+    return `<h1 class="page-title">🎁 الهدايا</h1>${emptyState('خطأ في التحميل','star')}`;
+  }
+}
+
+/* ============================================================
+   🏆 نظام المواسم
+   ============================================================ */
+async function loadSeasonInfo(){
+  try {
+    const snap = await getDoc(doc(db,'seasons','current'));
+    if(snap.exists()){
+      state.seasonInfo = snap.data();
+      return;
+    }
+
+    // موسم افتراضي محلي (في حال منعت القواعد الإنشاء)
+    const virtualSeason = {
+      number: 1, themeId: 's1', status: 'active',
+      startedAt: new Date(),
+      endsAt: new Date(Date.now() + SEASON_DURATION_DAYS * 24 * 60 * 60 * 1000),
+      _virtual: true
+    };
+    state.seasonInfo = virtualSeason;
+
+    // حاول إنشاء المستند — إذا فشلت القواعد، نبقى على الموسم الافتراضي
+    try {
+      await setDoc(doc(db,'seasons','current'), {
+        number: 1, themeId: 's1',
+        startedAt: serverTimestamp(),
+        endsAt: new Date(Date.now() + SEASON_DURATION_DAYS * 24 * 60 * 60 * 1000),
+        status: 'active'
+      });
+      const s2 = await getDoc(doc(db,'seasons','current'));
+      if(s2.exists()) state.seasonInfo = s2.data();
+    } catch(e){
+      console.warn('season create denied — using virtual season');
+    }
+  } catch(e){
+    console.error(e);
+    // حتى لو فشل كل شيء، الموسم الافتراضي يُعرض
+    if(!state.seasonInfo) state.seasonInfo = {
+      number: 1, themeId: 's1', status: 'active',
+      startedAt: new Date(), endsAt: new Date(Date.now() + SEASON_DURATION_DAYS*24*60*60*1000),
+      _virtual: true
+    };
+  }
+}
+
+function getSeasonTheme(themeId){
+  return SEASON_THEMES.find(t => t.id === themeId) || SEASON_THEMES[0];
+}
+
+function seasonTimeLeft(){
+  const info = state.seasonInfo;
+  if(!info?.endsAt) return null;
+  const endsAt = info.endsAt.toDate ? info.endsAt.toDate() : new Date(info.endsAt);
+  return Math.max(0, endsAt.getTime() - Date.now());
+}
+
+function pageSeason(){
+  if(!state.seasonInfo){
+    return `<h1 class="page-title">🏆 الموسم</h1>${emptyState('جاري تحميل الموسم…','trophy')}`;
+  }
+  
+  const info = state.seasonInfo;
+  const theme = getSeasonTheme(info.themeId);
+  const msLeft = seasonTimeLeft();
+  const days = Math.floor(msLeft / (1000*60*60*24));
+  const hours = Math.floor((msLeft % (1000*60*60*24)) / (1000*60*60));
+  const mins = Math.floor((msLeft % (1000*60*60)) / (1000*60));
+  
+  // أعلى اللاعبين هذا الموسم (حسب XP)
+  const topPlayers = Object.values(state.users)
+    .sort((a,b) => (b.xp || 0) - (a.xp || 0))
+    .slice(0, 10);
+  
+  return `
+    <h1 class="page-title">🏆 الموسم</h1>
+    
+    <div class="season-hero">
+      <span class="season-emblem">${theme.emoji}</span>
+      <div class="season-name">${esc(theme.name)}</div>
+      <div class="season-dates">الموسم ${info.number} · ${SEASON_DURATION_DAYS} يوم</div>
+      
+      <div class="season-timer">
+        <div><div class="v">${days}</div><div class="l">يوم</div></div>
+        <div><div class="v">${hours}</div><div class="l">ساعة</div></div>
+        <div><div class="v">${mins}</div><div class="l">دقيقة</div></div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.75">
+        🎯 <b style="color:var(--txt)">كيف يعمل الموسم؟</b><br>
+        كل موسم يستمر ${SEASON_DURATION_DAYS} يوماً، تنافس على أعلى XP.<br>
+        في نهاية الموسم، أفضل 3 لاعبين يحصلون على مكافآت حصرية.<br>
+        يتم إعادة ضبط XP بشكل جزئي، والبدء من جديد.
+      </div>
+    </div>
+    
+    <div class="section-title">${ic('trophy','sm')} أفضل اللاعبين</div>
+    ${topPlayers.map((u,i)=>`
+      <div class="lb-row ${u.uid===state.user.uid?'me':''}" data-view-profile="${u.uid}" style="cursor:pointer">
+        <div class="lb-rank ${i<3?'r'+(i+1):''}">${i+1}</div>
+        ${avatar(u, 40)}
+        <div class="lb-mid">
+          <div class="lb-n">${esc(u.name)} ${u.uid===state.user.uid?'<span class="pill" style="font-size:9px">أنت</span>':''}</div>
+          <div class="lb-s">المستوى ${levelFromXp(u.xp)}</div>
+        </div>
+        <div class="lb-v">${nf(u.xp || 0)} XP</div>
+      </div>
+    `).join('')}
+    
+    <div class="section-title" style="margin-top:20px">${ic('star','sm')} جوائز الموسم</div>
+    <div class="card">
+      <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <div class="lb-rank r1">1</div>
+        <div style="flex:1;font-size:13px;font-weight:800">المركز الأول</div>
+        <div class="pill gold">${ic('coin','xs')} 5000 + لقب حصري</div>
+      </div>
+      <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <div class="lb-rank r2">2</div>
+        <div style="flex:1;font-size:13px;font-weight:800">المركز الثاني</div>
+        <div class="pill">${ic('coin','xs')} 3000</div>
+      </div>
+      <div class="row" style="padding:8px 0">
+        <div class="lb-rank r3">3</div>
+        <div style="flex:1;font-size:13px;font-weight:800">المركز الثالث</div>
+        <div class="pill">${ic('coin','xs')} 1500</div>
+      </div>
+    </div>
+  `;
+}
+
+async function endCurrentSeason(){
+  // يستدعى من لوحة الإدارة
+  if(state.profile?.role !== 'admin') return toast('غير مصرح');
+  if(!confirm('إنهاء الموسم الحالي وبدء موسم جديد؟')) return;
+  
+  try {
+    const info = state.seasonInfo;
+    if(!info) return;
+    
+    // وزّع المكافآت على أفضل 3
+    const top = Object.values(state.users)
+      .sort((a,b) => (b.xp || 0) - (a.xp || 0))
+      .slice(0, 3);
+    const rewards = [5000, 3000, 1500];
+    
+    for(let i = 0; i < top.length; i++){
+      try {
+        await updateDoc(doc(db,'users',top[i].uid), {
+          coins: increment(rewards[i]),
+        });
+        await notify(top[i].uid, 'season_end',
+          `🏆 أنهيت الموسم في المركز ${i+1}! حصلت على ${rewards[i]} عملة`);
+      } catch(e){}
+    }
+    
+    // أنشئ موسم جديد
+    const newNumber = (info.number || 1) + 1;
+    const newThemeId = SEASON_THEMES[newNumber % SEASON_THEMES.length].id;
+    await setDoc(doc(db,'seasons','current'), {
+      id: 'season_' + newNumber,
+      number: newNumber,
+      themeId: newThemeId,
+      startedAt: serverTimestamp(),
+      endsAt: new Date(Date.now() + SEASON_DURATION_DAYS * 24 * 60 * 60 * 1000),
+      status: 'active',
+    });
+    
+    // احفظ الموسم القديم
+    await setDoc(doc(db,'seasons','season_' + info.number), {
+      ...info, status: 'finished', finishedAt: serverTimestamp(),
+      topPlayers: top.map((u,i) => ({ uid: u.uid, name: u.name, rank: i+1, xp: u.xp })),
+    });
+    
+    toast('تم بدء موسم جديد! 🎉');
+    await loadSeasonInfo();
+    render();
+  } catch(e){ console.error(e); toast('فشل'); }
+}
+
+async function pageCustomization(){
+  const p = state.profile;
+  if(!p) return emptyState('جاري التحميل…','image');
+
+  const sub = getSubscription(p);
+  const owned = p.ownedItems || [];
+  const plan = SUBSCRIPTION_PLANS[sub.plan] || SUBSCRIPTION_PLANS.free;
+  const cust = getProfileCustomization(p);
+  const themeId = p.equipped?.themeId || p.themeId || 'default';
+  const frameId = p.equipped?.frameId || p.frameId || 'none';
+  
+  /* حالة الاشتراك */
+  const subBadge = sub.active ? `
+    <div class="cust-sub-badge" style="background:${plan.color}22;border-color:${plan.color}55;color:${plan.color}">
+      <span>${plan.emoji}</span>
+      <div>
+        <div style="font-size:13px;font-weight:900">${plan.name}</div>
+        <div style="font-size:10px;opacity:.8">ينتهي ${sub.expiresAt.toLocaleDateString('ar-EG')}</div>
+      </div>
+    </div>
+  ` : `
+    <div class="cust-sub-badge" style="background:rgba(138,149,173,.15);border-color:rgba(138,149,173,.35);color:#8a95ad">
+      <span>🆓</span>
+      <div>
+        <div style="font-size:13px;font-weight:900">اشتراك مجاني</div>
+        <div style="font-size:10px;opacity:.8">اشترك لفتح المزيد</div>
+      </div>
+    </div>
+  `;
+
+  return `
+    <h1 class="page-title">🎨 استوديو التخصيص</h1>
+
+    <!-- ===== حالة الاشتراك ===== -->
+    ${subBadge}
+
+    <!-- ===== معاينة مباشرة ===== -->
+    <div class="cust-preview-wrap">
+      <div class="cust-preview-label">${ic('eye','xs')} معاينة مباشرة</div>
+      <div id="custPreviewBox">${renderCustomizationPreview()}</div>
+    </div>
+
+    <!-- ===== أزرار الاشتراك ===== -->
+    <div class="section-title">${ic('crown','sm')} الاشتراكات</div>
+    <div class="sub-plans-grid">
+      ${Object.entries(SUBSCRIPTION_PLANS).filter(([k])=>k!=='free').map(([k, pl])=>{
+        const isActive = sub.plan === k;
+        const isOwned = (p.purchasedPlans || []).includes(k);
+        return `
+          <button class="sub-plan-card ${isActive?'active':''}" data-buy-plan="${k}">
+            <div class="sp-top" style="background:${pl.color}20;border-color:${pl.color}50">
+              <div style="font-size:28px">${pl.emoji}</div>
+              <div style="font-size:14px;font-weight:900;color:${pl.color}">${pl.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${pl.durationDays} يوم</div>
+            </div>
+            <div class="sp-body">
+              <div style="font-size:16px;font-weight:900;color:var(--gold)">${nf(pl.price)} عملة</div>
+              ${isActive
+                ? `<span class="pill ok" style="font-size:9px;margin-top:6px">✓ نشط</span>`
+                : `<span class="btn btn-primary btn-sm" style="margin-top:6px;width:100%;font-size:11px">شراء</span>`}
+            </div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+
+    <!-- ===== الصورة الشخصية ===== -->
+    <div class="section-title">${ic('user','sm')} الصورة الشخصية ${!canCustomizeShape(p) ? '🔒' : ''}</div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="cust-field">
+        <label>شكل الصورة ${!canCustomizeShape(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeShape(p) ? `
+          <div class="cust-options">
+            ${Object.entries(AVATAR_SHAPES).map(([k,s])=>`
+              <button class="cust-opt ${cust.avatarShape===k?'active':''}"
+                      data-cust="avatarShape" data-val="${k}">
+                <div class="cust-shape-preview" style="border-radius:${s.radius}">👤</div>
+                <div>${s.label}</div>
+              </button>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="locked-feature" data-action="upsell-plus">
+            ${ic('lock','sm')} يتطلب اشتراك بلس
+          </div>
+        `}
+      </div>
+
+      <div class="cust-field">
+        <label>حدود الصورة ${!canCustomizeBorder(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeBorder(p) ? `
+          <div class="cust-options">
+            ${[
+              ['gradient','تدريج 🎨'],
+              ['solid','لون ثابت ⚪'],
+              ['none','بدون 🚫'],
+            ].map(([k,l])=>`
+              <button class="cust-opt ${cust.avatarBorder===k?'active':''}"
+                      data-cust="avatarBorder" data-val="${k}">
+                ${l}
+              </button>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="locked-feature" data-action="upsell-plus">
+            ${ic('lock','sm')} يتطلب اشتراك بلس
+          </div>
+        `}
+      </div>
+
+      ${cust.avatarBorder === 'solid' && canCustomizeBorder(p) ? `
+        <div class="cust-field">
+          <label>لون الحدود</label>
+          <div class="color-picker-row">
+            ${ACCENT_COLORS.map(c=>`
+              <button class="color-swatch ${cust.avatarBorderColor===c?'active':''}"
+                      style="background:${c}" data-cust="avatarBorderColor" data-val="${c}"></button>
+            `).join('')}
+            <input type="color" class="color-input-small" id="avatarBorderColorPicker"
+                   value="${cust.avatarBorderColor}">
+          </div>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- ===== ألوان الاسم واسم المستخدم ===== -->
+    <div class="section-title">${ic('star','sm')} ألوان الاسم واللقب</div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="cust-field">
+        <label>لون الاسم ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeNameColor(p) ? `
+          <div class="color-picker-row">
+            ${NAME_COLOR_PRESETS.map(c=>`
+              <button class="color-swatch ${(cust.nameColor||'#ffffff')===c?'active':''}"
+                      style="background:${c}" data-cust="nameColor" data-val="${c}"></button>
+            `).join('')}
+            <input type="color" class="color-input-small" id="nameColorPicker"
+                   value="${cust.nameColor||'#ffffff'}">
+          </div>
+        ` : `
+          <div class="locked-feature" data-action="upsell-plus">
+            ${ic('lock','sm')} يتطلب اشتراك بلس
+          </div>
+        `}
+      </div>
+
+      <div class="cust-field">
+        <label>لون اسم المستخدم ${!canCustomizeUsernameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeUsernameColor(p) ? `
+          <div class="color-picker-row">
+            ${NAME_COLOR_PRESETS.map(c=>`
+              <button class="color-swatch ${(cust.usernameColor||'#00d2ff')===c?'active':''}"
+                      style="background:${c}" data-cust="usernameColor" data-val="${c}"></button>
+            `).join('')}
+            <input type="color" class="color-input-small" id="usernameColorPicker"
+                   value="${cust.usernameColor||'#00d2ff'}">
+          </div>
+        ` : `
+          <div class="locked-feature" data-action="upsell-plus">
+            ${ic('lock','sm')} يتطلب اشتراك بلس
+          </div>
+        `}
+      </div>
+
+      <div class="cust-field">
+        <label>لون اللقب ${!canCustomizeTitleColor(p) ? '<span class="lock-hint">🔒 بلس دبل</span>' : ''}</label>
+        ${canCustomizeTitleColor(p) ? `
+          <div class="color-picker-row">
+            ${NAME_COLOR_PRESETS.map(c=>`
+              <button class="color-swatch ${(cust.titleColor||'#f5b301')===c?'active':''}"
+                      style="background:${c}" data-cust="titleColor" data-val="${c}"></button>
+            `).join('')}
+            <input type="color" class="color-input-small" id="titleColorPicker"
+                   value="${cust.titleColor||'#f5b301'}">
+          </div>
+        ` : `
+          <div class="locked-feature" data-action="upsell-plus2">
+            ${ic('lock','sm')} يتطلب بلس دبل
+          </div>
+        `}
+      </div>
+    </div>
+
+    <!-- ===== الثيم ===== -->
+    <div class="section-title">${ic('image','sm')} الثيم واللون المميز ${!canCustomizeTheme(p) ? '🔒' : ''}</div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="cust-field">
+        <label>ثيم الغلاف ${!canCustomizeTheme(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeTheme(p) ? `
+          <div class="theme-grid">
+            ${Object.entries(THEMES).map(([k, t])=>`
+              <div class="theme-card ${themeId === k ? 'selected' : ''}" data-set-theme="${k}">
+                <div class="theme-preview" style="background:linear-gradient(135deg,${t.colors[0]},${t.colors[1]})"></div>
+                <div class="theme-name">${t.name}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="locked-feature" data-action="upsell-plus">
+            ${ic('lock','sm')} يتطلب اشتراك بلس
+          </div>
+        `}
+      </div>
+
+      <div class="cust-field">
+        <label>اللون المميز ${sub.features.maxCustomColors===0 ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${sub.features.maxCustomColors > 0 ? `
+          <div class="color-picker-row">
+            ${ACCENT_COLORS.slice(0, sub.features.maxCustomColors).map(c=>`
+              <button class="color-swatch ${cust.accentColor===c?'active':''}"
+                      style="background:${c}" data-cust="accentColor" data-val="${c}"></button>
+            `).join('')}
+            <input type="color" class="color-input-small" id="accentColorPicker"
+                   value="${cust.accentColor}">
+          </div>
+        ` : `
+          <div class="locked-feature" data-action="upsell-plus">
+            ${ic('lock','sm')} يتطلب اشتراك بلس
+          </div>
+        `}
+      </div>
+    </div>
+
+    <!-- ===== الإطارات ===== -->
+    <div class="section-title">${ic('star','sm')} الإطارات</div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="theme-grid">
+        ${Object.entries(ANIMATED_FRAMES).map(([k, f])=>{
+          const canUse = canUseFrame(p, k);
+          const owned = (p.ownedItems||[]).includes(`frame_${k}`);
+          const isActive = frameId === k;
+          const tierBadge = f.tier === 'free'   ? '<span class="tier-badge free">مجاني</span>'
+                          : f.tier === 'plus'   ? '<span class="tier-badge plus">بلس</span>'
+                          : f.tier === 'plus2'  ? '<span class="tier-badge plus2">بلس دبل</span>'
+                          : `<span class="tier-badge exclusive">حصري ${f.price||0}</span>`;
+          return `
+            <div class="theme-card ${isActive ? 'selected' : ''} ${!canUse ? 'locked' : ''}"
+                 ${canUse ? `data-set-frame="${k}"` : `data-buy-frame="${k}"`}>
+              <div style="display:flex;justify-content:center;margin-bottom:8px;position:relative">
+                <div class="av ${f.class} ${!canUse ? 'preview-locked' : ''}"
+                     style="--s:50px;background:var(--grad);display:grid;place-items:center;font-weight:900;color:#fff;border-radius:50%;padding:3px">
+                  ${(state.profile.name||'?').charAt(0)}
+                  ${!canUse ? `<div class="frame-lock-overlay">${ic('lock','xs')}</div>` : ''}
+                </div>
+              </div>
+              <div class="theme-name">${f.name}</div>
+              ${tierBadge}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- ===== تأثيرات الغلاف (بلس) ===== -->
+    <div class="section-title">${ic('bolt','sm')} تأثيرات الغلاف ${!canUseBannerEffect(p) ? '🔒' : ''}</div>
+    <div class="card" style="margin-bottom:14px">
+      ${canUseBannerEffect(p) ? `
+        <div class="cust-options-3">
+          ${Object.entries(BANNER_EFFECTS).map(([k,e])=>`
+            <button class="cust-opt ${cust.bannerEffect===k?'active':''}"
+                    data-cust="bannerEffect" data-val="${k}">
+              <div style="font-size:20px">${e.emoji}</div>
+              <div>${e.label}</div>
+            </button>
+          `).join('')}
+        </div>
+      ` : `
+        <div class="locked-feature" data-action="upsell-plus">
+          ${ic('lock','sm')} يتطلب اشتراك بلس
+        </div>
+      `}
+    </div>
+
+    <!-- ===== التخطيط (بلس دبل) ===== -->
+    <div class="section-title">${ic('grid','sm')} تخطيط البطاقة ${!canUseLayoutCustomization(p) ? '🔒' : ''}</div>
+    <div class="card" style="margin-bottom:14px">
+      ${canUseLayoutCustomization(p) ? `
+        <div class="cust-options-3">
+          ${Object.entries(PROFILE_LAYOUTS).map(([k,l])=>`
+            <button class="cust-opt ${cust.profileLayout===k?'active':''}"
+                    data-cust="profileLayout" data-val="${k}">
+              <div class="layout-preview layout-${k}"></div>
+              <div>${l.label}</div>
+            </button>
+          `).join('')}
+        </div>
+      ` : `
+        <div class="locked-feature" data-action="upsell-plus2">
+          ${ic('lock','sm')} يتطلب بلس دبل
+        </div>
+      `}
+    </div>
+
+    <!-- ===== موسيقى الملف (بلس) ===== -->
+    <div class="section-title">${ic('play','sm')} موسيقى الملف ${!canUseMusic(p) ? '🔒' : ''}</div>
+    <div class="card" style="margin-bottom:14px">
+      ${canUseMusic(p) ? `
+        <div class="field">
+          <label>رابط صوتي (YouTube / SoundCloud / MP3)</label>
+          <input class="input" id="musicUrlInput" value="${esc(cust.musicUrl)}"
+                 placeholder="https://..." maxlength="200">
+        </div>
+        <button class="btn btn-primary btn-sm" style="width:100%" id="saveMusicBtn">
+          ${ic('check','xs')} حفظ الرابط
+        </button>
+      ` : `
+        <div class="locked-feature" data-action="upsell-plus">
+          ${ic('lock','sm')} يتطلب اشتراك بلس
+        </div>
+      `}
+    </div>
+
+    <div style="margin-top:20px;text-align:center">
+      <button class="btn btn-ghost" data-nav="profile">
+        ${ic('check','sm')} العودة للملف
+      </button>
+    </div>
+  `;
+}
+
+/* ============================================================
+   🎨 تطبيق الثيم (إصلاح nested update)
+   ============================================================ */
+async function applyTheme(themeId){
+  try {
+    const equipped = { ...(state.profile.equipped || {}), themeId };
+    await updateDoc(doc(db, 'users', state.user.uid), {
+      themeId,
+      equipped,   // ← كائن كامل بدلاً من 'equipped.themeId'
+    });
+    toast('تم تطبيق الثيم ✓');
+    render();
+  } catch(e){
+    console.error('applyTheme:', e);
+    toast('فشل التطبيق');
+  }
+}
+
+/* ============================================================
+   🖼️ تطبيق الإطار (إصلاح nested update)
+   ============================================================ */
+async function applyFrame(frameId){
+  try {
+    const equipped = { ...(state.profile.equipped || {}), frameId };
+    await updateDoc(doc(db, 'users', state.user.uid), {
+      frameId,
+      equipped,   // ← كائن كامل
+    });
+    toast('تم تطبيق الإطار ✓');
+    render();
+  } catch(e){
+    console.error('applyFrame:', e);
+    toast('فشل التطبيق');
+  }
+}
+
+/* ============================================================
+   💳 شراء الاشتراك (إصلاح nested update)
+   ============================================================ */
+async function purchaseSubscription(planId){
+  const plan = SUBSCRIPTION_PLANS[planId];
+  if(!plan || planId === 'free') return toast('خطة غير صالحة');
+  const p = state.profile;
+  if((p.coins || 0) < plan.price) return toast(`رصيد غير كافٍ — تحتاج ${nf(plan.price)} عملة`);
+  if(!confirm(`شراء اشتراك "${plan.name}" بـ ${nf(plan.price)} عملة؟`)) return;
+  
+  try {
+    const now = new Date();
+    const currentSub = p.subscription || {};
+    const currentEnd = currentSub.expiresAt?.toDate?.() || null;
+    let newEnd;
+    if(currentEnd && currentEnd > now && currentSub.plan === planId){
+      newEnd = new Date(currentEnd.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    } else {
+      newEnd = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    }
+    
+    // ★ بناء كائن subscription كامل
+    const subscription = {
+      plan: planId,
+      expiresAt: Timestamp.fromDate(newEnd),
+      purchasedAt: Timestamp.fromDate(now),
+    };
+    
+    await updateDoc(doc(db, 'users', state.user.uid), {
+      coins: increment(-plan.price),
+      subscription,   // ← كائن كامل بدلاً من 3 dot-notation
+    });
+    
+    toast(`✨ تم تفعيل ${plan.emoji} ${plan.name} حتى ${newEnd.toLocaleDateString('ar-EG')}`);
+    await logActivity('subscription', `اشترى باقة ${plan.name}`, plan.emoji);
+  } catch(e){
+    console.error('purchaseSubscription:', e);
+    toast('فشل الشراء: ' + (e.message || ''));
+  }
+}
+
+async function pageGameStats(){
+  // احسب إحصائيات لكل لعبة
+  try {
+    const snap = await getDocs(
+      query(collection(db,'users',state.user.uid,'matchHistory'),
+            orderBy('playedAt','desc'), limit(100))
+    );
+    const matches = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    
+    const byGame = {};
+    matches.forEach(m => {
+      const gid = m.gameId || 'g3';
+      if(!byGame[gid]) byGame[gid] = { played:0, wins:0, losses:0, totalScore:0 };
+      byGame[gid].played++;
+      byGame[gid].totalScore += (m.myScore || 0);
+      if(m.result === 'win') byGame[gid].wins++;
+      else byGame[gid].losses++;
+    });
+    
+    return `
+      <h1 class="page-title">📊 إحصائياتي التفصيلية</h1>
+      
+      <div class="stat-grid" style="margin-bottom:16px">
+        <div class="stat-box"><div class="sv">${matches.length}</div><div class="sl">إجمالي المباريات</div></div>
+        <div class="stat-box"><div class="sv">${matches.filter(m=>m.result==='win').length}</div><div class="sl">انتصارات</div></div>
+        <div class="stat-box"><div class="sv">${matches.filter(m=>m.result==='loss').length}</div><div class="sl">خسائر</div></div>
+        <div class="stat-box"><div class="sv">${
+          matches.length ? Math.round(matches.filter(m=>m.result==='win').length / matches.length * 100) : 0
+        }%</div><div class="sl">نسبة الفوز</div></div>
+      </div>
+      
+      <div class="section-title">${ic('gamepad','sm')} حسب اللعبة</div>
+      ${Object.keys(byGame).length ? Object.entries(byGame).map(([gid, stats])=>{
+        const g = GAMES.find(x => x.id === gid);
+        if(!g) return '';
+        const wr = Math.round(stats.wins / stats.played * 100);
+        return `
+          <div class="game-stat-card">
+            <div class="gs-header">
+              <div class="gs-icon" style="background:${g.grad}">${ic(g.icon,'sm')}</div>
+              <div style="flex:1">
+                <div class="gs-title">${g.name}</div>
+                <div class="gs-sub">${g.cat}</div>
+              </div>
+            </div>
+            <div class="gs-grid">
+              <div class="gs-cell"><div class="v">${stats.played}</div><div class="l">مباراة</div></div>
+              <div class="gs-cell"><div class="v" style="color:var(--ok)">${stats.wins}</div><div class="l">فوز</div></div>
+              <div class="gs-cell"><div class="v" style="color:var(--pink)">${stats.losses}</div><div class="l">خسارة</div></div>
+              <div class="gs-cell"><div class="v">${wr}%</div><div class="l">نسبة فوز</div></div>
+            </div>
+            <div class="gs-wr"><span style="width:${wr}%"></span></div>
+          </div>
+        `;
+      }).join('') : emptyState('لم تلعب أي مباراة بعد','gamepad')}
+      
+      <div class="section-title" style="margin-top:20px">${ic('clock','sm')} آخر 10 مباريات</div>
+      ${matches.slice(0, 10).map(m=>`
+        <div class="card" style="margin-bottom:8px;padding:11px">
+          <div class="row">
+            <div style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+              background:${m.result==='win'?'rgba(34,197,94,.15)':'rgba(255,61,113,.15)'};
+              color:${m.result==='win'?'var(--ok)':'var(--pink)'};font-weight:900;font-size:14px">
+              ${m.result==='win'?'✓':'✗'}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:800">${esc(m.gameName || 'Quiz Clash')}</div>
+              <div class="muted" style="font-size:10px">${timeAgo(m.playedAt)}</div>
+            </div>
+            <div style="text-align:left">
+              <div style="font-size:13px;font-weight:900;color:${m.result==='win'?'var(--ok)':'var(--pink)'}">
+                ${m.myScore || 0} - ${m.opponentScore || 0}
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('') || emptyState('لا مباريات بعد','gamepad')}
+    `;
+  } catch(e){
+    console.error(e);
+    return `<h1 class="page-title">📊 الإحصائيات</h1>${emptyState('خطأ في التحميل','chart')}`;
+  }
+}
+
+/* ============================================================
+   🔑 استعادة كلمة المرور
+   ============================================================ */
+document.getElementById('forgotPassBtn')?.addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  if(!email){ showAuthError('أدخل بريدك الإلكتروني أولاً'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showAuthError('');
+    toast('✓ تحقق من بريدك — تم إرسال رابط إعادة التعيين');
+  } catch(e){
+    const msgs = {
+      'auth/user-not-found': 'لا يوجد حساب بهذا البريد',
+      'auth/invalid-email': 'البريد غير صالح',
+    };
+    showAuthError(msgs[e.code] || 'فشل الإرسال — حاول مجدداً');
+  }
+});
+
 /* ============ Event Handlers ============ */
 document.addEventListener('click', async (e)=>{
   // Image preview click
@@ -3115,21 +6126,177 @@ document.addEventListener('click', async (e)=>{
     return;
   }
 
-  const t = e.target.closest('[data-nav], [data-action], [data-tab], [data-ptab], [data-follow], [data-like], [data-save], [data-chat], [data-open-chat], [data-game-open], [data-join-room], [data-leave-room], [data-create-room], [data-scat], [data-lb], [data-toggle], [data-view-profile], [data-open-comments], [data-delete-comment], [data-delete-post], [data-profile-like], [data-support], [data-buy-item], [data-open-team], [data-join-team], [data-leave-team], button');
-  if(!t) return;
+// 1) أولاً: إيجاد العنصر
+const t = e.target.closest('[data-nav],[data-action],[data-tab],[data-ptab],[data-follow],[data-like],[data-save],[data-chat],[data-open-chat],[data-game-open],[data-join-room],[data-leave-room],[data-create-room],[data-scat],[data-lb],[data-toggle],[data-view-profile],[data-open-comments],[data-delete-comment],[data-delete-post],[data-profile-like],[data-support],[data-buy-item],[data-open-team],[data-join-team],[data-leave-team],[data-cust],[data-toggle-tag],[data-inv-tab],[data-inv-item],[data-unequip],[data-gift-tab],[data-team-tab],[data-edit-tab],[data-view-image],[data-change-image],[data-delete-image],[data-block-user],[data-start-quiz],[data-invite-room],[data-send-invite],[data-send-team-chat],[data-send-challenge],[data-send-gift],[data-accept-challenge],[data-reject-challenge],[data-approve-join],[data-reject-join],[data-kick-member],[data-promote],[data-request-join],[data-set-theme],[data-set-frame],[data-view-tournament],[data-join-tournament],[data-view-war],[data-declare-war],[data-play-war-match],[data-admin-tab],[data-admin-ban],[data-admin-delete-post],[data-admin-dismiss],[data-report-target],[data-notif-filter],[data-gift-id],[data-reason],[data-pick-image],button');
+// 2) ثانياً: فحص null — يجب أن يكون قبل أي قراءة لـ dataset
+if(!t) return;
+
+// 3) ثالثاً: إغلاق المودال إن طُلب (مع حماية إضافية)
+if(t && t.dataset && t.dataset.closeModal) closeModal();
+
+/* ===== شراء اشتراك ===== */
+if(t.dataset.buyPlan){
+  await purchaseSubscription(t.dataset.buyPlan);
+  return;
+}
+
+/* ===== شراء إطار حصري ===== */
+if(t.dataset.buyFrame){
+  const frameId = t.dataset.buyFrame;
+  const frame = ANIMATED_FRAMES[frameId];
+  if(!frame) return;
+  if(frame.tier !== 'exclusive'){
+    toast('🔒 هذا الإطار يحتاج اشتراك — اشترك أولاً');
+    return;
+  }
+  const alreadyOwned = (state.profile.ownedItems || []).includes(`frame_${frameId}`);
+  if(alreadyOwned){
+    await applyFrame(frameId);
+    return;
+  }
+  await purchaseExclusiveItem(`frame_${frameId}`, 'frame', frame.price);
+  return;
+}
+
+/* ===== Upsell ===== */
+if(t.dataset.action === 'upsell-plus'){
+  openModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:48px">💎</div>
+      <h3 style="margin-top:8px">يتطلب اشتراك بلس</h3>
+      <div class="muted">افتح الألوان المخصصة، الموسيقى، تأثيرات الغلاف، وأكثر</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="plus">
+      اشتراك بلس — ${nf(SUBSCRIPTION_PLANS.plus.price)} عملة / 30 يوم
+    </button>
+    <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
+  `);
+  return;
+}
+if(t.dataset.action === 'upsell-plus2'){
+  openModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:48px">👑</div>
+      <h3 style="margin-top:8px">يتطلب بلس دبل</h3>
+      <div class="muted">افتح كل شيء — تخطيطات، ألوان اللقب، وأكثر</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="plus2">
+      اشتراك بلس دبل — ${nf(SUBSCRIPTION_PLANS.plus2.price)} عملة / 60 يوم
+    </button>
+    <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
+  `);
+  return;
+}
 
   /* المكافأة اليومية */
 if(t.dataset.nav === '_daily'){ 
+  closeDrawer();
   await checkDailyReward();
   openDailyRewardModal(); 
   return; 
 }
-
-/* التحديات */
 if(t.dataset.nav === '_challenges'){ 
+  closeDrawer();
   await openChallengesModal(); 
   return; 
 }
+
+/* ★ مودال إجراءات اللاعب */
+if(t.dataset.action === 'profile-actions'){ openProfileActionsModal(t.dataset.uid); return; }
+
+/* ★ نقر الأفاتار / الغلاف (في ملفي) */
+if(t.dataset.action === 'avatar-click'){ openImageActionsModal('avatar'); return; }
+if(t.dataset.action === 'cover-click'){  openImageActionsModal('cover');  return; }
+
+/* ===== استوديو التخصيص ===== */
+/* ===== استوديو التخصيص (مع فحص الأذونات) ===== */
+if(t.dataset.cust){
+  const field = t.dataset.cust;
+  const val = t.dataset.val;
+  
+  /* ===== فحص الأذونات ===== */
+  if(field === 'avatarShape' && !canCustomizeShape(state.profile)){ 
+    toast('🔒 شكل الصورة يتطلب اشتراك'); return; 
+  }
+  if(field === 'avatarBorder' && !canCustomizeBorder(state.profile)){ 
+    toast('🔒 حدود الصورة تتطلب اشتراك'); return; 
+  }
+  if(field === 'avatarBorderColor' && !canCustomizeBorder(state.profile)){ 
+    toast('🔒 لون الحدود يتطلب اشتراك'); return; 
+  }
+  if(field === 'nameColor' && !canCustomizeNameColor(state.profile)){ 
+    toast('🔒 لون الاسم يتطلب بلس'); return; 
+  }
+  if(field === 'usernameColor' && !canCustomizeUsernameColor(state.profile)){ 
+    toast('🔒 لون اسم المستخدم يتطلب بلس'); return; 
+  }
+  if(field === 'titleColor' && !canCustomizeTitleColor(state.profile)){ 
+    toast('🔒 لون اللقب يتطلب بلس دبل'); return; 
+  }
+  if(field === 'profileLayout' && !canUseLayoutCustomization(state.profile)){ 
+    toast('🔒 التخطيط يتطلب بلس دبل'); return; 
+  }
+  if(field === 'bannerEffect' && !canUseBannerEffect(state.profile)){ 
+    toast('🔒 تأثيرات الغلاف تتطلب بلس'); return; 
+  }
+  if(field === 'accentColor' && getSubscription(state.profile).features.maxCustomColors === 0){
+    toast('🔒 اللون المميز يتطلب بلس'); return;
+  }
+  
+  const ok = await saveCustomField(field, val);
+  if(ok){
+    const previewBox = document.getElementById('custPreviewBox');
+    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+    document.querySelectorAll(`[data-cust="${field}"]`).forEach(el=>{
+      el.classList.toggle('active', el.dataset.val === val);
+    });
+    if(field === 'avatarBorder'){
+      render();
+    }
+  }
+  return;
+}
+
+/* ===== حفظ موسيقى الملف ===== */
+if(t.id === 'saveMusicBtn'){
+  const url = document.getElementById('musicUrlInput')?.value.trim() || '';
+  const ok = await saveCustomField('musicUrl', url);
+  if(ok) toast('تم الحفظ ✓');
+  return;
+}
+
+/* ===== منتقي الألوان المخصص ===== */
+if(t.id === 'avatarBorderColorPicker'){
+  t.addEventListener('change', async (e)=>{
+    const color = e.target.value;
+    await saveCustomField('avatarBorderColor', color);
+    const previewBox = document.getElementById('custPreviewBox');
+    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+  }, { once: false });
+  return;
+}
+if(t.id === 'accentColorPicker'){
+  t.addEventListener('change', async (e)=>{
+    const color = e.target.value;
+    await saveCustomField('accentColor', color);
+    const previewBox = document.getElementById('custPreviewBox');
+    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+  }, { once: false });
+  return;
+}
+
+/* ★ إجراءات الصورة */
+if(t.dataset.viewImage){
+  const url = t.dataset.viewImage === 'avatar'
+    ? state.profile?.avatarUrl : state.profile?.coverUrl;
+  openImageViewerModal(url);
+  return;
+}
+if(t.dataset.changeImage){ await changeProfileImage(t.dataset.changeImage); return; }
+if(t.dataset.deleteImage){ await deleteProfileImage(t.dataset.deleteImage); return; }
+
+/* ★ حظر */
+if(t.dataset.blockUser){ await toggleBlockUser(t.dataset.blockUser); return; }
 
   if(t.dataset.nav){
     if(t.dataset.reset === 'chat'){ state.chatWith = null; }
@@ -3227,7 +6394,13 @@ if(t.dataset.teamTab){
 }
 
 if(t.dataset.tab){ state.homeTab = t.dataset.tab; render(); return; }
-if(t.dataset.ptab){ state.profileTab = t.dataset.ptab; render(); return; }
+if(t.dataset.ptab){
+  const tabsEl = document.querySelector('.tabs.scrollable');
+  state._tabsScroll = tabsEl ? tabsEl.scrollLeft : 0;   /* ★ حفظ كما هو */
+  state.profileTab = t.dataset.ptab;
+  render();                                              /* ★ الاستعادة داخل render */
+  return;
+}
 
   if(t.dataset.follow){ await toggleFollow(t.dataset.follow); return; }
   if(t.dataset.like){ await toggleLike(t.dataset.like); return; }
@@ -3340,14 +6513,134 @@ if(t.dataset.ptab){ state.profileTab = t.dataset.ptab; render(); return; }
 
   if(t.dataset.openTeam){ state.viewingTeamId = t.dataset.openTeam; render(); return; }
   if(t.dataset.joinTeam){ await joinTeam(t.dataset.joinTeam); return; }
+
+  /* ★ البطولات */
+if(t.dataset.action === 'create-tournament'){ openCreateTournamentModal(); return; }
+if(t.dataset.viewTournament){ go('tournaments', { viewingTournamentId: t.dataset.viewTournament }); return; }
+if(t.dataset.joinTournament){ await joinTournament(t.dataset.joinTournament); render(); return; }
+if(t.dataset.action === 'back-from-tournament'){ state.viewingTournamentId = null; render(); return; }
+if(t.id === 'confirmCreateTournament'){
+  const name = document.getElementById('tnName').value.trim();
+  const size = document.getElementById('tnSize').value;
+  const coins = document.getElementById('tnCoins').value;
+  if(!name) return toast('الاسم مطلوب');
+  const id = await createTournament(name, size, coins);
+  closeModal();
+  if(id) go('tournaments', { viewingTournamentId: id });
+  return;
+}
+
+/* ★ الحروب */
+if(t.dataset.viewWar){ state.viewingWarId = t.dataset.viewWar; go('war'); return; }
+if(t.dataset.action === 'back-from-war'){ state.viewingWarId = null; render(); return; }
+if(t.dataset.declareWar){ await declareWar(t.dataset.declareWar); return; }
+if(t.dataset.playWarMatch){ 
+  toast('ستبدأ مباراة — النقاط تُضاف للحرب');
+  // انتقل إلى Quiz Clash
+  setTimeout(()=>startMatchmaking('g3'), 500);
+  return;
+}
+
+/* ★ الإشعارات */
+if(t.dataset.notifFilter){ state.notifFilter = t.dataset.notifFilter; render(); return; }
+
+/* ★ الإعدادات */
+if(t.dataset.action === 'save-settings'){ await saveSettings(); return; }
+
+/* ★ الإبلاغ */
+if(t.dataset.reportTarget){ openReportModal(t.dataset.reportType, t.dataset.reportTarget); return; }
+if(t.id === 'confirmReport'){
+  const reason = document.querySelector('.report-option.selected')?.dataset.reason;
+  const details = document.getElementById('reportDetails')?.value.trim() || '';
+  if(!reason) return toast('اختر سبباً');
+  await reportContent(t.dataset.reportType, t.dataset.reportTarget, reason, details);
+  closeModal();
+  return;
+}
+
+/* ★ الهدايا */
+if(t.dataset.sendGift){ openSendGiftModal(t.dataset.sendGift); return; }
+if(t.dataset.giftTab){ state.giftTab = t.dataset.giftTab; render(); return; }
+
+/* ★ المواسم */
+if(t.dataset.action === 'admin-season-end'){ await endCurrentSeason(); return; }
+
+/* ★ التخصيص */
+if(t.dataset.setTheme){
+  if(!canCustomizeTheme(state.profile)){
+    toast('🔒 الثيم يتطلب اشتراك'); return;
+  }
+  await applyTheme(t.dataset.setTheme);
+  return;
+}
+if(t.dataset.setFrame){
+  const frameId = t.dataset.setFrame;
+  if(!canUseFrame(state.profile, frameId)){
+    toast('🔒 هذا الإطار مقفل'); return;
+  }
+  await applyFrame(frameId);
+  return;
+}
+
+/* ★ الإدارة */
+if(t.dataset.adminTab){ state.adminTab = t.dataset.adminTab; render(); return; }
+if(t.dataset.action === 'admin-refresh'){ state.reports = []; await loadSeasonInfo(); render(); toast('تم التحديث'); return; }
+if(t.dataset.adminBan){ await adminBanUser(t.dataset.adminBan, t.dataset.adminBanned === '1'); return; }
+if(t.dataset.adminDeletePost){
+  await adminDeletePost(t.dataset.adminDeletePost, t.dataset.adminReport || null);
+  return;
+}
+if(t.dataset.adminDismiss){ await adminDismissReport(t.dataset.adminDismiss); return; }
 });
 
 /* Input events */
-document.addEventListener('input', (e)=>{
+document.addEventListener('input', async (e)=>{
+  /* البحث */
   if(e.target.id === 'searchInput'){
     state.searchQ = e.target.value;
     clearTimeout(window._searchTimer);
     window._searchTimer = setTimeout(renderSearchResults, 200);
+    /* 🎨 منتقي لون الاسم */
+if(e.target.id === 'nameColorPicker'){
+  if(!canCustomizeNameColor(state.profile)) return;
+  await saveCustomField('nameColor', e.target.value);
+  const box = document.getElementById('custPreviewBox');
+  if(box) box.innerHTML = renderCustomizationPreview();
+  return;
+}
+if(e.target.id === 'usernameColorPicker'){
+  if(!canCustomizeUsernameColor(state.profile)) return;
+  await saveCustomField('usernameColor', e.target.value);
+  const box = document.getElementById('custPreviewBox');
+  if(box) box.innerHTML = renderCustomizationPreview();
+  return;
+}
+if(e.target.id === 'titleColorPicker'){
+  if(!canCustomizeTitleColor(state.profile)) return;
+  await saveCustomField('titleColor', e.target.value);
+  const box = document.getElementById('custPreviewBox');
+  if(box) box.innerHTML = renderCustomizationPreview();
+  return;
+}
+    return;
+  }
+
+  /* 🎨 منتقي لون حدود الصورة */
+  if(e.target.id === 'avatarBorderColorPicker'){
+    const color = e.target.value;
+    await saveCustomField('avatarBorderColor', color);
+    const previewBox = document.getElementById('custPreviewBox');
+    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+    return;
+  }
+
+  /* 🎨 منتقي اللون المميز */
+  if(e.target.id === 'accentColorPicker'){
+    const color = e.target.value;
+    await saveCustomField('accentColor', color);
+    const previewBox = document.getElementById('custPreviewBox');
+    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+    return;
   }
 });
 
