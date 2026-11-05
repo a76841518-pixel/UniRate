@@ -69,6 +69,7 @@ const ICONS = {
   trash:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/>',
   camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
   dots:'<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
+  eye:'<path d="M2 12s4-8 10-8 10 8 10 8-4 8-10 8S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
 };
 function ic(name, cls=''){ return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`; }
 
@@ -213,12 +214,99 @@ const SEASON_THEMES = [
 
 /* ============ الثيمات ============ */
 const THEMES = {
-  default:   { name:'افتراضي',  colors:['#6c5ce7','#00d2ff'] },
-  sunset:    { name:'غروب',      colors:['#ff8a00','#ff3d71'] },
-  forest:    { name:'غابة',      colors:['#22c55e','#00d2ff'] },
-  midnight:  { name:'منتصف الليل',colors:['#4c1d95','#1e1b4b'] },
-  fire:      { name:'نار',       colors:['#ff3d71','#f5b301'] },
-  ocean:     { name:'محيط',      colors:['#0891b2','#22d3ee'] },
+  default:   { name:'افتراضي',      colors:['#6c5ce7','#00d2ff'] },
+  sunset:    { name:'غروب',         colors:['#ff8a00','#ff3d71'] },
+  forest:    { name:'غابة',         colors:['#22c55e','#00d2ff'] },
+  midnight:  { name:'منتصف الليل',  colors:['#4c1d95','#1e1b4b'] },
+  fire:      { name:'نار',          colors:['#ff3d71','#f5b301'] },
+  ocean:     { name:'محيط',         colors:['#0891b2','#22d3ee'] },
+  lavender:  { name:'لافندر',       colors:['#a78bfa','#ec4899'] },
+  mint:      { name:'نعناع',        colors:['#10b981','#a7f3d0'] },
+  rose:      { name:'ورد',          colors:['#f43f5e','#fbcfe8'] },
+  sky:       { name:'سماء',         colors:['#0ea5e9','#bae6fd'] },
+  gold:      { name:'ذهبي',         colors:['#f5b301','#78350f'] },
+  cherry:    { name:'كرز',          colors:['#ec4899','#f43f5e'] },
+  cyber:     { name:'سايبر',        colors:['#00ff88','#ff00ff'] },
+  aurora:    { name:'شفق',          colors:['#22d3ee','#a78bfa'] },
+  blood:     { name:'دم',           colors:['#7f1d1d','#000000'] },
+  sand:      { name:'رمال',         colors:['#d97706','#fef3c7'] },
+  deep:      { name:'عميق',         colors:['#0f172a','#1e40af'] },
+  lime:      { name:'ليمون',        colors:['#84cc16','#06b6d4'] },
+  copper:    { name:'نحاسي',        colors:['#a05a1f','#f59e0b'] },
+  mono:      { name:'أحادي',        colors:['#475569','#1e293b'] },
+};
+
+/* ============================================================
+   🌫️ تأثيرات الأفاتار
+   ============================================================ */
+const AVATAR_FILTERS = {
+  none:      { label:'عادي',    css:'none',                              emoji:'⬜' },
+  grayscale: { label:'رمادي',   css:'grayscale(1)',                      emoji:'⚫' },
+  sepia:     { label:'سيبيا',   css:'sepia(1)',                          emoji:'🟤' },
+  invert:    { label:'معكوس',   css:'invert(1)',                         emoji:'🔄' },
+  blur:      { label:'ضبابي',   css:'blur(2px)',                         emoji:'💨' },
+  bright:    { label:'ساطع',    css:'brightness(1.3) saturate(1.4)',     emoji:'☀️' },
+  dark:      { label:'داكن',    css:'brightness(0.65)',                  emoji:'🌑' },
+  vintage:   { label:'قديم',    css:'sepia(0.6) contrast(1.1)',          emoji:'📷' },
+  cool:      { label:'بارد',    css:'hue-rotate(180deg)',                emoji:'❄️' },
+  warm:      { label:'دافئ',    css:'hue-rotate(-30deg) saturate(1.3)',  emoji:'🔥' },
+};
+
+/* ============================================================
+   🎬 حركات الاسم
+   ============================================================ */
+const NAME_ANIMATIONS = {
+  none:    { label:'بدون',    emoji:'⬜' },
+  pulse:   { label:'نبض',     emoji:'💓' },
+  shake:   { label:'اهتزاز',  emoji:'🌪️' },
+  glow:    { label:'توهج',    emoji:'✨' },
+  rainbow: { label:'قزح',     emoji:'🌈' },
+  bounce:  { label:'قفز',     emoji:'⬆️' },
+};
+
+/* ============================================================
+   🌟 توهج البطاقة
+   ============================================================ */
+const CARD_GLOWS = {
+  none:    { label:'بدون',  emoji:'⬜' },
+  soft:    { label:'ناعم',  emoji:'🌟' },
+  strong:  { label:'قوي',   emoji:'💫' },
+  rainbow: { label:'قزح',   emoji:'🌈' },
+  gold:    { label:'ذهبي',  emoji:'👑' },
+};
+
+/* ============================================================
+   💫 ظل البطاقة
+   ============================================================ */
+const CARD_SHADOWS = {
+  none:   { label:'بدون',   emoji:'⬜' },
+  small:  { label:'صغير',   emoji:'▪️' },
+  medium: { label:'متوسط',  emoji:'◼️' },
+  large:  { label:'كبير',   emoji:'⬛' },
+};
+
+/* ============================================================
+   🏅 نمط شارة المستوى
+   ============================================================ */
+const LEVEL_STYLES = {
+  default: { label:'افتراضي', emoji:'🎖️' },
+  badge:   { label:'شارة',   emoji:'🏅' },
+  gem:     { label:'جوهرة',  emoji:'💎' },
+  crown:   { label:'تاج',    emoji:'👑' },
+  star:    { label:'نجمة',   emoji:'⭐' },
+  minimal: { label:'بسيط',   emoji:'▫️' },
+};
+
+/* ============================================================
+   🎨 أنماط الخلفية
+   ============================================================ */
+const BG_PATTERNS = {
+  none:    { label:'بدون',   emoji:'⬜' },
+  dots:    { label:'نقاط',   emoji:'⚬' },
+  grid:    { label:'شبكة',   emoji:'▦' },
+  stripes: { label:'خطوط',   emoji:'▥' },
+  waves:   { label:'موج',    emoji:'🌊' },
+  stars:   { label:'نجوم',   emoji:'✨' },
 };
 
 /* ============ الإطارات المتحركة ============ */
@@ -236,14 +324,6 @@ const ANIMATED_FRAMES = {
   gradient:    { name:'تدرّج متحرك',   class:'frame-gradient-anim', tier:'exclusive', price:3500 },
   dashed:      { name:'متقطع',         class:'frame-dashed',        tier:'exclusive', price:1800 },
   double:      { name:'مزدوج',         class:'frame-double',        tier:'exclusive', price:3000 },
-};
-
-/* ============ أشكال الصور ============ */
-const AVATAR_SHAPES = {
-  circle:  { label:'دائرية', radius:'50%' },
-  rounded: { label:'مستديرة', radius:'23px' },
-  square:  { label:'مربعة',   radius:'6px' },
-  hexagon: { label:'سداسية',  radius:'0' },
 };
 
 /* ============ تخطيطات البطاقة ============ */
@@ -322,11 +402,123 @@ const SUBSCRIPTION_PLANS = {
   },
 };
 
-/* ============ ألوان مخصصة إضافية ============ */
+/* ============================================================
+   🎨 الألوان الموسّعة
+   ============================================================ */
 const NAME_COLOR_PRESETS = [
-  '#ffffff', '#e9eefb', '#6c5ce7', '#00d2ff', '#ff3d71',
-  '#f5b301', '#22c55e', '#a78bfa', '#ff8a00', '#ec4899',
+  /* محايدة (9) */
+  '#ffffff','#f8fafc','#e9eefb','#cbd5e1','#94a3b8','#64748b','#475569','#1e293b','#000000',
+  /* هوية نكسوس (5) */
+  '#6c5ce7','#00d2ff','#ff3d71','#f5b301','#22c55e',
+  /* طيف قزح كامل (17) */
+  '#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#14b8a6',
+  '#06b6d4','#0ea5e9','#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899','#f43f5e',
+  /* باستيل (10) */
+  '#fecaca','#fed7aa','#fde68a','#d9f99d','#bbf7d0','#a7f3d0','#bae6fd','#c7d2fe','#ddd6fe','#fbcfe8',
+  /* داكنة (11) */
+  '#7f1d1d','#78350f','#713f12','#365314','#14532d','#134e4a',
+  '#164e63','#1e3a8a','#3730a3','#581c87','#831843',
+  /* نيون (10) */
+  '#39ff14','#ff10f0','#00ffff','#ff6600','#fb7185',
+  '#ff00ff','#00ff88','#ff0080','#00ffcc','#ccff00',
 ];
+
+/* ============================================================
+   🌈 تدرجات للاسم
+   ============================================================ */
+const NAME_GRADIENTS = {
+  none:    { label:'بدون',    css:'none',              emoji:'⬜' },
+  sunset:  { label:'غروب',    css:'linear-gradient(90deg,#ff8a00,#ff3d71)', emoji:'🌅' },
+  ocean:   { label:'محيط',    css:'linear-gradient(90deg,#0891b2,#22d3ee)', emoji:'🌊' },
+  forest:  { label:'غابة',    css:'linear-gradient(90deg,#22c55e,#00d2ff)', emoji:'🌲' },
+  purple:  { label:'أرجوان',  css:'linear-gradient(90deg,#a78bfa,#6c5ce7)', emoji:'💜' },
+  fire:    { label:'نار',     css:'linear-gradient(90deg,#f5b301,#ff3d71)', emoji:'🔥' },
+  rainbow: { label:'قزح',     css:'linear-gradient(90deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3)', emoji:'🌈' },
+  gold:    { label:'ذهبي',    css:'linear-gradient(90deg,#f5b301,#ffd700,#f5b301)', emoji:'👑' },
+  ice:     { label:'جليد',    css:'linear-gradient(90deg,#a5f3fc,#22d3ee)', emoji:'❄️' },
+  neon:    { label:'نيون',    css:'linear-gradient(90deg,#39ff14,#00ffff)', emoji:'💡' },
+  candy:   { label:'حلوى',    css:'linear-gradient(90deg,#f472b6,#a78bfa,#38bdf8)', emoji:'🍬' },
+};
+
+/* ============================================================
+   ✨ تأثيرات النص
+   ============================================================ */
+const TEXT_EFFECTS = {
+  none:    { label:'بدون',    emoji:'⬜' },
+  glow:    { label:'توهج',    emoji:'✨' },
+  shadow:  { label:'ظل',      emoji:'🌑' },
+  outline: { label:'حدود',    emoji:'⬛' },
+  neon:    { label:'نيون',    emoji:'💡' },
+};
+
+/* ============================================================
+   🔤 أوزان الخط
+   ============================================================ */
+const FONT_WEIGHTS = {
+  normal: { label:'عادي',   value:400 },
+  medium: { label:'متوسط',  value:600 },
+  bold:   { label:'عريض',   value:700 },
+  heavy:  { label:'ثقيل',   value:800 },
+  black:  { label:'أسود',   value:900 },
+};
+
+/* ============================================================
+   🖼️ أشكال الأفاتار الموسّعة (8 أشكال)
+   ============================================================ */
+const AVATAR_SHAPES = {
+  circle:  { label:'دائرية',  radius:'50%' },
+  rounded: { label:'مستديرة', radius:'23px' },
+  square:  { label:'مربعة',   radius:'6px' },
+  hexagon: { label:'سداسية',  radius:'0', clip:'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' },
+  octagon: { label:'ثمانية',  radius:'0', clip:'polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)' },
+  diamond: { label:'معينة',   radius:'0', clip:'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' },
+  star:    { label:'نجمة',    radius:'0', clip:'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
+  blob:    { label:'عضوية',   radius:'60% 40% 30% 70% / 60% 30% 70% 40%' },
+};
+
+/* ============================================================
+   🎖️ شارات بجانب الاسم
+   ============================================================ */
+const NAME_BADGES = {
+  none:    { emoji:'',   label:'بدون' },
+  star:    { emoji:'⭐', label:'نجمة' },
+  crown:   { emoji:'👑', label:'تاج' },
+  fire:    { emoji:'🔥', label:'نار' },
+  gem:     { emoji:'💎', label:'جوهرة' },
+  skull:   { emoji:'💀', label:'جمجمة' },
+  sword:   { emoji:'⚔️', label:'سيف' },
+  heart:   { emoji:'❤️', label:'قلب' },
+  bolt:    { emoji:'⚡', label:'برق' },
+  moon:    { emoji:'🌙', label:'قمر' },
+  sun:     { emoji:'☀️', label:'شمس' },
+  flower:  { emoji:'🌸', label:'زهرة' },
+  dragon:  { emoji:'🐉', label:'تنين' },
+  rocket:  { emoji:'🚀', label:'صاروخ' },
+  ghost:   { emoji:'👻', label:'شبح' },
+  alien:   { emoji:'👽', label:'فضائي' },
+};
+
+/* ============================================================
+   📝 أنماط النبذة
+   ============================================================ */
+const BIO_STYLES = {
+  plain:   { label:'عادي',    emoji:'📄' },
+  quote:   { label:'اقتباس',  emoji:'💬' },
+  italic:  { label:'مائل',    emoji:'✍️' },
+  glow:    { label:'متوهج',   emoji:'✨' },
+  card:    { label:'بطاقة',   emoji:'🃏' },
+};
+
+/* ============================================================
+   🔵 أشكال حدود الأفاتار
+   ============================================================ */
+const AVATAR_BORDERS = {
+  gradient: { label:'تدرّج',   emoji:'🎨' },
+  solid:    { label:'لون ثابت', emoji:'⚪' },
+  glow:     { label:'توهج',    emoji:'✨' },
+  rainbow:  { label:'قزح',     emoji:'🌈' },
+  none:     { label:'بدون',    emoji:'🚫' },
+};
 
 /* ============ إطارات لا تظهر في الاشتراكات ============ */
 function getFrameTier(frameId){
@@ -473,6 +665,7 @@ const state = {
   invTab: 'all',
   giftTab: 'received',
   mmUnsub: null,
+  custActiveZone: null,
     _tabsScroll: null,   /* حفظ موضع تمرير التبويبات */
 };
 
@@ -629,6 +822,11 @@ async function notify(uid, type, text, link = '') {
 
 /* ============ Navigation ============ */
 function go(page, opt={}){
+  /* ★ تصفير المنطقة النشطة عند مغادرة التخصيص */
+  if(state.page === 'customization' && page !== 'customization'){
+    state.custActiveZone = null;
+  }
+
   if(state.page === 'messages' && page !== 'messages' && state.chatUnsub){
     try { state.chatUnsub(); } catch(e){}
     state.chatUnsub = null; state.chatWith = null;
@@ -969,7 +1167,7 @@ state.unsubs.push(onSnapshot(
       state.profile = snap.data();
       updateTopbarCoins();
       renderTopbar();
-      if (['profile','stats','settings','userprofile'].includes(state.page)) render();
+if (['profile','stats','settings','userprofile','customization'].includes(state.page)) render();
     } else {
       console.warn('Profile document disappeared');
     }
@@ -1130,15 +1328,29 @@ async function toggleProfileLike(targetUid){
   try {
     if(snap.exists()){
       await deleteDoc(likeRef);
-      await updateDoc(doc(db,'users',targetUid), { likesProfile: increment(-1) });
+      await updateDoc(doc(db,'users',targetUid), {
+        likesProfile: increment(-1),
+        fame: increment(-10)
+      });
       toast('تم إزالة الإعجاب');
     } else {
-      await setDoc(likeRef, { from: state.user.uid, to: targetUid, createdAt: serverTimestamp() });
-      await updateDoc(doc(db,'users',targetUid), { likesProfile: increment(1) });
-      await notify(targetUid, 'like', `<b>${esc(state.profile.name)}</b> أعجبه ملفك الشخصي`);
+      await setDoc(likeRef, {
+        from: state.user.uid,
+        to: targetUid,
+        createdAt: serverTimestamp()
+      });
+      await updateDoc(doc(db,'users',targetUid), {
+        likesProfile: increment(1),
+        fame: increment(10)
+      });
+      await notify(targetUid, 'like',
+        `<b>${esc(state.profile.name)}</b> أعجبه ملفك الشخصي`);
       toast('تم إعجاب الملف ✓');
     }
-  } catch(e){ toast('تعذّر التحديث'); }
+  } catch(e){
+    console.error(e);
+    toast('تعذّر التحديث');
+  }
 }
 
 async function sendSupport(targetUid){
@@ -1150,7 +1362,10 @@ async function sendSupport(targetUid){
   if(snap.exists()) return toast('دعمت هذا اللاعب اليوم بالفعل');
   try {
     await setDoc(supportRef, { from: state.user.uid, to: targetUid, date: today, createdAt: serverTimestamp() });
-    await updateDoc(doc(db,'users',targetUid), { support: increment(10) });
+await updateDoc(doc(db,'users',targetUid), {
+  support: increment(10),
+  fame: increment(10)   // ★ جديد
+});
     await notify(targetUid, 'support', `<b>${esc(state.profile.name)}</b> أرسل لك 10 نقاط دعم`);
     toast('تم إرسال 10 نقاط دعم ✓');
   } catch(e){ toast('فشل الدعم'); }
@@ -3086,7 +3301,13 @@ function openImageActionsModal(type){
       ${url ? `
         <button class="set-row" data-view-image="${type}">
           ${ic('image','sm')} <span class="sr-txt"><span class="sr-n">عرض الصورة</span></span>
-        </button>` : ''}
+        </button>
+        ${!isAvatar ? `
+          <button class="set-row" data-recrop-cover="1">
+            ${ic('edit','sm')} <span class="sr-txt"><span class="sr-n">إعادة الاقتصاص</span></span>
+          </button>
+        ` : ''}
+      ` : ''}
       <button class="set-row" data-change-image="${type}">
         ${ic('camera','sm')} <span class="sr-txt"><span class="sr-n">${url ? 'تغيير الصورة' : 'إضافة صورة'}</span></span>
       </button>
@@ -3101,6 +3322,81 @@ function openImageActionsModal(type){
   `);
 }
 
+/* ★ معالج إعادة الاقتصاص */
+async function recropCover(){
+  const url = state.profile?.coverUrl;
+  if(!url) return toast('لا توجد صورة غلاف');
+
+  // استخرج الموضع الحالي
+  const current = state.profile.coverPosition || '50% 50%';
+  const [curX, curY] = current.split(' ').map(s => parseInt(s) || 50);
+
+  let posX = curX, posY = curY;
+
+  openModal(`
+    <h3>✂️ اقتصاص الغلاف</h3>
+    <div class="sub">اسحب الشرائط لتحديد الجزء الظاهر</div>
+
+    <div class="crop-preview-wrap">
+      <div class="crop-preview-img" id="cropPreviewImg"
+           style="background-image:url('${url}');background-position:${curX}% ${curY}%"></div>
+      <div class="crop-overlay"></div>
+    </div>
+
+    <div class="crop-control">
+      <label>
+        <span>↕️ الموضع العمودي</span>
+        <span class="val" id="cropYVal">${curY}%</span>
+      </label>
+      <input type="range" class="crop-slider" id="cropY" min="0" max="100" value="${curY}">
+    </div>
+
+    <div class="crop-control">
+      <label>
+        <span>↔️ الموضع الأفقي</span>
+        <span class="val" id="cropXVal">${curX}%</span>
+      </label>
+      <input type="range" class="crop-slider" id="cropX" min="0" max="100" value="${curX}">
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="saveRecropBtn">
+        ${ic('check','sm')} حفظ
+      </button>
+    </div>
+  `);
+
+  const preview = document.getElementById('cropPreviewImg');
+  const sliderX = document.getElementById('cropX');
+  const sliderY = document.getElementById('cropY');
+  const valX = document.getElementById('cropXVal');
+  const valY = document.getElementById('cropYVal');
+
+  const update = () => {
+    posX = parseInt(sliderX.value);
+    posY = parseInt(sliderY.value);
+    preview.style.backgroundPosition = `${posX}% ${posY}%`;
+    valX.textContent = `${posX}%`;
+    valY.textContent = `${posY}%`;
+  };
+  sliderX.addEventListener('input', update);
+  sliderY.addEventListener('input', update);
+
+  document.getElementById('saveRecropBtn').onclick = async () => {
+    try {
+      await updateDoc(doc(db, 'users', state.user.uid), {
+        coverPosition: `${posX}% ${posY}%`,
+      });
+      closeModal();
+      toast('تم تحديث الاقتصاص ✓');
+    } catch(e){
+      console.error(e);
+      toast('فشل الحفظ');
+    }
+  };
+}
+
 function openImageViewerModal(url){
   if(!url) return toast('لا توجد صورة');
   openModal(`
@@ -3113,19 +3409,99 @@ function openImageViewerModal(url){
   `);
 }
 
+/* ============================================================
+   ✂️ مودال اقتصاص صورة الغلاف
+   ============================================================ */
+function openCoverCropModal(imageDataUrl, onSave){
+  let posX = 50, posY = 50;
+
+  openModal(`
+    <h3>✂️ اقتصاص صورة الغلاف</h3>
+    <div class="sub">اسحب الشرائط لتحديد الجزء الظاهر</div>
+
+    <div class="crop-preview-wrap">
+      <div class="crop-preview-img" id="cropPreviewImg"
+           style="background-image:url('${imageDataUrl}');background-position:50% 50%"></div>
+      <div class="crop-overlay"></div>
+    </div>
+
+    <div class="crop-control">
+      <label>
+        <span>↕️ الموضع العمودي</span>
+        <span class="val" id="cropYVal">50%</span>
+      </label>
+      <input type="range" class="crop-slider" id="cropY" min="0" max="100" value="50">
+    </div>
+
+    <div class="crop-control">
+      <label>
+        <span>↔️ الموضع الأفقي</span>
+        <span class="val" id="cropXVal">50%</span>
+      </label>
+      <input type="range" class="crop-slider" id="cropX" min="0" max="100" value="50">
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="saveCropBtn">
+        ${ic('check','sm')} حفظ الغلاف
+      </button>
+    </div>
+  `);
+
+  const preview = document.getElementById('cropPreviewImg');
+  const sliderX = document.getElementById('cropX');
+  const sliderY = document.getElementById('cropY');
+  const valX = document.getElementById('cropXVal');
+  const valY = document.getElementById('cropYVal');
+
+  const update = () => {
+    posX = parseInt(sliderX.value);
+    posY = parseInt(sliderY.value);
+    preview.style.backgroundPosition = `${posX}% ${posY}%`;
+    valX.textContent = `${posX}%`;
+    valY.textContent = `${posY}%`;
+  };
+  sliderX.addEventListener('input', update);
+  sliderY.addEventListener('input', update);
+
+  document.getElementById('saveCropBtn').onclick = () => {
+    onSave(`${posX}% ${posY}%`);
+    closeModal();
+  };
+}
+
 async function changeProfileImage(type){
   pickImage(type, async (previewUrl, file) => {
     try {
       const base64 = await imageToBase64(file, type);
-      const field = type === 'avatar' ? 'avatarUrl' : 'coverUrl';
-      await updateDoc(doc(db, 'users', state.user.uid), { [field]: base64 });
-      // حدّث صور المنشورات إذا تغيّر الأفاتار
-      if(type === 'avatar'){
-        try {
-          const snap = await getDocs(query(collection(db,'posts'), where('authorId','==',state.user.uid)));
-          await Promise.all(snap.docs.map(d => updateDoc(d.ref, { 'author.avatarUrl': base64 })));
-        } catch(e){}
+
+      /* ★ الغلاف → افتح مودال الاقتصاص أولاً */
+      if(type === 'cover'){
+        openCoverCropModal(base64, async (position) => {
+          try {
+            await updateDoc(doc(db, 'users', state.user.uid), {
+              coverUrl: base64,
+              coverPosition: position,   /* ★ جديد */
+            });
+            toast('تم تحديث الغلاف ✓');
+          } catch(e){
+            console.error(e);
+            toast('فشل الحفظ');
+          }
+        });
+        return;
       }
+
+      /* الأفاتار — مباشر */
+      await updateDoc(doc(db, 'users', state.user.uid), { avatarUrl: base64 });
+
+      // تحديث صور المنشورات
+      try {
+        const snap = await getDocs(query(collection(db,'posts'), where('authorId','==',state.user.uid)));
+        await Promise.all(snap.docs.map(d => updateDoc(d.ref, { 'author.avatarUrl': base64 })));
+      } catch(e){}
+
       closeModal();
       toast('تم التحديث ✓');
     } catch(e){
@@ -3647,14 +4023,361 @@ async function renderProfileTabBody(){
 }
 
 /* ============================================================
+   📊 حساب الشهرة والقوة (Requirements 2, 3)
+   ============================================================ */
+async function calculateFame(uid) {
+  try {
+    const uSnap = await getDoc(doc(db, 'users', uid));
+    if (!uSnap.exists()) return 0;
+    const u = uSnap.data();
+    const likesProfile = u.likesProfile || 0;
+    const support = u.support || 0;
+    let giftValue = 0;
+    try {
+      const gs = await getDocs(query(collection(db, 'gifts'), where('to', '==', uid)));
+      giftValue = gs.docs.reduce((s, d) => s + (d.data().price || 0), 0);
+    } catch (e) {}
+    // الشهرة = إعجابات الملف × 10 + الدعم + قيمة الهدايا ÷ 10
+    return likesProfile * 10 + support + Math.floor(giftValue / 10);
+  } catch (e) { return 0; }
+}
+
+async function calculatePower(uid) {
+  try {
+    const uSnap = await getDoc(doc(db, 'users', uid));
+    if (!uSnap.exists()) return 0;
+    const u = uSnap.data();
+    const gameLikes = u.likesGames || 0;
+    let wins = 0, losses = 0;
+    try {
+      const ms = await getDocs(collection(db, 'users', uid, 'matchHistory'));
+      ms.docs.forEach(d => {
+        const m = d.data();
+        if (m.result === 'win') wins++; else losses++;
+      });
+    } catch (e) {}
+    const kd = losses > 0 ? wins / losses : wins;
+    // القوة = إعجابات اللعب × 2 + K/D × 100
+    return gameLikes * 2 + Math.round(kd * 100);
+  } catch (e) { return 0; }
+}
+
+async function recalcFamePower(uid) {
+  try {
+    const [fame, power] = await Promise.all([calculateFame(uid), calculatePower(uid)]);
+    await updateDoc(doc(db, 'users', uid), { fame, power });
+  } catch (e) { console.warn('recalcFamePower:', e); }
+}
+
+/* ============================================================
+   👁️ تسجيل مشاهدة الملف (Requirement 4)
+   ============================================================ */
+async function recordProfileView(targetUid) {
+  if (!targetUid || targetUid === state.user.uid) return;
+  
+  // ★ الحل: فحص الـ sessionStorage أولاً لمنع تكرار المشاهدة في نفس الجلسة
+  const sessionKey = `viewed_${targetUid}`;
+  if (sessionStorage.getItem(sessionKey)) return; 
+
+  try {
+    const viewId = `${state.user.uid}_${targetUid}`;
+    const viewRef = doc(db, 'profileViews', viewId);
+    const snap = await getDoc(viewRef);
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    if (snap.exists()) {
+      const last = snap.data().lastViewAt?.toMillis?.() || 0;
+      if (last > hourAgo) {
+        sessionStorage.setItem(sessionKey, 'true'); // حفظ في الجلسة
+        return; // تجاهل إذا شوهد في آخر ساعة
+      }
+    }
+    
+    // تسجيل المشاهدة
+    await setDoc(viewRef, {
+      viewerId: state.user.uid,
+      targetId: targetUid,
+      lastViewAt: serverTimestamp(),
+      views: increment(1),
+    }, { merge: true });
+    
+    await updateDoc(doc(db, 'users', targetUid), { views: increment(1) });
+    
+    // ★ حفظ في الجلسة لمنع التكرار
+    sessionStorage.setItem(sessionKey, 'true'); 
+  } catch (e) { console.warn('recordProfileView:', e); }
+}
+
+/* ============================================================
+   👑 شارة الإشراف (Requirement 6)
+   ============================================================ */
+function getAdminBadge(user) {
+  if (!user) return '';
+  if (user.role === 'admin') {
+    return '<span class="admin-name-badge admin">👑 المشرف العام</span>';
+  }
+  if (user.role === 'moderator') {
+    const labels = {
+      games:   '🎮 مشرف ألعاب',
+      content: '📝 مشرف محتوى',
+      users:   '👥 مشرف مستخدمين',
+      data:    '📊 مشرف بيانات',
+    };
+    return `<span class="admin-name-badge mod">${labels[user.adminTask] || '🛡️ مشرف'}</span>`;
+  }
+  return '';
+}
+
+/* ============================================================
+   👥 مودال المتابعين/المتابعات (Requirement 1)
+   ============================================================ */
+async function openFollowersModal(uid, type) {
+  const title = type === 'followers' ? 'المتابعون' : 'يتابع';
+  try {
+    let ids = [];
+    if (type === 'followers') {
+      const snap = await getDocs(query(collection(db, 'follows'), where('followingId', '==', uid)));
+      ids = snap.docs.map(d => d.data().followerId);
+    } else {
+      const snap = await getDocs(query(collection(db, 'follows'), where('followerId', '==', uid)));
+      ids = snap.docs.map(d => d.data().followingId);
+    }
+    const users = ids.map(id => state.users[id]).filter(Boolean);
+
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">${title} (${users.length})</h3>
+        <button class="icon-btn" data-action="modal-close">${ic('close','sm')}</button>
+      </div>
+      <div style="max-height:60vh;overflow-y:auto">
+        ${users.length ? users.map(u => `
+          <div class="follow-list-item" data-view-profile="${u.uid}" data-close-modal="1">
+            ${avatar(u, 44)}
+            <div style="flex:1;min-width:0">
+              <div class="follow-name">${esc(u.name)} ${getAdminBadge(u)}</div>
+              <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+            </div>
+            ${u.uid !== state.user.uid
+              ? `<button class="btn btn-primary btn-sm" data-follow="${u.uid}"
+                         onclick="event.stopPropagation()">
+                   ${state.followed.has(u.uid) ? '✓' : '+ متابعة'}
+                 </button>`
+              : '<span class="pill">أنت</span>'}
+          </div>
+        `).join('') : `<div class="empty" style="padding:30px">${ic('users')}<div>لا ${title} بعد</div></div>`}
+      </div>
+    `);
+  } catch (e) {
+    console.error(e);
+    toast('فشل تحميل القائمة');
+  }
+}
+
+/* ============================================================
+   👁️ مودال آخر المشاهدات/الإعجابات (Requirement 5)
+   ============================================================ */
+async function openInteractionsModal(uid, type) {
+  const cfg = {
+    views:        { title:'👁️ آخر المشاهدات',  coll:'profileViews', field:'targetId', orderBy:'lastViewAt', idField:'viewerId', timeField:'lastViewAt' },
+    profileLikes: { title:'❤️ آخر الإعجابات',   coll:'profileLikes', field:'to',       orderBy:'createdAt',  idField:'from',     timeField:'createdAt' },
+    gameLikes:    { title:'🎮 إعجابات اللعب',   coll:'gameLikes',    field:'to',       orderBy:'createdAt',  idField:'from',     timeField:'createdAt' },
+  }[type];
+  if (!cfg) return;
+
+  try {
+    let items = [];
+    try {
+      const snap = await getDocs(query(
+        collection(db, cfg.coll),
+        where(cfg.field, '==', uid),
+        orderBy(cfg.orderBy, 'desc'),
+        limit(10)
+      ));
+      items = snap.docs.map(d => ({
+        uid: d.data()[cfg.idField],
+        time: d.data()[cfg.timeField],
+      })).filter(x => x.uid);
+    } catch (e) {
+      // في حال عدم وجود index — نستخدم استعلاماً بسيطاً
+      const snap = await getDocs(query(collection(db, cfg.coll), where(cfg.field, '==', uid), limit(10)));
+      items = snap.docs.map(d => ({ uid: d.data()[cfg.idField], time: d.data()[cfg.timeField] }));
+    }
+
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">${cfg.title}</h3>
+        <button class="icon-btn" data-action="modal-close">${ic('close','sm')}</button>
+      </div>
+      <div style="max-height:60vh;overflow-y:auto">
+        ${items.length ? items.map(item => {
+          const u = state.users[item.uid];
+          if (!u) return '';
+          return `
+            <div class="follow-list-item" data-view-profile="${u.uid}" data-close-modal="1">
+              ${avatar(u, 44)}
+              <div style="flex:1;min-width:0">
+                <div class="follow-name">${esc(u.name)} ${getAdminBadge(u)}</div>
+                <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+              </div>
+              <span class="muted" style="font-size:10px;white-space:nowrap">${timeAgo(item.time)}</span>
+            </div>
+          `;
+        }).join('') : `<div class="empty" style="padding:30px">${ic('heart')}<div>لا يوجد بعد</div></div>`}
+      </div>
+    `);
+  } catch (e) {
+    console.error(e);
+    toast('فشل تحميل القائمة');
+  }
+}
+
+/* ============================================================
+   📑 محتوى تبويبات ملف الغير (Requirement 7)
+   ============================================================ */
+async function renderUserTabBody(uid, tab) {
+  if (tab === 'posts') {
+    const posts = state.posts.filter(x => x.authorId === uid);
+    return posts.length ? posts.map(x => postCard(x)).join('') : emptyState('لا منشورات','grid');
+  }
+
+  if (tab === 'achievements') {
+    const user = state.users[uid] || {};
+    const unlocked = user.achievements || {};
+    const all = Object.entries(ACHIEVEMENT_DEFS);
+    const done = all.filter(([id]) => unlocked[id]).length;
+    return `
+      <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:14px">
+        <div class="ach-icon" style="width:56px;height:56px;font-size:26px">🏅</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:900">${done} / ${all.length}</div>
+          <div class="ach-prog" style="margin-top:8px">
+            <span style="width:${(done/all.length*100).toFixed(0)}%"></span>
+          </div>
+        </div>
+      </div>
+      ${all.map(([id, def]) => {
+        const isUnlocked = !!unlocked[id];
+        return `
+          <div class="achievement-card ${isUnlocked?'unlocked':'locked'}">
+            <div class="ach-tier-icon ${def.tier}">${def.icon}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:800">${def.name}</div>
+              <div class="ach-d">${def.desc}</div>
+            </div>
+            ${isUnlocked ? '<span class="pill ok">✓</span>' : '<span class="muted" style="font-size:10px">مقفل</span>'}
+          </div>
+        `;
+      }).join('')}
+    `;
+  }
+
+  if (tab === 'stats') {
+    const user = state.users[uid] || {};
+    let matches = [];
+    try {
+      const snap = await getDocs(query(
+        collection(db,'users',uid,'matchHistory'),
+        orderBy('playedAt','desc'), limit(100)
+      ));
+      matches = snap.docs.map(d => d.data());
+    } catch (e) {}
+    const wins = matches.filter(m=>m.result==='win').length;
+    const losses = matches.filter(m=>m.result==='loss').length;
+    return `
+      <div class="stat-grid" style="margin-bottom:16px">
+        <div class="stat-box"><div class="sv">${nf(user.fame)}</div><div class="sl">الشهرة</div></div>
+        <div class="stat-box"><div class="sv">${nf(user.power)}</div><div class="sl">القوة</div></div>
+        <div class="stat-box"><div class="sv">${nf(user.support)}</div><div class="sl">الدعم</div></div>
+        <div class="stat-box"><div class="sv">${nf(user.views||0)}</div><div class="sl">مشاهدات</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="sv">${matches.length}</div><div class="sl">مباراة</div></div>
+        <div class="stat-box"><div class="sv">${wins}</div><div class="sl">فوز</div></div>
+        <div class="stat-box"><div class="sv">${losses}</div><div class="sl">خسارة</div></div>
+        <div class="stat-box"><div class="sv">${matches.length?Math.round(wins/matches.length*100):0}%</div><div class="sl">نسبة الفوز</div></div>
+      </div>
+    `;
+  }
+
+  if (tab === 'games') {
+    try {
+      const snap = await getDocs(query(
+        collection(db,'users',uid,'matchHistory'),
+        orderBy('playedAt','desc'), limit(500)
+      ));
+      const matches = snap.docs.map(d => d.data());
+      const byGame = {};
+      GAMES.forEach(g => { byGame[g.id] = { played:0, wins:0, losses:0, xp:0 }; });
+      matches.forEach(m => {
+        const gid = m.gameId || 'g3';
+        if (!byGame[gid]) byGame[gid] = { played:0, wins:0, losses:0, xp:0 };
+        byGame[gid].played++;
+        if (m.result === 'win') { byGame[gid].wins++; byGame[gid].xp += 100; }
+        else { byGame[gid].losses++; byGame[gid].xp += 30; }
+      });
+      return GAMES.map(g => {
+        const s = byGame[g.id];
+        if (!s.played) return '';
+        const wr = Math.round(s.wins/s.played*100);
+        const lvl = Math.floor(s.xp/500)+1;
+        return `
+          <div class="game-stat-card">
+            <div class="gs-header">
+              <div class="gs-icon" style="background:${g.grad}">${ic(g.icon,'sm')}</div>
+              <div style="flex:1">
+                <div class="gs-title">${g.name}</div>
+                <div class="gs-sub">${g.cat}</div>
+              </div>
+              <div class="game-level-badge" style="background:${g.grad}">
+                <span class="glb-l">LV</span><span class="glb-v">${lvl}</span>
+              </div>
+            </div>
+            <div class="gs-grid">
+              <div class="gs-cell"><div class="v">${s.played}</div><div class="l">مباراة</div></div>
+              <div class="gs-cell"><div class="v" style="color:var(--ok)">${s.wins}</div><div class="l">فوز</div></div>
+              <div class="gs-cell"><div class="v" style="color:var(--pink)">${s.losses}</div><div class="l">خسارة</div></div>
+              <div class="gs-cell"><div class="v">${wr}%</div><div class="l">نسبة</div></div>
+            </div>
+          </div>
+        `;
+      }).join('') || emptyState('لم يلعب بعد','gamepad');
+    } catch (e) { return emptyState('خطأ','gamepad'); }
+  }
+
+  if (tab === 'gifts') {
+    try {
+      const snap = await getDocs(query(
+        collection(db,'gifts'), where('to','==',uid),
+        orderBy('createdAt','desc'), limit(50)
+      ));
+      const gifts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      return gifts.length ? gifts.map(g => `
+        <div class="gift-history-item received">
+          <div style="font-size:26px">${g.giftEmoji || '🎁'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:800">${esc(g.fromName||'مجهول')}</div>
+            <div style="font-size:11px;color:var(--muted)">${esc(g.message||g.giftName||'')}</div>
+            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">${timeAgo(g.createdAt)}</div>
+          </div>
+          <div class="pill gold">${ic('coin','xs')} ${nf(g.price||0)}</div>
+        </div>
+      `).join('') : emptyState('لا هدايا','star');
+    } catch (e) { return emptyState('خطأ','star'); }
+  }
+
+  return emptyState('اختر تبويباً','grid');
+}
+
+/* ============================================================
    📛 الحصول على بيانات التخصيص من الملف (مع defaults)
    ============================================================ */
 function getProfileCustomization(p){
   if(!p) return {};
   return {
+    /* الموجودة */
     avatarShape:       p.avatarShape       || 'circle',
     avatarBorder:      p.avatarBorder      || 'gradient',
     avatarBorderColor: p.avatarBorderColor || '#6c5ce7',
+    avatarBorderWidth: p.avatarBorderWidth || 3,
     profileLayout:     p.profileLayout     || 'default',
     bannerEffect:      p.bannerEffect      || 'none',
     accentColor:       p.accentColor       || '#6c5ce7',
@@ -3665,11 +4388,141 @@ function getProfileCustomization(p){
     birthday:          p.birthday          || '',
     discord:           p.discord           || '',
     twitter:           p.twitter           || '',
-    /* ★ جديدة */
     nameColor:         p.nameColor         || '#ffffff',
     usernameColor:     p.usernameColor     || '#00d2ff',
     titleColor:        p.titleColor        || '#f5b301',
+    coverPosition:     p.coverPosition     || '50% 50%',
+    /* الاسم */
+    nameEffect:        p.nameEffect        || 'none',
+    nameGradient:      p.nameGradient      || 'none',
+    nameWeight:        p.nameWeight        || 'black',
+    /* اسم المستخدم */
+    usernameEffect:    p.usernameEffect    || 'none',
+    usernameWeight:    p.usernameWeight    || 'bold',
+    /* الشارة */
+    nameBadge:         p.nameBadge         || 'none',
+    /* النبذة */
+    bioStyle:          p.bioStyle          || 'plain',
+    /* ★ جديدة — الغلاف */
+    coverBlur:         p.coverBlur         ?? 0,
+    coverOverlay:      p.coverOverlay      ?? 0,
+    coverBrightness:   p.coverBrightness   ?? 1,
+    /* ★ جديدة — الأفاتار */
+    avatarRotation:    p.avatarRotation    ?? 0,
+    avatarScale:       p.avatarScale       ?? 1,
+    avatarFilter:      p.avatarFilter      || 'none',
+    /* ★ جديدة — الاسم */
+    nameAnimation:     p.nameAnimation     || 'none',
+    /* ★ جديدة — البطاقة */
+    cardBorderColor:   p.cardBorderColor   || '',
+    cardGlow:          p.cardGlow          || 'none',
+    cardShadow:        p.cardShadow        || 'medium',
+    /* ★ جديدة — المستوى */
+    levelStyle:        p.levelStyle        || 'default',
+    levelColor:        p.levelColor        || '#00d2ff',
+    /* ★ جديدة — الحالة */
+    statusEffect:      p.statusEffect      || 'none',
+    /* ★ جديدة — الخلفية */
+    bgPattern:         p.bgPattern         || 'none',
+    /* بعد حقول bgPattern */
+joinDateColor:     p.joinDateColor     || '#8a95ad',
+followersBtnColor: p.followersBtnColor || '#00d2ff',
+followersBtnBg:    p.followersBtnBg    || 'transparent',
+locationColor:     p.locationColor     || '#8a95ad',
+levelBarColor:     p.levelBarColor     || '',      /* فارغ = تدرج افتراضي */
+levelTextColor:    p.levelTextColor    || '#ffffff',
   };
+}
+
+/* ============================================================
+   🎨 أنماط مشتركة للتخصيص — تُستخدم في المعاينة والصفحة الحقيقية
+   ============================================================ */
+function buildNameStyle(cust){
+  const gradient = NAME_GRADIENTS[cust.nameGradient] || NAME_GRADIENTS.none;
+  const weight = FONT_WEIGHTS[cust.nameWeight]?.value || 900;
+  let s = `color:${cust.nameColor};font-weight:${weight};`;
+  if(gradient.css !== 'none'){
+    s += `background:${gradient.css};-webkit-background-clip:text;background-clip:text;color:transparent;`;
+  }
+  if(cust.nameEffect === 'glow'){
+    s += `text-shadow:0 0 12px ${cust.nameColor}, 0 0 24px ${cust.nameColor}88;`;
+  } else if(cust.nameEffect === 'shadow'){
+    s += `text-shadow:2px 2px 6px rgba(0,0,0,.7);`;
+  } else if(cust.nameEffect === 'outline'){
+    s += `-webkit-text-stroke:1.5px ${cust.nameColor};color:transparent;`;
+  } else if(cust.nameEffect === 'neon'){
+    s += `text-shadow:0 0 4px #fff, 0 0 12px ${cust.nameColor}, 0 0 24px ${cust.nameColor};`;
+  }
+  return s;
+}
+
+function buildUsernameStyle(cust){
+  const weight = FONT_WEIGHTS[cust.usernameWeight]?.value || 700;
+  let s = `color:${cust.usernameColor};font-weight:${weight};`;
+  if(cust.usernameEffect === 'glow'){
+    s += `text-shadow:0 0 10px ${cust.usernameColor};`;
+  } else if(cust.usernameEffect === 'shadow'){
+    s += `text-shadow:1px 1px 3px rgba(0,0,0,.7);`;
+  }
+  return s;
+}
+
+function buildAvatarInnerStyle(cust){
+  const shape = AVATAR_SHAPES[cust.avatarShape] || AVATAR_SHAPES.circle;
+  let s = shape.clip
+    ? `clip-path:${shape.clip};border-radius:0;`
+    : `border-radius:${shape.radius};`;
+  if(cust.avatarBorder === 'gradient'){
+    s += `box-shadow:0 0 0 ${cust.avatarBorderWidth}px #6c5ce7, 0 0 0 ${cust.avatarBorderWidth*2}px #00d2ff;`;
+  } else if(cust.avatarBorder === 'solid'){
+    s += `box-shadow:0 0 0 ${cust.avatarBorderWidth}px ${cust.avatarBorderColor};`;
+  } else if(cust.avatarBorder === 'glow'){
+    s += `box-shadow:0 0 0 ${cust.avatarBorderWidth}px ${cust.avatarBorderColor}, 0 0 20px ${cust.avatarBorderColor}aa;`;
+  } else if(cust.avatarBorder === 'rainbow'){
+    s += `box-shadow:0 0 0 ${cust.avatarBorderWidth}px #ff0000, 0 0 0 ${cust.avatarBorderWidth*2}px #00ff00, 0 0 0 ${cust.avatarBorderWidth*3}px #0000ff;`;
+  }
+  s += `transform:rotate(${cust.avatarRotation}deg) scale(${cust.avatarScale});`;
+  s += `filter:${AVATAR_FILTERS[cust.avatarFilter]?.css || 'none'};`;
+  s += `transition:transform .3s ease;`;
+  return s;
+}
+
+function buildBioStyle(cust){
+  if(cust.bioStyle === 'quote'){
+    return 'padding:8px 12px;border-inline-start:3px solid var(--brand-2);background:rgba(0,210,255,.06);border-radius:8px;font-style:italic;';
+  } else if(cust.bioStyle === 'italic'){
+    return 'font-style:italic;';
+  } else if(cust.bioStyle === 'glow'){
+    return 'text-shadow:0 0 8px rgba(0,210,255,.4);';
+  } else if(cust.bioStyle === 'card'){
+    return 'padding:10px 14px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;';
+  }
+  return '';
+}
+
+function buildCardStyle(cust){
+  const shadowMap = {
+    none:'none', small:'0 6px 16px rgba(0,0,0,.3)',
+    medium:'0 20px 50px rgba(0,0,0,.45)', large:'0 30px 80px rgba(0,0,0,.65)',
+  };
+  const glowMap = {
+    none:'', soft:'0 0 20px rgba(0,210,255,.4)',
+    strong:'0 0 40px rgba(0,210,255,.7), 0 0 80px rgba(108,92,231,.4)',
+    rainbow:'0 0 30px rgba(255,0,255,.5), 0 0 60px rgba(0,210,255,.4)',
+    gold:'0 0 30px rgba(245,179,1,.6), 0 0 60px rgba(255,138,0,.3)',
+  };
+  const shadows = [shadowMap[cust.cardShadow] || shadowMap.medium, glowMap[cust.cardGlow] || ''].filter(Boolean);
+  return [
+    `box-shadow:${shadows.join(', ') || 'none'}`,
+    cust.cardBorderColor ? `border:2px solid ${cust.cardBorderColor}` : '',
+  ].filter(Boolean).join(';');
+}
+
+function buildCoverStyle(p, cust, theme){
+  return `background-image:url('${p.coverUrl ? esc(p.coverUrl) : ''}');
+          background-position:${p.coverPosition || '50% 50%'};
+          background-color:${p.coverUrl ? '#1a1f30' : theme.colors[0]};
+          filter:blur(${cust.coverBlur}px) brightness(${1 - cust.coverOverlay / 200});`;
 }
 
 /* ============================================================
@@ -3678,29 +4531,52 @@ function getProfileCustomization(p){
 function renderCustomizationPreview(){
   const p = state.profile;
   if(!p) return '';
-
   const cust = getProfileCustomization(p);
   const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
   const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
-
-  const borderClass = `border-${cust.avatarBorder}`;
-  const shapeClass = cust.avatarShape;
+  const activeZone = state.custActiveZone;
+  const badge = NAME_BADGES[cust.nameBadge] || NAME_BADGES.none;
 
   return `
-    <div class="preview-card">
-      <div class="preview-cover" style="background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})">
+    <div class="player-card preview-card" style="${buildCardStyle(cust)}">
+      <div class="pc-cover preview-cover cust-zone-target ${activeZone==='cover'?'active':''}"
+           data-cust-zone="cover"
+           style="${buildCoverStyle(p, cust, theme)}">
+        ${!p.coverUrl ? `
+          <div class="preview-cover-fallback"
+               style="background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})">
+            ${ic('camera','sm')} <span>غلاف</span>
+          </div>` : ''}
         ${cust.bannerEffect !== 'none'
-          ? `<div class="preview-effect effect-${cust.bannerEffect}"></div>`
-          : ''}
+          ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0;z-index:2"></div>` : ''}
+        <div class="cust-zone-hint">${ic('image','xs')} الغلاف</div>
       </div>
-      <div class="preview-body">
-        <div class="preview-avatar ${shapeClass} ${borderClass} ${frameClass}"
-             style="${cust.avatarBorder === 'solid' ? `--border-color:${cust.avatarBorderColor}` : ''}">
-          ${avatar(p, 52)}
-        </div>
-        <div class="preview-info">
-<div class="preview-name" style="color:${cust.nameColor}">${esc(p.name)}</div>
-<div class="preview-user" style="color:${cust.usernameColor}">@${esc(p.username)}</div>
+
+      <div class="pc-body-section preview-body-section cust-zone-target ${activeZone==='body'?'active':''}"
+           data-cust-zone="body"
+           style="--tc1:${theme.colors[0]}45;--tc2:${theme.colors[1]}15">
+        <div class="pc-body preview-body">
+          <div class="pc-info preview-info">
+            <div class="pc-nick preview-name anim-name-${cust.nameAnimation} cust-zone-target ${activeZone==='name'?'active':''}"
+                 data-cust-zone="name" style="${buildNameStyle(cust)}">
+              ${badge.emoji ? `<span style="margin-inline-end:4px">${badge.emoji}</span>` : ''}
+              ${esc(p.name)}
+              <span class="cust-zone-hint-inline">${ic('edit','xs')}</span>
+            </div>
+            <div class="pc-user preview-user cust-zone-target ${activeZone==='username'?'active':''}"
+                 data-cust-zone="username" style="${buildUsernameStyle(cust)}">
+              @${esc(p.username)}
+            </div>
+            <div class="preview-theme-tag">${ic('image','xs')} ${theme.name}</div>
+          </div>
+
+          <div class="pc-avatar preview-avatar cust-zone-target ${activeZone==='avatar'?'active':''}"
+               data-cust-zone="avatar">
+            <div class="av" style="--s:82px;${buildAvatarInnerStyle(cust)}">
+              ${avatar(p, 82)}
+            </div>
+            <div class="cust-zone-hint-avatar">${ic('camera','xs')}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -3771,7 +4647,7 @@ async function saveCustomField(field, value){
   }
 }
 
-async function pageProfile(){
+function pageProfile(){ // ★ تم إزالة async
   const p = state.profile;
   if(!p){
     setTimeout(() => {
@@ -3810,74 +4686,120 @@ async function pageProfile(){
   const validIds = tabs.map(t=>t.id);
   if(!validIds.includes(state.profileTab)) state.profileTab = 'posts';
 
-  const body = await renderProfileTabBody();
   const prog = xpProgress(p.xp || 0);
   const cust = getProfileCustomization(p);
 
-  // بيانات إضافية
   const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
   const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
   const avatarShapeClass = `shape-${cust.avatarShape}`;
   const avatarBorderClass = `border-${cust.avatarBorder}`;
 
+  const levelStyle = {
+    default: '', badge: 'background:linear-gradient(135deg,#a78bfa,#6c5ce7);',
+    gem: 'background:linear-gradient(135deg,#00d2ff,#0891b2);',
+    crown: 'background:linear-gradient(135deg,#f5b301,#ff8a00);',
+    star: 'background:linear-gradient(135deg,#ec4899,#f43f5e);',
+    minimal: 'background:rgba(255,255,255,.1);color:#fff;',
+  }[cust.levelStyle] || '';
+
+  const levelBarBg = cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` : '';
+  const levelBadgeBg = cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : '';
+
+  // ★ [التحديث الجديد] جلب البيانات في الخلفية بعد رسم الصفحة
+  setTimeout(() => {
+    // 1. جلب التواقيع وتحديث الواجهة
+    getDocs(query(collection(db, 'users', state.user.uid, 'signatures'), orderBy('createdAt', 'desc'), limit(3)))
+      .then(sSnap => {
+        const signatures = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const sigContainer = document.getElementById('mySigSlider');
+        if (sigContainer) {
+          if (signatures.length > 0) {
+            sigContainer.innerHTML = signatures.map((s, idx) => `
+              <div class="sig-preview-item" style="animation-delay: ${idx * 3}s;">"${esc(s.text)}"</div>
+            `).join('');
+          } else {
+            sigContainer.innerHTML = `<div class="sig-preview-item" style="animation:none; opacity:0.6; color:#64748b;">✍️ لا تواقيع</div>`;
+          }
+        }
+      }).catch(e => console.warn(e));
+
+    // 2. جلب محتوى التبويب الحالي
+    renderProfileTabBody().then(bodyHtml => {
+      const bodyContainer = document.getElementById('profileTabBody');
+      if (bodyContainer) bodyContainer.innerHTML = bodyHtml;
+    }).catch(e => console.warn(e));
+  }, 50);
+
   return `
-    <div class="player-card">
-      <div class="pc-cover" data-action="cover-click" style="cursor:pointer;background:${
-        p.coverUrl ? `url(${esc(p.coverUrl)})` : `linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})`
-      }">
-        ${cust.bannerEffect !== 'none'
-          ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0"></div>`
-          : ''}
+    <div class="player-card" style="${buildCardStyle(cust)}">
+      <div class="pc-cover" data-action="cover-click" style="cursor:pointer;${buildCoverStyle(p, cust, theme)}">
+        ${!p.coverUrl ? `
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]});display:grid;place-items:center;color:rgba(255,255,255,.55);font-size:13px;font-weight:800">
+            ${ic('camera','sm')} اضغط لإضافة غلاف
+          </div>` : ''}
+        ${cust.bannerEffect !== 'none' ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0;z-index:2"></div>` : ''}
       </div>
 
       <div class="pc-card-actions">
         <button class="pc-act-btn" data-action="edit-profile">${ic('edit','xs')} تعديل</button>
         <button class="pc-act-btn" data-nav="customization">${ic('image','xs')} تخصيص</button>
+        <button class="pc-act-btn" data-action="preview-profile">${ic('eye','xs')} معاينة</button>
       </div>
 
-      <div class="pc-topright">
-        <div class="pc-like-chip">${ic('heart')} ${nf(p.likesProfile)}</div>
-        <div class="pc-like-chip gp">${ic('gamepad')} ${nf(p.likesGames)}</div>
-      </div>
+      <div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12">
+        <div class="pc-body">
+          <div class="pc-info">
+            <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
+              ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
+              ${esc(p.name)} ${getAdminBadge(p)}
+              ${cust.pronouns ? `<span class="pc-pronouns">${esc(cust.pronouns)}</span>` : ''}
+            </div>
+            <div class="pc-user" style="${buildUsernameStyle(cust)}">@${esc(p.username)}</div>
+            <div class="pc-joined" style="color:${cust.joinDateColor}">
+              ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
+            </div>
 
-      <div class="pc-body">
-        <div class="pc-info">
-<div class="pc-nick" style="color:${cust.nameColor}">
-  ${esc(p.name)}
-  ${cust.pronouns ? `<span class="pc-pronouns">${esc(cust.pronouns)}</span>` : ''}
-</div>
-<div class="pc-user" style="color:${cust.usernameColor}">@${esc(p.username)}</div>
-          <div class="pc-joined">${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}</div>
+            <div class="pc-social">
+              <button class="pc-social-btn" data-action="show-followers" data-uid="${p.uid}" data-type="followers"
+                      style="color:${cust.followersBtnColor};background:${cust.followersBtnBg === 'transparent' ? 'transparent' : cust.followersBtnBg};padding:3px 8px;border-radius:8px">
+                <b style="color:${cust.followersBtnColor}">${nf(p.followers)}</b> متابع
+              </button>
+              <button class="pc-social-btn" data-action="show-followers" data-uid="${p.uid}" data-type="following"
+                      style="color:${cust.followersBtnColor};background:${cust.followersBtnBg === 'transparent' ? 'transparent' : cust.followersBtnBg};padding:3px 8px;border-radius:8px">
+                <b style="color:${cust.followersBtnColor}">${nf(p.following)}</b> متابَع
+              </button>
+            </div>
 
-          <div class="pc-social">
-            <span><b>${nf(p.followers)}</b> متابع</span>
-            <span><b>${nf(p.following)}</b> متابَع</span>
+            ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
+
+            ${(cust.location || cust.website || cust.twitter || cust.discord) ? `
+              <div class="pc-meta-row">
+                ${cust.location ? `<span style="color:${cust.locationColor}">${ic('location','xs')} ${esc(cust.location)}</span>` : ''}
+                ${cust.website ? `<a href="${esc(cust.website)}" target="_blank" rel="noopener">${ic('globe','xs')} ${esc(cust.website.replace(/^https?:\/\//,'').slice(0,30))}</a>` : ''}
+                ${cust.twitter ? `<span>${ic('share','xs')} ${esc(cust.twitter)}</span>` : ''}
+                ${cust.discord ? `<span>${ic('message','xs')} ${esc(cust.discord)}</span>` : ''}
+              </div>` : ''}
+
+            <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
           </div>
 
-          ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
-
-          ${(cust.location || cust.website || cust.twitter || cust.discord) ? `
-            <div class="pc-meta-row">
-              ${cust.location ? `<span>${ic('location','xs')} ${esc(cust.location)}</span>` : ''}
-              ${cust.website ? `<a href="${esc(cust.website)}" target="_blank" rel="noopener">${ic('globe','xs')} ${esc(cust.website.replace(/^https?:\/\//,'').replace(/\/$/,'').slice(0,30))}</a>` : ''}
-              ${cust.twitter ? `<span>${ic('share','xs')} ${esc(cust.twitter)}</span>` : ''}
-              ${cust.discord ? `<span>${ic('message','xs')} ${esc(cust.discord)}</span>` : ''}
+          <div class="avatar-sig-wrapper">
+            <div class="pc-avatar ${avatarShapeClass} ${avatarBorderClass} ${frameClass}"
+                 data-action="avatar-click" style="cursor:pointer">
+              ${avatar(p, 82)}
             </div>
-          ` : ''}
-
-          <div class="pc-bio">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
+            
+            <!-- ★ حاوية التواقيع (فارغة حالياً وسيتم تعبئتها في الخلفية) -->
+            <div class="sig-slider-preview" id="mySigSlider">
+              <div class="sig-preview-item" style="animation:none; opacity:0.5;">جاري التحميل...</div>
+            </div>
+          </div>
         </div>
 
-<div class="pc-avatar ${avatarShapeClass} ${avatarBorderClass} ${frameClass}"
-     data-action="avatar-click"
-     style="cursor:pointer;${cust.avatarBorder==='solid'?`--border-color:${cust.avatarBorderColor}`:''}">
-  ${avatar(p, 82)}
-</div>
-      </div>
-
-      <div class="pc-level">
-        <div class="pc-level-bar"><span style="width:${Math.min(100,(p.xp||0)%100)}%"></span></div>
-        <div class="pc-level-num">المستوى ${p.level||1}</div>
+        <div class="pc-level">
+          <div class="pc-level-bar"><span style="width:${Math.min(100,(p.xp||0)%100)}%;${levelBarBg}"></span></div>
+          <div class="pc-level-num" style="${levelStyle}${levelBadgeBg}">المستوى ${p.level||1}</div>
+        </div>
       </div>
     </div>
 
@@ -3887,9 +4809,21 @@ async function pageProfile(){
       <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
     </div>
 
+    <div class="pc-interactions">
+      <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="views">
+        ${ic('eye','xs')} <b>${nf(p.views||0)}</b> مشاهدة
+      </button>
+      <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="profileLikes">
+        ${ic('heart','xs')} <b>${nf(p.likesProfile)}</b> إعجاب
+      </button>
+      <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="gameLikes">
+        ${ic('gamepad','xs')} <b>${nf(p.likesGames)}</b> لعب
+      </button>
+    </div>
+
     <div class="level-widget">
       <div class="level-top">
-        <div class="level-badge">${prog.level}</div>
+        <div class="level-badge" style="${levelStyle}">${prog.level}</div>
         <div class="level-info">
           <div class="ln">المستوى ${prog.level}</div>
           <div class="lx">${prog.current} / ${prog.needed} XP حتى المستوى ${prog.level + 1}</div>
@@ -3899,7 +4833,7 @@ async function pageProfile(){
           ${PLAYER_STATUSES[p.status || 'available'].label}
         </div>
       </div>
-      <div class="level-bar"><span style="width:${prog.pct}%"></span></div>
+      <div class="level-bar"><span style="width:${prog.pct}%;${levelBarBg}"></span></div>
       ${p.statusMsg ? `<div class="muted" style="font-size:11px;margin-top:8px;text-align:center">"${esc(p.statusMsg)}"</div>` : ''}
     </div>
 
@@ -3908,80 +4842,451 @@ async function pageProfile(){
         ${ic(t.icon,'xs')} ${t.label}
       </button>`).join('')}
     </div>
-
-    <div id="profileTabBody">${body}</div>
+    
+    <!-- ★ حاوية التبويب (فارغة وتُملأ في الخلفية) -->
+    <div id="profileTabBody">
+      <div class="spinner" style="margin:40px auto"></div>
+    </div>
   `;
 }
 
-function pageUserProfile(){
+function pageUserProfile(){ // ★ بدون async لضمان سرعة العرض
   const p = state.users[state.viewingUid];
   if(!p) return emptyState('المستخدم غير موجود','user');
-  const on = state.followed.has(state.viewingUid);
-  const myPosts = state.posts.filter(x => x.authorId === state.viewingUid);
 
+  // تسجيل المشاهدة في الخلفية (مرة واحدة في الجلسة عبر recordProfileView)
+  recordProfileView(state.viewingUid);
+
+  const on = state.followed.has(state.viewingUid);
+  const cust = getProfileCustomization(p);
+  const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
+  const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+  const avatarShapeClass = `shape-${cust.avatarShape}`;
+  const avatarBorderClass = `border-${cust.avatarBorder}`;
+
+  const tabs = [
+    {id:'posts',        label:'المنشورات',  icon:'grid'},
+    {id:'games',        label:'الألعاب',    icon:'gamepad'},
+    {id:'achievements', label:'الإنجازات',  icon:'medal'},
+    {id:'stats',        label:'الإحصائيات', icon:'chart'},
+    {id:'gifts',        label:'الهدايا',    icon:'star'},
+  ];
+  if(!tabs.find(t => t.id === state.profileTab)) state.profileTab = 'posts';
+
+  // ★ جلب البيانات في الخلفية لتجنب تجميد الواجهة
+  setTimeout(async () => {
+    try {
+      // 1. جلب كل التواقيع
+      const sSnap = await getDocs(query(
+        collection(db, 'users', state.viewingUid, 'signatures'),
+        orderBy('createdAt', 'desc'), limit(50)
+      ));
+      const signatures = sSnap.docs.map(d => ({id: d.id, ...d.data()}));
+
+      // 2. فحص شرط الـ 24 ساعة لتوقيعي الأخير
+      const mySignatures = signatures.filter(s => s.fromId === state.user.uid);
+      const lastMySigTime = mySignatures.length > 0 ? (mySignatures[0].createdAt?.toMillis?.() || 0) : 0;
+      const hasSignedRecently = (Date.now() - lastMySigTime) < (24 * 60 * 60 * 1000);
+      const isSubscribed = getSubscription(state.profile).active;
+
+      // 3. تحديث التواقيع المتحركة تحت الصورة (Slider)
+      const sigSlider = document.getElementById('userSigSlider');
+      if (sigSlider) {
+        if (signatures.length > 0) {
+          // خلط عشوائي واختيار 3 تواقيع لعرضها
+          const randomSigs = [...signatures].sort(() => 0.5 - Math.random()).slice(0, 3);
+          sigSlider.innerHTML = randomSigs.map((s, idx) => `
+            <div class="sig-preview-item" style="animation-delay: ${idx * 3}s;">
+              "${esc(s.text)}"
+            </div>
+          `).join('');
+        } else {
+          sigSlider.innerHTML = `<div class="sig-preview-item" style="animation:none; opacity:0.6; color:#64748b;">✍️ لا تواقيع</div>`;
+        }
+      }
+
+      // 4. تحديث صندوق التواقيع السفلي (Full List)
+      const fullSigContainer = document.getElementById('fullSignaturesBox');
+      if (fullSigContainer) {
+        let sigHtml = `
+          <div class="signatures-head">
+            <span>${ic('edit','xs')} تواقيع الزوار (${signatures.length})</span>
+            ${state.viewingUid !== state.user.uid ? `
+              ${hasSignedRecently
+                ? '<span class="pill ok" style="font-size:9.5px">✓ لقد وقعت مؤخراً</span>'
+                : `<button class="sig-btn ${!isSubscribed ? 'locked' : ''}" data-action="open-signature" data-uid="${state.viewingUid}">
+                     ${ic('edit','xs')} ${isSubscribed ? 'وقّع الآن' : '🔒 يتطلب بلس'}
+                   </button>`}
+            ` : ''}
+          </div>`;
+
+        if (signatures.length > 0) {
+          sigHtml += `
+            <div class="sig-list">
+              ${signatures.map(s => {
+                // إضافة شارات توضيحية لمن صاحب التوقيع
+                const isMe = s.fromId === state.user.uid;
+                const isOwner = s.fromId === state.viewingUid;
+                
+                return `
+                <div class="sig-item">
+                  ${avatar({name: s.fromName, avatarUrl: s.fromAvatar, grad: pickGrad(s.fromId)}, 32)}
+                  <div class="sig-body">
+                    <div class="sig-name">
+                      ${esc(s.fromName || 'لاعب')}
+                      ${isMe ? '<span class="pill" style="font-size:8px;padding:1px 4px;background:var(--brand)">أنت</span>' : ''}
+                      ${isOwner ? '<span class="pill gold" style="font-size:8px;padding:1px 4px">صاحب الملف</span>' : ''}
+                    </div>
+                    <div class="sig-text">${esc(s.text || '')}</div>
+                    <div class="sig-time">${timeAgo(s.createdAt)}</div>
+                  </div>
+                </div>
+              `}).join('')}
+            </div>
+          `;
+        } else {
+          sigHtml += `<div class="sig-empty">✍️ لا توجد تواقيع بعد. كن أول من يوقع!</div>`;
+        }
+        fullSigContainer.innerHTML = sigHtml;
+      }
+    } catch(e) {
+      console.warn('❌ Error loading signatures:', e);
+    }
+
+    // 5. تحميل محتوى التبويب (المنشورات، الألعاب، إلخ)
+    try {
+      const bodyHtml = await renderUserTabBody(state.viewingUid, state.profileTab);
+      const bodyContainer = document.getElementById('profileTabBody');
+      if (bodyContainer) bodyContainer.innerHTML = bodyHtml;
+    } catch(e) {
+      console.warn('❌ Error loading tab body:', e);
+    }
+  }, 50);
+
+  // ★ الواجهة تُرسم فوراً (هذا ما يجعل الموقع سريعاً)
   return `
     <div class="row" style="margin-bottom:14px">
       <button class="icon-btn" data-nav="home">${ic('back','sm')}</button>
       <div style="font-size:15px;font-weight:900">الملف الشخصي</div>
     </div>
 
-    <div class="player-card">
-      <div class="pc-cover" style="background:${
-        p.coverUrl ? `url(${esc(p.coverUrl)})` : (p.grad || 'linear-gradient(135deg,#6c5ce7,#00d2ff 55%,#ff3d71)')
-      }"></div>
+    <div class="player-card" style="${buildCardStyle(cust)}">
+      <div class="pc-cover" style="${buildCoverStyle(p, cust, theme)}">
+        ${!p.coverUrl ? `<div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})"></div>` : ''}
+        ${cust.bannerEffect !== 'none' ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0;z-index:2"></div>` : ''}
+      </div>
 
-      <!-- ★ زر المتابعة + الإجراءات في الزاوية العلوية اليسرى -->
       <div class="pc-card-actions">
         <button class="pc-act-btn pc-act-follow ${on?'on':''}" data-follow="${state.viewingUid}">
           ${on ? '✓ متابَع' : '+ متابعة'}
         </button>
-        <button class="pc-act-btn pc-act-more"
-                data-action="profile-actions" data-uid="${state.viewingUid}"
-                aria-label="إجراءات">
+        <button class="pc-act-btn pc-act-more" data-action="profile-actions" data-uid="${state.viewingUid}">
           ${ic('dots','sm')}
         </button>
       </div>
 
-      <div class="pc-topright">
-        <div class="pc-like-chip">${ic('heart')} ${nf(p.likesProfile)}</div>
-        <div class="pc-like-chip gp">${ic('gamepad')} ${nf(p.likesGames)}</div>
-      </div>
+      <div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12">
+        <div class="pc-body">
+          <div class="pc-info">
+            <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
+              ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
+              ${esc(p.name)} ${getAdminBadge(p)}
+            </div>
+            <div class="pc-user" style="${buildUsernameStyle(cust)}">@${esc(p.username)}</div>
+            <div class="pc-joined" style="color:${cust.joinDateColor}">
+              ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
+            </div>
 
-      <div class="pc-body">
-        <div class="pc-info">
-${(() => {
-  const pu = getProfileCustomization(p);
-  return `
-    <div class="pc-nick" style="color:${pu.nameColor}">${esc(p.name)}</div>
-    <div class="pc-user" style="color:${pu.usernameColor}">@${esc(p.username)}</div>
-  `;
-})()}
-          <div class="pc-joined">${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}</div>
-          <div class="pc-social">
-            <span><b>${nf(p.followers)}</b> متابع</span>
-            <span><b>${nf(p.following)}</b> متابَع</span>
+            <div class="pc-social">
+              <button class="pc-social-btn" data-action="show-followers" data-uid="${p.uid}" data-type="followers"
+                      style="color:${cust.followersBtnColor};background:${cust.followersBtnBg==='transparent'?'transparent':cust.followersBtnBg};padding:3px 8px;border-radius:8px">
+                <b style="color:${cust.followersBtnColor}">${nf(p.followers)}</b> متابع
+              </button>
+              <button class="pc-social-btn" data-action="show-followers" data-uid="${p.uid}" data-type="following"
+                      style="color:${cust.followersBtnColor};background:${cust.followersBtnBg==='transparent'?'transparent':cust.followersBtnBg};padding:3px 8px;border-radius:8px">
+                <b style="color:${cust.followersBtnColor}">${nf(p.following)}</b> متابَع
+              </button>
+            </div>
+
+            ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
+
+            ${cust.location ? `<div class="pc-meta-row"><span style="color:${cust.locationColor}">${ic('location','xs')} ${esc(cust.location)}</span></div>` : ''}
+
+            <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
           </div>
-          ${p.teamName ? `<div class="pc-team">${p.teamEmblem||'🛡️'} ${esc(p.teamName)}</div>` : ''}
-          <div class="pc-bio">${esc(p.bio||'')}</div>
-        </div>
-        <div class="pc-avatar">${avatar(p, 82)}</div>
-      </div>
 
-      <div class="pc-level">
-        <div class="pc-level-bar"><span style="width:${Math.min(100,(p.xp||0)%100)}%"></span></div>
-        <div class="pc-level-num">المستوى ${p.level||1}</div>
+          <div class="avatar-sig-wrapper">
+            <div class="pc-avatar ${avatarShapeClass} ${avatarBorderClass} ${frameClass}">
+              ${avatar(p, 82)}
+            </div>
+            
+            <!-- حاوية التواقيع المتحركة (تُملأ في الخلفية) -->
+            <div class="sig-slider-preview" id="userSigSlider">
+              <div class="sig-preview-item" style="animation:none; opacity:0.5;">جاري التحميل...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-level">
+          <div class="pc-level-bar">
+            <span style="width:${Math.min(100,(p.xp||0)%100)}%;${cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` : ''}"></span>
+          </div>
+          <div class="pc-level-num" style="${cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : ''}">المستوى ${p.level||1}</div>
+        </div>
       </div>
     </div>
 
-    <div class="pc-stats">
+    <!-- ✍️ قسم التواقيع السفلي (يُملأ في الخلفية) -->
+    <div class="signatures-box" id="fullSignaturesBox">
+      <div class="spinner" style="margin:20px auto;width:24px;height:24px"></div>
+    </div>
+
+    <div class="pc-stats" style="margin-top:14px">
       <div class="pc-stat f"><div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div></div>
       <div class="pc-stat p"><div class="v">${nf(p.power)}</div><div class="l">القوة</div></div>
       <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
     </div>
 
-    <div class="section-title" style="margin-top:16px">${ic('grid','sm')} منشوراته</div>
-    ${myPosts.length ? myPosts.map(x=>postCard(x)).join('') : emptyState('لا توجد منشورات','grid')}
+    <div class="pc-interactions">
+      <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="views">
+        ${ic('eye','xs')} <b>${nf(p.views||0)}</b> مشاهدة
+      </button>
+      <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="profileLikes">
+        ${ic('heart','xs')} <b>${nf(p.likesProfile)}</b> إعجاب
+      </button>
+      <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="gameLikes">
+        ${ic('gamepad','xs')} <b>${nf(p.likesGames)}</b> لعب
+      </button>
+    </div>
+
+    <div class="tabs scrollable" style="margin-top:16px">
+      ${tabs.map(t => `<button class="tab ${state.profileTab===t.id?'active':''}" data-ptab="${t.id}">
+        ${ic(t.icon,'xs')} ${t.label}
+      </button>`).join('')}
+    </div>
+    
+    <!-- حاوية محتوى التبويب (تُملأ في الخلفية) -->
+    <div id="profileTabBody">
+      <div class="spinner" style="margin:40px auto"></div>
+    </div>
   `;
+}
+
+/* ============================================================
+   ✍️ نظام التواقيع
+   ============================================================ */
+async function openSignatureModal(targetUid){
+  const sub = getSubscription(state.profile);
+  if(!sub.active){
+    return openModal(`
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:48px">✍️</div>
+        <h3 style="margin-top:8px">التوقيع يتطلب اشتراك</h3>
+        <div class="muted">اشترك في بلس أو بلس دبل لتوقيع الملفات</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="plus">
+        اشتراك بلس — ${nf(SUBSCRIPTION_PLANS.plus.price)} عملة
+      </button>
+      <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
+    `);
+  }
+  if(targetUid === state.user.uid) return toast('لا يمكنك توقيع ملفك');
+
+  openModal(`
+    <h3>✍️ وقّع ملف ${esc(state.users[targetUid]?.name || 'اللاعب')}</h3>
+    <div class="sub">اترك بصمتك — حتى 100 حرف</div>
+    <div class="field">
+      <textarea class="input" id="sigInput" rows="3" maxlength="100"
+                placeholder="اكتب توقيعك…" style="resize:vertical"></textarea>
+      <div class="char-counter" id="sigCounter">0 / 100</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="submitSigBtn" data-uid="${targetUid}">
+        ${ic('check','sm')} توقيع
+      </button>
+    </div>
+  `);
+  const inp = document.getElementById('sigInput');
+  const counter = document.getElementById('sigCounter');
+  inp.addEventListener('input', () => {
+    counter.textContent = `${inp.value.length} / 100`;
+  });
+  inp.focus();
+}
+
+async function submitSignature(targetUid){
+  const inp = document.getElementById('sigInput');
+  const text = inp?.value.trim();
+  if(!text) return toast('اكتب توقيعك أولاً');
+  if(text.length > 100) return toast('التوقيع طويل جداً');
+
+  // ★ التحقق من مرور 24 ساعة
+  try {
+    const q = query(
+      collection(db, 'users', targetUid, 'signatures'), 
+      where('fromId', '==', state.user.uid), 
+      orderBy('createdAt', 'desc'), 
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    
+    if (!snap.empty) {
+      const lastDate = snap.docs[0].data().createdAt?.toMillis?.() || 0;
+      const hoursPassed = (Date.now() - lastDate) / (1000 * 60 * 60);
+      
+      if (hoursPassed < 24) {
+        const remaining = Math.ceil(24 - hoursPassed);
+        return toast(`⏳ يمكنك التوقيع مرة أخرى بعد ${remaining} ساعة`);
+      }
+    }
+  } catch (error) {
+    console.warn('خطأ في فحص وقت التوقيع السابق:', error);
+  }
+
+  try {
+    await addDoc(collection(db, 'users', targetUid, 'signatures'), {
+      fromId: state.user.uid,
+      fromName: state.profile.name,
+      fromAvatar: state.profile.avatarUrl || '',
+      text,
+      createdAt: serverTimestamp(),
+    });
+    
+    await notify(targetUid, 'signature', `<b>${esc(state.profile.name)}</b> وقع ملفك ✍️`);
+    
+    closeModal();
+    toast('تم التوقيع ✓');
+    render();
+  } catch(e){
+    console.error(e);
+    toast('فشل التوقيع');
+  }
+}
+
+/* ============================================================
+   🖼️ المعاينة الكاملة + الحفظ والمشاركة
+   ============================================================ */
+async function openFullPreviewModal(){
+  const p = state.profile;
+  if(!p) return;
+  const cust = getProfileCustomization(p);
+  const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
+  const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">🖼️ معاينة الملف</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+
+    <div class="preview-full-wrap" id="previewCaptureTarget">
+      <div class="player-card" style="${buildCardStyle(cust)}">
+        <div class="pc-cover" style="${buildCoverStyle(p, cust, theme)}">
+          ${!p.coverUrl ? `<div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})"></div>` : ''}
+          ${cust.bannerEffect !== 'none'
+            ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0;z-index:2"></div>` : ''}
+        </div>
+        <div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12">
+          <div class="pc-body">
+            <div class="pc-info">
+              <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
+                ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
+                ${esc(p.name)} ${getAdminBadge(p)}
+              </div>
+              <div class="pc-user" style="${buildUsernameStyle(cust)}">@${esc(p.username)}</div>
+              <div class="pc-joined" style="color:${cust.joinDateColor}">
+                ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
+              </div>
+              <div class="pc-social">
+                <span class="pc-social-btn" style="color:${cust.followersBtnColor}">
+                  <b style="color:${cust.followersBtnColor}">${nf(p.followers)}</b> متابع
+                </span>
+                <span class="pc-social-btn" style="color:${cust.followersBtnColor}">
+                  <b style="color:${cust.followersBtnColor}">${nf(p.following)}</b> متابَع
+                </span>
+              </div>
+              ${cust.location ? `<div class="pc-meta-row"><span style="color:${cust.locationColor}">${ic('location','xs')} ${esc(cust.location)}</span></div>` : ''}
+              <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
+            </div>
+            <div class="pc-avatar shape-${cust.avatarShape} border-${cust.avatarBorder} ${frameClass}">
+              ${avatar(p, 82)}
+            </div>
+          </div>
+          <div class="pc-level">
+            <div class="pc-level-bar">
+              <span style="width:${Math.min(100,(p.xp||0)%100)}%;${cust.levelBarColor ? `background:${cust.levelBarColor};` : ''}"></span>
+            </div>
+            <div class="pc-level-num" style="${cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : ''}">المستوى ${p.level||1}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="gap:8px">
+      <button class="btn btn-primary" style="flex:1" data-action="save-preview">
+        ${ic('check','sm')} حفظ الصورة
+      </button>
+      <button class="btn btn-ghost" style="flex:1" data-action="share-preview">
+        ${ic('share','sm')} مشاركة
+      </button>
+    </div>
+  `);
+}
+
+async function saveProfilePreview(){
+  const target = document.getElementById('previewCaptureTarget');
+  if(!target) return;
+  toast('جاري إنشاء الصورة…');
+  try {
+    if(!window.html2canvas){
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    const canvas = await window.html2canvas(target, {
+      backgroundColor: '#070a11',
+      scale: 2,
+      useCORS: true,
+    });
+    const link = document.createElement('a');
+    link.download = `nexus-${state.profile.username}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toast('تم حفظ الصورة ✓');
+  } catch(e){
+    console.error(e);
+    toast('فشل إنشاء الصورة');
+  }
+}
+
+async function shareProfilePreview(){
+  const url = `${window.location.origin}${window.location.pathname}?u=${state.profile.username}`;
+  try {
+    if(navigator.share){
+      await navigator.share({
+        title: `ملف ${state.profile.name} على نكسوس`,
+        text: `شاهد ملف ${state.profile.name} على نكسوس`,
+        url,
+      });
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast('تم نسخ الرابط ✓');
+    }
+  } catch(e){
+    if(e.name !== 'AbortError'){
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('تم نسخ الرابط ✓');
+      } catch(err){ toast('فشل المشاركة'); }
+    }
+  }
 }
 
 function pageSearch(){
@@ -4911,7 +6216,7 @@ async function finalizeMatch(roomId, data){
       await updateDoc(doc(db,'users',uid), { xp: increment(25) });
     }
   } catch(e){ console.error('reward:', e); }
-
+await recalcFamePower(uid);
   setTimeout(checkAchievements, 800);
   await logActivity('match',
     isWinner ? `فزت بمباراة Quiz Clash (${myScore}-${oppScore})`
@@ -5350,9 +6655,14 @@ async function sendGift(toUid, gift, message, anonymous){
   if((state.profile.coins || 0) < gift.price) return toast('رصيد غير كافٍ');
   
   try {
-    // خصم العملات
+    // خصم العملات من المرسل
     await updateDoc(doc(db,'users',state.user.uid), {
       coins: increment(-gift.price),
+    });
+    
+    // ★★★ [هنا المكان الصحيح] إضافة الشهرة للمستلم ★★★
+    await updateDoc(doc(db,'users',toUid), {
+      fame: increment(Math.floor(gift.price / 10))
     });
     
     // سجل الهدية
@@ -5610,18 +6920,702 @@ async function endCurrentSeason(){
   } catch(e){ console.error(e); toast('فشل'); }
 }
 
+/* ============================================================
+   🎨 استوديو التخصيص — دوال المناطق
+   ============================================================ */
+function getZoneLabel(zone){
+  return {
+    cover:    '🖼️ الغلاف',
+    avatar:   '👤 الصورة الشخصية',
+    name:     '✏️ الاسم',
+    username: '@ اسم المستخدم',
+    bio:      '📝 النبذة',
+    body:     '🎨 الثيم',
+    card:     '🃏 البطاقة',
+    level:    '🏅 المستوى',
+    texts:    '🔤 النصوص',
+  }[zone] || '';
+}
+
+/* تحديث قسم الخيارات فقط (بدون render كامل) */
+function refreshCustOptions(){
+  const optArea = document.getElementById('custOptionsArea');
+  if(!optArea) return;
+  const p = state.profile;
+  if(!p) return;
+  const sub = getSubscription(p);
+  const cust = getProfileCustomization(p);
+  const themeId = p.equipped?.themeId || p.themeId || 'default';
+  const frameId = p.equipped?.frameId || p.frameId || 'none';
+  const zone = state.custActiveZone;
+  optArea.innerHTML = zone
+    ? renderZoneOptions(zone, p, sub, cust, themeId, frameId)
+    : '';
+}
+
+/* ============================================================
+   💎 مودال الاشتراكات
+   ============================================================ */
+function openSubscriptionPlansModal(){
+  const p = state.profile;
+  if(!p) return;
+  const sub = getSubscription(p);
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="margin:0">💎 الاشتراكات</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+    <div class="sub-plans-grid">
+      ${Object.entries(SUBSCRIPTION_PLANS).filter(([k])=>k!=='free').map(([k, pl])=>{
+        const isActive = sub.plan === k;
+        return `
+          <button class="sub-plan-card ${isActive?'active':''}" data-buy-plan="${k}">
+            <div class="sp-top" style="background:${pl.color}20;border-color:${pl.color}50">
+              <div style="font-size:28px">${pl.emoji}</div>
+              <div style="font-size:14px;font-weight:900;color:${pl.color}">${pl.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${pl.durationDays} يوم</div>
+            </div>
+            <div class="sp-body">
+              <div style="font-size:16px;font-weight:900;color:var(--gold)">${nf(pl.price)} عملة</div>
+              ${isActive
+                ? `<span class="pill ok" style="font-size:9px;margin-top:6px">✓ نشط</span>`
+                : `<span class="btn btn-primary btn-sm" style="margin-top:6px;width:100%;font-size:11px">شراء</span>`}
+            </div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `);
+}
+
+/* ============================================================
+   📦 خيارات كل منطقة
+   ============================================================ */
+function renderZoneOptions(zone, p, sub, cust, themeId, frameId){
+  const header = (icon, title) => `
+    <div class="cust-zone-header">
+      <span class="cust-zone-icon">${icon}</span>
+      <div style="flex:1"><div class="cust-zone-title">${title}</div></div>
+      <button class="icon-btn" data-action="close-cust-zone" style="width:30px;height:30px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+  `;
+
+  /* ============ 🖼️ الغلاف ============ */
+  if(zone === 'cover'){
+    return `<div class="cust-zone-panel">
+      ${header('🖼️', 'الغلاف')}
+      <div class="cust-zone-body">
+        <div class="cust-field">
+          <label>الصورة</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" data-change-image="cover">
+              ${ic('camera','xs')} ${p.coverUrl ? 'تغيير' : 'إضافة'}
+            </button>
+            ${p.coverUrl ? `
+              <button class="btn btn-ghost btn-sm" data-recrop-cover="1">${ic('edit','xs')} اقتصاص</button>
+              <button class="btn btn-ghost btn-sm" data-delete-image="cover">${ic('trash','xs')} حذف</button>
+            ` : ''}
+          </div>
+        </div>
+        <!-- ★ ضبابية الغلاف -->
+<div class="cust-field">
+  <label>الضبابية ${!canUseBannerEffect(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+  ${canUseBannerEffect(p) ? `
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" class="crop-slider" id="coverBlurSlider"
+             min="0" max="10" step="1" value="${cust.coverBlur}" style="flex:1">
+      <span class="pill" id="blurVal" style="min-width:50px;text-align:center">${cust.coverBlur}px</span>
+    </div>
+  ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+</div>
+
+<!-- ★ تعتيم الغلاف -->
+<div class="cust-field">
+  <label>التعتيم ${!canUseBannerEffect(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+  ${canUseBannerEffect(p) ? `
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" class="crop-slider" id="coverOverlaySlider"
+             min="0" max="80" step="5" value="${cust.coverOverlay}" style="flex:1">
+      <span class="pill" id="overlayVal" style="min-width:50px;text-align:center">${cust.coverOverlay}%</span>
+    </div>
+  ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+</div>
+        <div class="cust-field">
+          <label>التأثير ${!canUseBannerEffect(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canUseBannerEffect(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(BANNER_EFFECTS).map(([k,e])=>`
+                <button class="cchip ${cust.bannerEffect===k?'active':''}"
+                        data-cust="bannerEffect" data-val="${k}">
+                  ${e.emoji} ${e.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} يتطلب بلس</div>`}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ============ 👤 الأفاتار (موسّع) ============ */
+  if(zone === 'avatar'){
+    return `<div class="cust-zone-panel">
+      ${header('👤', 'الصورة الشخصية')}
+      <div class="cust-zone-body">
+
+        <div class="cust-field">
+          <label>الصورة</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" data-change-image="avatar">
+              ${ic('camera','xs')} ${p.avatarUrl ? 'تغيير' : 'إضافة'}
+            </button>
+            ${p.avatarUrl ? `<button class="btn btn-ghost btn-sm" data-delete-image="avatar">${ic('trash','xs')} حذف</button>` : ''}
+          </div>
+        </div>
+
+        <div class="cust-field">
+          <label>الشكل ${!canCustomizeShape(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeShape(p) ? `
+            <div class="shape-picker-row">
+              ${Object.entries(AVATAR_SHAPES).map(([k,s])=>`
+                <button class="shape-btn ${cust.avatarShape===k?'active':''}"
+                        data-cust="avatarShape" data-val="${k}" title="${s.label}">
+                  <div style="width:32px;height:32px;background:var(--grad);
+                              ${s.clip ? `clip-path:${s.clip};border-radius:0;` : `border-radius:${s.radius};`}"></div>
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>الحدود ${!canCustomizeBorder(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeBorder(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(AVATAR_BORDERS).map(([k,b])=>`
+                <button class="cchip ${cust.avatarBorder===k?'active':''}"
+                        data-cust="avatarBorder" data-val="${k}">
+                  ${b.emoji} ${b.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        ${['solid','glow'].includes(cust.avatarBorder) && canCustomizeBorder(p) ? `
+          <div class="cust-field">
+            <label>سماكة الحدود</label>
+<div style="display:flex;align-items:center;gap:10px">
+  <input type="range" class="crop-slider" id="avatarBorderWidthSlider"
+         min="1" max="8" step="1" value="${cust.avatarBorderWidth}"
+         style="flex:1">
+  <span id="borderWidthVal" class="pill" style="min-width:44px;text-align:center">${cust.avatarBorderWidth}px</span>
+</div>
+          </div>
+          <div class="cust-field">
+            <label>لون الحدود</label>
+            <div class="color-strip">
+              ${NAME_COLOR_PRESETS.slice(0,15).map(c=>`
+                <button class="color-dot ${cust.avatarBorderColor===c?'active':''}"
+                        style="background:${c}" data-cust="avatarBorderColor" data-val="${c}"></button>
+              `).join('')}
+              <input type="color" class="color-input-small" id="avatarBorderColorPicker"
+                     value="${cust.avatarBorderColor}">
+            </div>
+          </div>
+        ` : ''}
+
+<!-- ★ دوران الصورة -->
+<div class="cust-field">
+  <label>الدوران</label>
+  <div style="display:flex;align-items:center;gap:10px">
+    <input type="range" class="crop-slider" id="avatarRotationSlider"
+           min="0" max="360" step="5" value="${cust.avatarRotation}" style="flex:1">
+    <span class="pill" id="rotationVal" style="min-width:50px;text-align:center">${cust.avatarRotation}°</span>
+  </div>
+</div>
+
+<!-- ★ حجم الصورة -->
+<div class="cust-field">
+  <label>الحجم</label>
+  <div style="display:flex;align-items:center;gap:10px">
+    <input type="range" class="crop-slider" id="avatarScaleSlider"
+           min="0.8" max="1.2" step="0.05" value="${cust.avatarScale}" style="flex:1">
+    <span class="pill" id="scaleVal" style="min-width:50px;text-align:center">${Math.round(cust.avatarScale * 100)}%</span>
+  </div>
+</div>
+
+<!-- ★ فلتر الصورة -->
+<div class="cust-field">
+  <label>الفلتر ${!canCustomizeShape(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+  ${canCustomizeShape(p) ? `
+    <div class="compact-chips">
+      ${Object.entries(AVATAR_FILTERS).map(([k,f])=>`
+        <button class="cchip ${cust.avatarFilter===k?'active':''}"
+                data-cust="avatarFilter" data-val="${k}">
+          ${f.emoji} ${f.label}
+        </button>
+      `).join('')}
+    </div>
+  ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+</div>
+
+        <div class="cust-field">
+          <label>الإطار</label>
+          <div class="frame-picker-row">
+            ${Object.entries(ANIMATED_FRAMES).map(([k, f])=>{
+              const canUse = canUseFrame(p, k);
+              const isActive = frameId === k;
+              return `
+                <button class="frame-btn ${isActive?'active':''} ${!canUse?'locked':''}"
+                        ${canUse ? `data-set-frame="${k}"` : `data-buy-frame="${k}"`}
+                        title="${f.name}">
+                  <div class="av ${f.class}"
+                       style="--s:32px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:900;border-radius:50%">
+                    ${(p.name||'?').charAt(0)}
+                  </div>
+                  ${!canUse ? `<span class="frame-lock-mini">${ic('lock','xs')}</span>` : ''}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ============ ✏️ الاسم (موسّع) ============ */
+  if(zone === 'name'){
+    return `<div class="cust-zone-panel">
+      ${header('✏️', 'تخصيص الاسم')}
+      <div class="cust-zone-body">
+
+        <div class="cust-field">
+          <label>اللون ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeNameColor(p) ? `
+            <div class="color-strip">
+              ${NAME_COLOR_PRESETS.map(c=>`
+                <button class="color-dot ${(cust.nameColor||'#ffffff')===c?'active':''}"
+                        style="background:${c}" data-cust="nameColor" data-val="${c}"></button>
+              `).join('')}
+              <input type="color" class="color-input-small" id="nameColorPicker"
+                     value="${cust.nameColor||'#ffffff'}">
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>التدرج ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeNameColor(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(NAME_GRADIENTS).map(([k,g])=>`
+                <button class="cchip ${cust.nameGradient===k?'active':''}"
+                        data-cust="nameGradient" data-val="${k}">
+                  ${g.emoji} ${g.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>التأثير ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeNameColor(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(TEXT_EFFECTS).map(([k,e])=>`
+                <button class="cchip ${cust.nameEffect===k?'active':''}"
+                        data-cust="nameEffect" data-val="${k}">
+                  ${e.emoji} ${e.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>سماكة الخط ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeNameColor(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(FONT_WEIGHTS).map(([k,w])=>`
+                <button class="cchip ${cust.nameWeight===k?'active':''}"
+                        data-cust="nameWeight" data-val="${k}"
+                        style="font-weight:${w.value}">
+                  ${w.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+<!-- ★ حركة الاسم -->
+<div class="cust-field">
+  <label>الحركة ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+  ${canCustomizeNameColor(p) ? `
+    <div class="compact-chips">
+      ${Object.entries(NAME_ANIMATIONS).map(([k,a])=>`
+        <button class="cchip ${cust.nameAnimation===k?'active':''}"
+                data-cust="nameAnimation" data-val="${k}">
+          ${a.emoji} ${a.label}
+        </button>
+      `).join('')}
+    </div>
+  ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+</div>
+
+        <div class="cust-field">
+          <label>الشارة ${!canCustomizeTitleColor(p) ? '<span class="lock-hint">🔒 بلس دبل</span>' : ''}</label>
+          ${canCustomizeTitleColor(p) ? `
+            <div class="badge-picker-row">
+              ${Object.entries(NAME_BADGES).map(([k,b])=>`
+                <button class="badge-btn ${cust.nameBadge===k?'active':''}"
+                        data-cust="nameBadge" data-val="${k}" title="${b.label}">
+                  ${k === 'none' ? ic('close','xs') : b.emoji}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus2">${ic('lock','sm')} بلس دبل</div>`}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ============ @ اسم المستخدم (جديد) ============ */
+  if(zone === 'username'){
+    return `<div class="cust-zone-panel">
+      ${header('@', 'اسم المستخدم')}
+      <div class="cust-zone-body">
+
+        <div class="cust-field">
+          <label>اللون ${!canCustomizeUsernameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeUsernameColor(p) ? `
+            <div class="color-strip">
+              ${NAME_COLOR_PRESETS.map(c=>`
+                <button class="color-dot ${(cust.usernameColor||'#00d2ff')===c?'active':''}"
+                        style="background:${c}" data-cust="usernameColor" data-val="${c}"></button>
+              `).join('')}
+              <input type="color" class="color-input-small" id="usernameColorPicker"
+                     value="${cust.usernameColor||'#00d2ff'}">
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>التأثير ${!canCustomizeUsernameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeUsernameColor(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(TEXT_EFFECTS).map(([k,e])=>`
+                <button class="cchip ${cust.usernameEffect===k?'active':''}"
+                        data-cust="usernameEffect" data-val="${k}">
+                  ${e.emoji} ${e.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>السماكة ${!canCustomizeUsernameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeUsernameColor(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(FONT_WEIGHTS).map(([k,w])=>`
+                <button class="cchip ${cust.usernameWeight===k?'active':''}"
+                        data-cust="usernameWeight" data-val="${k}"
+                        style="font-weight:${w.value}">
+                  ${w.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ============ 📝 النبذة (جديد) ============ */
+  if(zone === 'bio'){
+    return `<div class="cust-zone-panel">
+      ${header('📝', 'نمط النبذة')}
+      <div class="cust-zone-body">
+        <div class="cust-field">
+          <label>النمط ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeNameColor(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(BIO_STYLES).map(([k,b])=>`
+                <button class="cchip ${cust.bioStyle===k?'active':''}"
+                        data-cust="bioStyle" data-val="${k}">
+                  ${b.emoji} ${b.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+        <div class="cust-field">
+          <label>نص النبذة</label>
+          <button class="btn btn-ghost btn-sm" style="width:100%" data-action="edit-profile">
+            ${ic('edit','xs')} تعديل النبذة
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ============ 🎨 الثيم ============ */
+  if(zone === 'body'){
+    return `<div class="cust-zone-panel">
+      ${header('🎨', 'الثيم والتخطيط')}
+      <div class="cust-zone-body">
+
+        <div class="cust-field">
+          <label>الثيم ${!canCustomizeTheme(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canCustomizeTheme(p) ? `
+            <div class="theme-picker-row">
+              ${Object.entries(THEMES).map(([k, t])=>{
+                const isSel = themeId === k;
+                return `
+                  <button class="theme-btn ${isSel?'active':''}" data-set-theme="${k}">
+                    <div class="theme-swatch" style="background:linear-gradient(135deg,${t.colors[0]},${t.colors[1]})"></div>
+                    <div class="theme-btn-name">${t.name}</div>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>اللون المميز ${sub.features.maxCustomColors===0 ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${sub.features.maxCustomColors > 0 ? `
+            <div class="color-strip">
+              ${ACCENT_COLORS.slice(0, sub.features.maxCustomColors).map(c=>`
+                <button class="color-dot ${cust.accentColor===c?'active':''}"
+                        style="background:${c}" data-cust="accentColor" data-val="${c}"></button>
+              `).join('')}
+              <input type="color" class="color-input-small" id="accentColorPicker"
+                     value="${cust.accentColor}">
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>التخطيط ${!canUseLayoutCustomization(p) ? '<span class="lock-hint">🔒 بلس دبل</span>' : ''}</label>
+          ${canUseLayoutCustomization(p) ? `
+            <div class="compact-chips">
+              ${Object.entries(PROFILE_LAYOUTS).map(([k,l])=>`
+                <button class="cchip ${cust.profileLayout===k?'active':''}"
+                        data-cust="profileLayout" data-val="${k}">
+                  ${l.label}
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="locked-feature" data-action="upsell-plus2">${ic('lock','sm')} بلس دبل</div>`}
+        </div>
+
+        <div class="cust-field">
+          <label>موسيقى الملف ${!canUseMusic(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+          ${canUseMusic(p) ? `
+            <input class="input" id="musicUrlInput" value="${esc(cust.musicUrl)}"
+                   placeholder="https://..." maxlength="200" style="margin-bottom:8px">
+            <button class="btn btn-primary btn-sm" style="width:100%" id="saveMusicBtn">
+              ${ic('check','xs')} حفظ
+            </button>
+          ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+        </div>
+      </div>
+    </div>`;
+  }
+/* ============ 🃏 البطاقة (جديد) ============ */
+if(zone === 'card'){
+  return `<div class="cust-zone-panel">
+    ${header('🃏', 'تخصيص البطاقة')}
+    <div class="cust-zone-body">
+
+      <div class="cust-field">
+        <label>توهج البطاقة ${!canUseBannerEffect(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canUseBannerEffect(p) ? `
+          <div class="compact-chips">
+            ${Object.entries(CARD_GLOWS).map(([k,g])=>`
+              <button class="cchip ${cust.cardGlow===k?'active':''}"
+                      data-cust="cardGlow" data-val="${k}">
+                ${g.emoji} ${g.label}
+              </button>
+            `).join('')}
+          </div>
+        ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+      </div>
+
+      <div class="cust-field">
+        <label>ظل البطاقة ${!canUseBannerEffect(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canUseBannerEffect(p) ? `
+          <div class="compact-chips">
+            ${Object.entries(CARD_SHADOWS).map(([k,s])=>`
+              <button class="cchip ${cust.cardShadow===k?'active':''}"
+                      data-cust="cardShadow" data-val="${k}">
+                ${s.emoji} ${s.label}
+              </button>
+            `).join('')}
+          </div>
+        ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+      </div>
+
+      <div class="cust-field">
+        <label>حدود البطاقة ${!canCustomizeTheme(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeTheme(p) ? `
+          <div class="color-strip">
+            ${NAME_COLOR_PRESETS.map(c=>`
+              <button class="color-dot ${cust.cardBorderColor===c?'active':''}"
+                      style="background:${c}" data-cust="cardBorderColor" data-val="${c}"></button>
+            `).join('')}
+          </div>
+        ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+      </div>
+
+      <div class="cust-field">
+        <label>نمط الخلفية ${!canCustomizeTheme(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeTheme(p) ? `
+          <div class="compact-chips">
+            ${Object.entries(BG_PATTERNS).map(([k,b])=>`
+              <button class="cchip ${cust.bgPattern===k?'active':''}"
+                      data-cust="bgPattern" data-val="${k}">
+                ${b.emoji} ${b.label}
+              </button>
+            `).join('')}
+          </div>
+        ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+      </div>
+
+    </div>
+  </div>`;
+}
+
+/* ============ 🏅 المستوى (جديد) ============ */
+if(zone === 'level'){
+  return `<div class="cust-zone-panel">
+    ${header('🏅', 'شارة المستوى')}
+    <div class="cust-zone-body">
+
+      <div class="cust-field">
+        <label>نمط الشارة ${!canCustomizeTheme(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeTheme(p) ? `
+          <div class="compact-chips">
+            ${Object.entries(LEVEL_STYLES).map(([k,l])=>`
+              <button class="cchip ${cust.levelStyle===k?'active':''}"
+                      data-cust="levelStyle" data-val="${k}">
+                ${l.emoji} ${l.label}
+              </button>
+            `).join('')}
+          </div>
+        ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+      </div>
+
+      <div class="cust-field">
+        <label>لون الشارة ${!canCustomizeTheme(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
+        ${canCustomizeTheme(p) ? `
+          <div class="color-strip">
+            ${NAME_COLOR_PRESETS.map(c=>`
+              <button class="color-dot ${cust.levelColor===c?'active':''}"
+                      style="background:${c}" data-cust="levelColor" data-val="${c}"></button>
+            `).join('')}
+          </div>
+        ` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+      </div>
+
+    </div>
+  </div>`;
+}
+/* ============ 🔤 النصوص ============ */
+if(zone === 'texts'){
+  return `<div class="cust-zone-panel">
+    ${header('🔤', 'تخصيص النصوص')}
+    <div class="cust-zone-body">
+
+      <div class="cust-field">
+        <label>تاريخ الانضمام</label>
+        <div class="color-strip">
+          ${NAME_COLOR_PRESETS.slice(0, 30).map(c => `
+            <button class="color-dot ${cust.joinDateColor===c?'active':''}"
+                    style="background:${c}" data-cust="joinDateColor" data-val="${c}"></button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="cust-field">
+        <label>أزرار المتابعين</label>
+        <div class="color-strip">
+          ${NAME_COLOR_PRESETS.slice(0, 30).map(c => `
+            <button class="color-dot ${cust.followersBtnColor===c?'active':''}"
+                    style="background:${c}" data-cust="followersBtnColor" data-val="${c}"></button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="cust-field">
+        <label>خلفية أزرار المتابعين</label>
+        <div class="color-strip">
+          <button class="color-dot ${cust.followersBtnBg==='transparent'?'active':''}"
+                  style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
+                  data-cust="followersBtnBg" data-val="transparent" title="شفاف"></button>
+          ${NAME_COLOR_PRESETS.slice(0, 20).map(c => `
+            <button class="color-dot ${cust.followersBtnBg===c?'active':''}"
+                    style="background:${c}" data-cust="followersBtnBg" data-val="${c}"></button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="cust-field">
+        <label>الموقع</label>
+        <div class="color-strip">
+          ${NAME_COLOR_PRESETS.slice(0, 30).map(c => `
+            <button class="color-dot ${cust.locationColor===c?'active':''}"
+                    style="background:${c}" data-cust="locationColor" data-val="${c}"></button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="cust-field">
+        <label>شريط المستوى</label>
+        <div class="color-strip">
+          <button class="color-dot ${!cust.levelBarColor?'active':''}"
+                  style="background:linear-gradient(135deg,#6c5ce7,#00d2ff)"
+                  data-cust="levelBarColor" data-val="" title="افتراضي"></button>
+          ${NAME_COLOR_PRESETS.slice(0, 30).map(c => `
+            <button class="color-dot ${cust.levelBarColor===c?'active':''}"
+                    style="background:${c}" data-cust="levelBarColor" data-val="${c}"></button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="cust-field">
+        <label>نص المستوى</label>
+        <div class="color-strip">
+          ${NAME_COLOR_PRESETS.slice(0, 30).map(c => `
+            <button class="color-dot ${cust.levelTextColor===c?'active':''}"
+                    style="background:${c}" data-cust="levelTextColor" data-val="${c}"></button>
+          `).join('')}
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+  return '';
+}
+
 async function pageCustomization(){
   const p = state.profile;
   if(!p) return emptyState('جاري التحميل…','image');
 
   const sub = getSubscription(p);
-  const owned = p.ownedItems || [];
   const plan = SUBSCRIPTION_PLANS[sub.plan] || SUBSCRIPTION_PLANS.free;
   const cust = getProfileCustomization(p);
   const themeId = p.equipped?.themeId || p.themeId || 'default';
   const frameId = p.equipped?.frameId || p.frameId || 'none';
-  
-  /* حالة الاشتراك */
+  const zone = state.custActiveZone;
+
   const subBadge = sub.active ? `
     <div class="cust-sub-badge" style="background:${plan.color}22;border-color:${plan.color}55;color:${plan.color}">
       <span>${plan.emoji}</span>
@@ -5640,287 +7634,55 @@ async function pageCustomization(){
     </div>
   `;
 
-  return `
-    <h1 class="page-title">🎨 استوديو التخصيص</h1>
+  /* ★ شريط التنقل السريع */
+const zoneNav = `
+  <div class="cust-quick-nav">
+    ${[
+      ['cover',    '🖼️', 'الغلاف'],
+      ['avatar',   '👤', 'الصورة'],
+      ['name',     '✏️', 'الاسم'],
+      ['username', '@',  'المعرّف'],
+      ['bio',      '📝', 'النبذة'],
+      ['body',     '🎨', 'الثيم'],
+      ['card',     '🃏', 'البطاقة'],
+      ['level',    '🏅', 'المستوى'],
+      ['texts',    '🔤', 'النصوص'],
+    ].map(([k,icon,label])=>`
+      <button class="cq-btn ${zone===k?'active':''}" data-cust-zone="${k}">
+        <span class="cq-icon">${icon}</span>
+        <span class="cq-label">${label}</span>
+      </button>
+    `).join('')}
+  </div>
+`;
 
-    <!-- ===== حالة الاشتراك ===== -->
+  const optionsHtml = zone
+    ? renderZoneOptions(zone, p, sub, cust, themeId, frameId)
+    : '';
+
+  return `
+    <div class="cust-header">
+      <h1 class="page-title" style="margin:0;flex:1">🎨 استوديو التخصيص</h1>
+      <button class="btn btn-ghost btn-sm" data-action="show-plans">
+        💎 الاشتراكات
+      </button>
+    </div>
+
     ${subBadge}
 
-    <!-- ===== معاينة مباشرة ===== -->
+    <div class="cust-tip-text">اضغط على أي جزء في المعاينة، أو اختر من الشريط السريع</div>
+
     <div class="cust-preview-wrap">
-      <div class="cust-preview-label">${ic('eye','xs')} معاينة مباشرة</div>
+      <div class="cust-preview-label">
+        ${ic('eye','xs')} معاينة حية
+        ${zone ? `<span class="cust-zone-badge">${getZoneLabel(zone)}</span>` : ''}
+      </div>
       <div id="custPreviewBox">${renderCustomizationPreview()}</div>
     </div>
 
-    <!-- ===== أزرار الاشتراك ===== -->
-    <div class="section-title">${ic('crown','sm')} الاشتراكات</div>
-    <div class="sub-plans-grid">
-      ${Object.entries(SUBSCRIPTION_PLANS).filter(([k])=>k!=='free').map(([k, pl])=>{
-        const isActive = sub.plan === k;
-        const isOwned = (p.purchasedPlans || []).includes(k);
-        return `
-          <button class="sub-plan-card ${isActive?'active':''}" data-buy-plan="${k}">
-            <div class="sp-top" style="background:${pl.color}20;border-color:${pl.color}50">
-              <div style="font-size:28px">${pl.emoji}</div>
-              <div style="font-size:14px;font-weight:900;color:${pl.color}">${pl.name}</div>
-              <div style="font-size:11px;color:var(--muted)">${pl.durationDays} يوم</div>
-            </div>
-            <div class="sp-body">
-              <div style="font-size:16px;font-weight:900;color:var(--gold)">${nf(pl.price)} عملة</div>
-              ${isActive
-                ? `<span class="pill ok" style="font-size:9px;margin-top:6px">✓ نشط</span>`
-                : `<span class="btn btn-primary btn-sm" style="margin-top:6px;width:100%;font-size:11px">شراء</span>`}
-            </div>
-          </button>
-        `;
-      }).join('')}
-    </div>
+    ${zoneNav}
 
-    <!-- ===== الصورة الشخصية ===== -->
-    <div class="section-title">${ic('user','sm')} الصورة الشخصية ${!canCustomizeShape(p) ? '🔒' : ''}</div>
-    <div class="card" style="margin-bottom:14px">
-      <div class="cust-field">
-        <label>شكل الصورة ${!canCustomizeShape(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
-        ${canCustomizeShape(p) ? `
-          <div class="cust-options">
-            ${Object.entries(AVATAR_SHAPES).map(([k,s])=>`
-              <button class="cust-opt ${cust.avatarShape===k?'active':''}"
-                      data-cust="avatarShape" data-val="${k}">
-                <div class="cust-shape-preview" style="border-radius:${s.radius}">👤</div>
-                <div>${s.label}</div>
-              </button>
-            `).join('')}
-          </div>
-        ` : `
-          <div class="locked-feature" data-action="upsell-plus">
-            ${ic('lock','sm')} يتطلب اشتراك بلس
-          </div>
-        `}
-      </div>
-
-      <div class="cust-field">
-        <label>حدود الصورة ${!canCustomizeBorder(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
-        ${canCustomizeBorder(p) ? `
-          <div class="cust-options">
-            ${[
-              ['gradient','تدريج 🎨'],
-              ['solid','لون ثابت ⚪'],
-              ['none','بدون 🚫'],
-            ].map(([k,l])=>`
-              <button class="cust-opt ${cust.avatarBorder===k?'active':''}"
-                      data-cust="avatarBorder" data-val="${k}">
-                ${l}
-              </button>
-            `).join('')}
-          </div>
-        ` : `
-          <div class="locked-feature" data-action="upsell-plus">
-            ${ic('lock','sm')} يتطلب اشتراك بلس
-          </div>
-        `}
-      </div>
-
-      ${cust.avatarBorder === 'solid' && canCustomizeBorder(p) ? `
-        <div class="cust-field">
-          <label>لون الحدود</label>
-          <div class="color-picker-row">
-            ${ACCENT_COLORS.map(c=>`
-              <button class="color-swatch ${cust.avatarBorderColor===c?'active':''}"
-                      style="background:${c}" data-cust="avatarBorderColor" data-val="${c}"></button>
-            `).join('')}
-            <input type="color" class="color-input-small" id="avatarBorderColorPicker"
-                   value="${cust.avatarBorderColor}">
-          </div>
-        </div>
-      ` : ''}
-    </div>
-
-    <!-- ===== ألوان الاسم واسم المستخدم ===== -->
-    <div class="section-title">${ic('star','sm')} ألوان الاسم واللقب</div>
-    <div class="card" style="margin-bottom:14px">
-      <div class="cust-field">
-        <label>لون الاسم ${!canCustomizeNameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
-        ${canCustomizeNameColor(p) ? `
-          <div class="color-picker-row">
-            ${NAME_COLOR_PRESETS.map(c=>`
-              <button class="color-swatch ${(cust.nameColor||'#ffffff')===c?'active':''}"
-                      style="background:${c}" data-cust="nameColor" data-val="${c}"></button>
-            `).join('')}
-            <input type="color" class="color-input-small" id="nameColorPicker"
-                   value="${cust.nameColor||'#ffffff'}">
-          </div>
-        ` : `
-          <div class="locked-feature" data-action="upsell-plus">
-            ${ic('lock','sm')} يتطلب اشتراك بلس
-          </div>
-        `}
-      </div>
-
-      <div class="cust-field">
-        <label>لون اسم المستخدم ${!canCustomizeUsernameColor(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
-        ${canCustomizeUsernameColor(p) ? `
-          <div class="color-picker-row">
-            ${NAME_COLOR_PRESETS.map(c=>`
-              <button class="color-swatch ${(cust.usernameColor||'#00d2ff')===c?'active':''}"
-                      style="background:${c}" data-cust="usernameColor" data-val="${c}"></button>
-            `).join('')}
-            <input type="color" class="color-input-small" id="usernameColorPicker"
-                   value="${cust.usernameColor||'#00d2ff'}">
-          </div>
-        ` : `
-          <div class="locked-feature" data-action="upsell-plus">
-            ${ic('lock','sm')} يتطلب اشتراك بلس
-          </div>
-        `}
-      </div>
-
-      <div class="cust-field">
-        <label>لون اللقب ${!canCustomizeTitleColor(p) ? '<span class="lock-hint">🔒 بلس دبل</span>' : ''}</label>
-        ${canCustomizeTitleColor(p) ? `
-          <div class="color-picker-row">
-            ${NAME_COLOR_PRESETS.map(c=>`
-              <button class="color-swatch ${(cust.titleColor||'#f5b301')===c?'active':''}"
-                      style="background:${c}" data-cust="titleColor" data-val="${c}"></button>
-            `).join('')}
-            <input type="color" class="color-input-small" id="titleColorPicker"
-                   value="${cust.titleColor||'#f5b301'}">
-          </div>
-        ` : `
-          <div class="locked-feature" data-action="upsell-plus2">
-            ${ic('lock','sm')} يتطلب بلس دبل
-          </div>
-        `}
-      </div>
-    </div>
-
-    <!-- ===== الثيم ===== -->
-    <div class="section-title">${ic('image','sm')} الثيم واللون المميز ${!canCustomizeTheme(p) ? '🔒' : ''}</div>
-    <div class="card" style="margin-bottom:14px">
-      <div class="cust-field">
-        <label>ثيم الغلاف ${!canCustomizeTheme(p) ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
-        ${canCustomizeTheme(p) ? `
-          <div class="theme-grid">
-            ${Object.entries(THEMES).map(([k, t])=>`
-              <div class="theme-card ${themeId === k ? 'selected' : ''}" data-set-theme="${k}">
-                <div class="theme-preview" style="background:linear-gradient(135deg,${t.colors[0]},${t.colors[1]})"></div>
-                <div class="theme-name">${t.name}</div>
-              </div>
-            `).join('')}
-          </div>
-        ` : `
-          <div class="locked-feature" data-action="upsell-plus">
-            ${ic('lock','sm')} يتطلب اشتراك بلس
-          </div>
-        `}
-      </div>
-
-      <div class="cust-field">
-        <label>اللون المميز ${sub.features.maxCustomColors===0 ? '<span class="lock-hint">🔒 بلس</span>' : ''}</label>
-        ${sub.features.maxCustomColors > 0 ? `
-          <div class="color-picker-row">
-            ${ACCENT_COLORS.slice(0, sub.features.maxCustomColors).map(c=>`
-              <button class="color-swatch ${cust.accentColor===c?'active':''}"
-                      style="background:${c}" data-cust="accentColor" data-val="${c}"></button>
-            `).join('')}
-            <input type="color" class="color-input-small" id="accentColorPicker"
-                   value="${cust.accentColor}">
-          </div>
-        ` : `
-          <div class="locked-feature" data-action="upsell-plus">
-            ${ic('lock','sm')} يتطلب اشتراك بلس
-          </div>
-        `}
-      </div>
-    </div>
-
-    <!-- ===== الإطارات ===== -->
-    <div class="section-title">${ic('star','sm')} الإطارات</div>
-    <div class="card" style="margin-bottom:14px">
-      <div class="theme-grid">
-        ${Object.entries(ANIMATED_FRAMES).map(([k, f])=>{
-          const canUse = canUseFrame(p, k);
-          const owned = (p.ownedItems||[]).includes(`frame_${k}`);
-          const isActive = frameId === k;
-          const tierBadge = f.tier === 'free'   ? '<span class="tier-badge free">مجاني</span>'
-                          : f.tier === 'plus'   ? '<span class="tier-badge plus">بلس</span>'
-                          : f.tier === 'plus2'  ? '<span class="tier-badge plus2">بلس دبل</span>'
-                          : `<span class="tier-badge exclusive">حصري ${f.price||0}</span>`;
-          return `
-            <div class="theme-card ${isActive ? 'selected' : ''} ${!canUse ? 'locked' : ''}"
-                 ${canUse ? `data-set-frame="${k}"` : `data-buy-frame="${k}"`}>
-              <div style="display:flex;justify-content:center;margin-bottom:8px;position:relative">
-                <div class="av ${f.class} ${!canUse ? 'preview-locked' : ''}"
-                     style="--s:50px;background:var(--grad);display:grid;place-items:center;font-weight:900;color:#fff;border-radius:50%;padding:3px">
-                  ${(state.profile.name||'?').charAt(0)}
-                  ${!canUse ? `<div class="frame-lock-overlay">${ic('lock','xs')}</div>` : ''}
-                </div>
-              </div>
-              <div class="theme-name">${f.name}</div>
-              ${tierBadge}
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- ===== تأثيرات الغلاف (بلس) ===== -->
-    <div class="section-title">${ic('bolt','sm')} تأثيرات الغلاف ${!canUseBannerEffect(p) ? '🔒' : ''}</div>
-    <div class="card" style="margin-bottom:14px">
-      ${canUseBannerEffect(p) ? `
-        <div class="cust-options-3">
-          ${Object.entries(BANNER_EFFECTS).map(([k,e])=>`
-            <button class="cust-opt ${cust.bannerEffect===k?'active':''}"
-                    data-cust="bannerEffect" data-val="${k}">
-              <div style="font-size:20px">${e.emoji}</div>
-              <div>${e.label}</div>
-            </button>
-          `).join('')}
-        </div>
-      ` : `
-        <div class="locked-feature" data-action="upsell-plus">
-          ${ic('lock','sm')} يتطلب اشتراك بلس
-        </div>
-      `}
-    </div>
-
-    <!-- ===== التخطيط (بلس دبل) ===== -->
-    <div class="section-title">${ic('grid','sm')} تخطيط البطاقة ${!canUseLayoutCustomization(p) ? '🔒' : ''}</div>
-    <div class="card" style="margin-bottom:14px">
-      ${canUseLayoutCustomization(p) ? `
-        <div class="cust-options-3">
-          ${Object.entries(PROFILE_LAYOUTS).map(([k,l])=>`
-            <button class="cust-opt ${cust.profileLayout===k?'active':''}"
-                    data-cust="profileLayout" data-val="${k}">
-              <div class="layout-preview layout-${k}"></div>
-              <div>${l.label}</div>
-            </button>
-          `).join('')}
-        </div>
-      ` : `
-        <div class="locked-feature" data-action="upsell-plus2">
-          ${ic('lock','sm')} يتطلب بلس دبل
-        </div>
-      `}
-    </div>
-
-    <!-- ===== موسيقى الملف (بلس) ===== -->
-    <div class="section-title">${ic('play','sm')} موسيقى الملف ${!canUseMusic(p) ? '🔒' : ''}</div>
-    <div class="card" style="margin-bottom:14px">
-      ${canUseMusic(p) ? `
-        <div class="field">
-          <label>رابط صوتي (YouTube / SoundCloud / MP3)</label>
-          <input class="input" id="musicUrlInput" value="${esc(cust.musicUrl)}"
-                 placeholder="https://..." maxlength="200">
-        </div>
-        <button class="btn btn-primary btn-sm" style="width:100%" id="saveMusicBtn">
-          ${ic('check','xs')} حفظ الرابط
-        </button>
-      ` : `
-        <div class="locked-feature" data-action="upsell-plus">
-          ${ic('lock','sm')} يتطلب اشتراك بلس
-        </div>
-      `}
-    </div>
+    <div id="custOptionsArea">${optionsHtml}</div>
 
     <div style="margin-top:20px;text-align:center">
       <button class="btn btn-ghost" data-nav="profile">
@@ -5934,17 +7696,54 @@ async function pageCustomization(){
    🎨 تطبيق الثيم (إصلاح nested update)
    ============================================================ */
 async function applyTheme(themeId){
+  if(!state.profile) return;
+
+  /* ★ 1) تحديث فوري للـ state (Optimistic) */
+  state.profile.themeId = themeId;
+  if(!state.profile.equipped) state.profile.equipped = {};
+  state.profile.equipped.themeId = themeId;
+
+  /* ★ 2) تحديث المعاينة مباشرة (بدون render كامل) */
+  const previewBox = document.getElementById('custPreviewBox');
+  if(previewBox){
+    previewBox.innerHTML = renderCustomizationPreview();
+  }
+
+  /* ★ 3) تحديـد البطاقة المختارة */
+  document.querySelectorAll('[data-set-theme]').forEach(el=>{
+    const isSelected = el.dataset.setTheme === themeId;
+    el.classList.toggle('selected', isSelected);
+    // تحديث شارة "مُطبَّق"
+    const existing = el.querySelector('.tier-badge');
+    const nameEl = el.querySelector('.theme-name');
+    if(isSelected && !existing && nameEl){
+      const badge = document.createElement('span');
+      badge.className = 'tier-badge free';
+      badge.style.marginTop = '2px';
+      badge.textContent = '✓ مُطبَّق';
+      nameEl.after(badge);
+    } else if(!isSelected && existing){
+      existing.remove();
+    }
+  });
+
+  /* ★ 4) الحفظ في Firestore */
   try {
     const equipped = { ...(state.profile.equipped || {}), themeId };
     await updateDoc(doc(db, 'users', state.user.uid), {
       themeId,
-      equipped,   // ← كائن كامل بدلاً من 'equipped.themeId'
+      equipped,
     });
     toast('تم تطبيق الثيم ✓');
-    render();
   } catch(e){
     console.error('applyTheme:', e);
     toast('فشل التطبيق');
+    /* Rollback — إعادة القراءة من DB */
+    try {
+      const s = await getDoc(doc(db, 'users', state.user.uid));
+      if(s.exists()) state.profile = s.data();
+      if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+    } catch(err){}
   }
 }
 
@@ -6112,12 +7911,18 @@ document.getElementById('forgotPassBtn')?.addEventListener('click', async () => 
 
 /* ============ Event Handlers ============ */
 document.addEventListener('click', async (e)=>{
-  // Image preview click
+
+  /* ============================================================
+     1) معالجة اختيار الصور — قبل تعريف t
+     ============================================================ */
   const imgEl = e.target.closest('[data-pick-image]');
   if(imgEl){
     const type = imgEl.dataset.pickImage;
     pickImage(type, (previewUrl)=>{
-      const el = document.getElementById(type === 'post' ? 'postPreview' : type === 'avatar' ? 'avatarPreview' : 'coverPreview');
+      const el = document.getElementById(
+        type === 'post' ? 'postPreview' :
+        type === 'avatar' ? 'avatarPreview' : 'coverPreview'
+      );
       if(el){
         el.style.backgroundImage = `url(${previewUrl})`;
         el.classList.add('has-image');
@@ -6126,123 +7931,201 @@ document.addEventListener('click', async (e)=>{
     return;
   }
 
-// 1) أولاً: إيجاد العنصر
-const t = e.target.closest('[data-nav],[data-action],[data-tab],[data-ptab],[data-follow],[data-like],[data-save],[data-chat],[data-open-chat],[data-game-open],[data-join-room],[data-leave-room],[data-create-room],[data-scat],[data-lb],[data-toggle],[data-view-profile],[data-open-comments],[data-delete-comment],[data-delete-post],[data-profile-like],[data-support],[data-buy-item],[data-open-team],[data-join-team],[data-leave-team],[data-cust],[data-toggle-tag],[data-inv-tab],[data-inv-item],[data-unequip],[data-gift-tab],[data-team-tab],[data-edit-tab],[data-view-image],[data-change-image],[data-delete-image],[data-block-user],[data-start-quiz],[data-invite-room],[data-send-invite],[data-send-team-chat],[data-send-challenge],[data-send-gift],[data-accept-challenge],[data-reject-challenge],[data-approve-join],[data-reject-join],[data-kick-member],[data-promote],[data-request-join],[data-set-theme],[data-set-frame],[data-view-tournament],[data-join-tournament],[data-view-war],[data-declare-war],[data-play-war-match],[data-admin-tab],[data-admin-ban],[data-admin-delete-post],[data-admin-dismiss],[data-report-target],[data-notif-filter],[data-gift-id],[data-reason],[data-pick-image],button');
-// 2) ثانياً: فحص null — يجب أن يكون قبل أي قراءة لـ dataset
-if(!t) return;
+  /* ============================================================
+     2) إيجاد العنصر المستهدف — ★ يجب أن يكون قبل أي استخدام لـ t
+     ============================================================ */
+const t = e.target.closest(
+  '[data-nav],[data-action],[data-tab],[data-ptab],[data-follow],' +
+  '[data-like],[data-save],[data-chat],[data-open-chat],[data-game-open],' +
+  '[data-join-room],[data-leave-room],[data-create-room],[data-scat],[data-lb],' +
+  '[data-toggle],[data-view-profile],[data-open-comments],[data-delete-comment],' +
+  '[data-delete-post],[data-profile-like],[data-support],[data-buy-item],' +
+  '[data-open-team],[data-join-team],[data-leave-team],[data-cust],' +
+  '[data-cust-zone],' +   /* ★ أضف هذه */
+  '[data-toggle-tag],[data-inv-tab],[data-inv-item],[data-unequip],' +
+    '[data-gift-tab],[data-team-tab],[data-edit-tab],[data-view-image],' +
+    '[data-change-image],[data-delete-image],[data-block-user],[data-start-quiz],' +
+    '[data-invite-room],[data-send-invite],[data-send-team-chat],[data-send-challenge],' +
+    '[data-send-gift],[data-accept-challenge],[data-reject-challenge],[data-approve-join],' +
+    '[data-reject-join],[data-kick-member],[data-promote],[data-request-join],' +
+    '[data-set-theme],[data-set-frame],[data-view-tournament],[data-join-tournament],' +
+    '[data-view-war],[data-declare-war],[data-play-war-match],[data-admin-tab],' +
+    '[data-admin-ban],[data-admin-delete-post],[data-admin-dismiss],[data-report-target],' +
+    '[data-notif-filter],[data-gift-id],[data-reason],[data-pick-image],button'
+  );
 
-// 3) ثالثاً: إغلاق المودال إن طُلب (مع حماية إضافية)
-if(t && t.dataset && t.dataset.closeModal) closeModal();
+  /* 3) حماية null */
+  if(!t) return;
 
-/* ===== شراء اشتراك ===== */
-if(t.dataset.buyPlan){
-  await purchaseSubscription(t.dataset.buyPlan);
+if(t.dataset.closeModal) closeModal();
+
+/* ★★ مناطق التخصيص التفاعلية ★★ */
+if(t.dataset.custZone){
+  const zone = t.dataset.custZone;
+  state.custActiveZone = state.custActiveZone === zone ? null : zone;
+  refreshCustOptions();
+  const previewBox = document.getElementById('custPreviewBox');
+  if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
   return;
 }
 
-/* ===== شراء إطار حصري ===== */
-if(t.dataset.buyFrame){
-  const frameId = t.dataset.buyFrame;
-  const frame = ANIMATED_FRAMES[frameId];
-  if(!frame) return;
-  if(frame.tier !== 'exclusive'){
-    toast('🔒 هذا الإطار يحتاج اشتراك — اشترك أولاً');
+/* ✍️ التواقيع */
+if(t.dataset.action === 'open-signature'){
+  await openSignatureModal(t.dataset.uid);
+  return;
+}
+if(t.id === 'submitSigBtn'){
+  await submitSignature(t.dataset.uid);
+  return;
+}
+
+/* 🖼️ المعاينة الكاملة */
+if(t.dataset.action === 'preview-profile'){
+  await openFullPreviewModal();
+  return;
+}
+if(t.dataset.action === 'save-preview'){
+  await saveProfilePreview();
+  return;
+}
+if(t.dataset.action === 'share-preview'){
+  await shareProfilePreview();
+  return;
+}
+
+if(t.dataset.action === 'close-cust-zone'){
+  state.custActiveZone = null;
+  refreshCustOptions();
+  const previewBox = document.getElementById('custPreviewBox');
+  if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+  return;
+}
+
+if(t.dataset.action === 'show-plans'){
+  openSubscriptionPlansModal();
+  return;
+}
+
+  /* ============================================================
+     5) ★★★ المعالجات الجديدة — الآن بعد تعريف t (TDZ FIXED)
+     ============================================================ */
+  if(t.dataset.action === 'show-followers'){
+    await openFollowersModal(t.dataset.uid, t.dataset.type);
     return;
   }
-  const alreadyOwned = (state.profile.ownedItems || []).includes(`frame_${frameId}`);
-  if(alreadyOwned){
-    await applyFrame(frameId);
+  if(t.dataset.action === 'show-interactions'){
+    await openInteractionsModal(t.dataset.uid, t.dataset.type);
     return;
   }
-  await purchaseExclusiveItem(`frame_${frameId}`, 'frame', frame.price);
-  return;
-}
 
-/* ===== Upsell ===== */
-if(t.dataset.action === 'upsell-plus'){
-  openModal(`
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:48px">💎</div>
-      <h3 style="margin-top:8px">يتطلب اشتراك بلس</h3>
-      <div class="muted">افتح الألوان المخصصة، الموسيقى، تأثيرات الغلاف، وأكثر</div>
-    </div>
-    <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="plus">
-      اشتراك بلس — ${nf(SUBSCRIPTION_PLANS.plus.price)} عملة / 30 يوم
-    </button>
-    <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
-  `);
-  return;
-}
-if(t.dataset.action === 'upsell-plus2'){
-  openModal(`
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:48px">👑</div>
-      <h3 style="margin-top:8px">يتطلب بلس دبل</h3>
-      <div class="muted">افتح كل شيء — تخطيطات، ألوان اللقب، وأكثر</div>
-    </div>
-    <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="plus2">
-      اشتراك بلس دبل — ${nf(SUBSCRIPTION_PLANS.plus2.price)} عملة / 60 يوم
-    </button>
-    <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
-  `);
-  return;
-}
+  /* ============================================================
+     6) شراء اشتراك
+     ============================================================ */
+  if(t.dataset.buyPlan){
+    await purchaseSubscription(t.dataset.buyPlan);
+    return;
+  }
 
-  /* المكافأة اليومية */
-if(t.dataset.nav === '_daily'){ 
-  closeDrawer();
-  await checkDailyReward();
-  openDailyRewardModal(); 
-  return; 
-}
-if(t.dataset.nav === '_challenges'){ 
-  closeDrawer();
-  await openChallengesModal(); 
-  return; 
-}
+  /* ============================================================
+     7) شراء إطار حصري
+     ============================================================ */
+  if(t.dataset.buyFrame){
+    const frameId = t.dataset.buyFrame;
+    const frame = ANIMATED_FRAMES[frameId];
+    if(!frame) return;
+    if(frame.tier !== 'exclusive'){
+      toast('🔒 هذا الإطار يحتاج اشتراك — اشترك أولاً');
+      return;
+    }
+    const alreadyOwned = (state.profile.ownedItems || []).includes(`frame_${frameId}`);
+    if(alreadyOwned){
+      await applyFrame(frameId);
+      return;
+    }
+    await purchaseExclusiveItem(`frame_${frameId}`, 'frame', frame.price);
+    return;
+  }
 
-/* ★ مودال إجراءات اللاعب */
-if(t.dataset.action === 'profile-actions'){ openProfileActionsModal(t.dataset.uid); return; }
+  /* ============================================================
+     8) Upsell — بلس / بلس دبل
+     ============================================================ */
+  if(t.dataset.action === 'upsell-plus'){
+    openModal(`
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:48px">💎</div>
+        <h3 style="margin-top:8px">يتطلب اشتراك بلس</h3>
+        <div class="muted">افتح الألوان المخصصة، الموسيقى، تأثيرات الغلاف، وأكثر</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="plus">
+        اشتراك بلس — ${nf(SUBSCRIPTION_PLANS.plus.price)} عملة / 30 يوم
+      </button>
+      <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
+    `);
+    return;
+  }
+  if(t.dataset.action === 'upsell-plus2'){
+    openModal(`
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:48px">👑</div>
+        <h3 style="margin-top:8px">يتطلب بلس دبل</h3>
+        <div class="muted">افتح كل شيء — تخطيطات، ألوان اللقب، وأكثر</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="plus2">
+        اشتراك بلس دبل — ${nf(SUBSCRIPTION_PLANS.plus2.price)} عملة / 60 يوم
+      </button>
+      <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
+    `);
+    return;
+  }
 
-/* ★ نقر الأفاتار / الغلاف (في ملفي) */
-if(t.dataset.action === 'avatar-click'){ openImageActionsModal('avatar'); return; }
-if(t.dataset.action === 'cover-click'){  openImageActionsModal('cover');  return; }
+  /* ============================================================
+     9) المكافأة اليومية
+     ============================================================ */
+  if(t.dataset.nav === '_daily'){
+    closeDrawer();
+    await checkDailyReward();
+    openDailyRewardModal();
+    return;
+  }
+  if(t.dataset.nav === '_challenges'){
+    closeDrawer();
+    await openChallengesModal();
+    return;
+  }
 
-/* ===== استوديو التخصيص ===== */
-/* ===== استوديو التخصيص (مع فحص الأذونات) ===== */
-if(t.dataset.cust){
-  const field = t.dataset.cust;
-  const val = t.dataset.val;
-  
-  /* ===== فحص الأذونات ===== */
-  if(field === 'avatarShape' && !canCustomizeShape(state.profile)){ 
-    toast('🔒 شكل الصورة يتطلب اشتراك'); return; 
+  /* ============================================================
+     10) مودال إجراءات اللاعب
+     ============================================================ */
+  if(t.dataset.action === 'profile-actions'){
+    openProfileActionsModal(t.dataset.uid);
+    return;
   }
-  if(field === 'avatarBorder' && !canCustomizeBorder(state.profile)){ 
-    toast('🔒 حدود الصورة تتطلب اشتراك'); return; 
-  }
-  if(field === 'avatarBorderColor' && !canCustomizeBorder(state.profile)){ 
-    toast('🔒 لون الحدود يتطلب اشتراك'); return; 
-  }
-  if(field === 'nameColor' && !canCustomizeNameColor(state.profile)){ 
-    toast('🔒 لون الاسم يتطلب بلس'); return; 
-  }
-  if(field === 'usernameColor' && !canCustomizeUsernameColor(state.profile)){ 
-    toast('🔒 لون اسم المستخدم يتطلب بلس'); return; 
-  }
-  if(field === 'titleColor' && !canCustomizeTitleColor(state.profile)){ 
-    toast('🔒 لون اللقب يتطلب بلس دبل'); return; 
-  }
-  if(field === 'profileLayout' && !canUseLayoutCustomization(state.profile)){ 
-    toast('🔒 التخطيط يتطلب بلس دبل'); return; 
-  }
-  if(field === 'bannerEffect' && !canUseBannerEffect(state.profile)){ 
-    toast('🔒 تأثيرات الغلاف تتطلب بلس'); return; 
-  }
-  if(field === 'accentColor' && getSubscription(state.profile).features.maxCustomColors === 0){
-    toast('🔒 اللون المميز يتطلب بلس'); return;
-  }
-  
+
+  /* ============================================================
+     11) نقر الأفاتار / الغلاف
+     ============================================================ */
+  if(t.dataset.action === 'avatar-click'){ openImageActionsModal('avatar'); return; }
+  if(t.dataset.action === 'cover-click'){  openImageActionsModal('cover');  return; }
+
+  /* ============================================================
+     12) استوديو التخصيص (مع فحص الأذونات)
+     ============================================================ */
+  if(t.dataset.cust){
+    const field = t.dataset.cust;
+    const val = t.dataset.val;
+
+    if(field === 'avatarShape'    && !canCustomizeShape(state.profile))    { toast('🔒 شكل الصورة يتطلب اشتراك'); return; }
+    if(field === 'avatarBorder'   && !canCustomizeBorder(state.profile))   { toast('🔒 حدود الصورة تتطلب اشتراك'); return; }
+    if(field === 'avatarBorderColor' && !canCustomizeBorder(state.profile)){ toast('🔒 لون الحدود يتطلب اشتراك'); return; }
+    if(field === 'nameColor'      && !canCustomizeNameColor(state.profile)){ toast('🔒 لون الاسم يتطلب بلس'); return; }
+    if(field === 'usernameColor'  && !canCustomizeUsernameColor(state.profile)){ toast('🔒 لون اسم المستخدم يتطلب بلس'); return; }
+    if(field === 'titleColor'     && !canCustomizeTitleColor(state.profile)){ toast('🔒 لون اللقب يتطلب بلس دبل'); return; }
+    if(field === 'profileLayout'  && !canUseLayoutCustomization(state.profile)){ toast('🔒 التخطيط يتطلب بلس دبل'); return; }
+    if(field === 'bannerEffect'   && !canUseBannerEffect(state.profile))   { toast('🔒 تأثيرات الغلاف تتطلب بلس'); return; }
+    if(field === 'accentColor'    && getSubscription(state.profile).features.maxCustomColors === 0){
+      toast('🔒 اللون المميز يتطلب بلس'); return;
+    }
+
   const ok = await saveCustomField(field, val);
   if(ok){
     const previewBox = document.getElementById('custPreviewBox');
@@ -6251,172 +8134,227 @@ if(t.dataset.cust){
       el.classList.toggle('active', el.dataset.val === val);
     });
     if(field === 'avatarBorder'){
-      render();
+      refreshCustOptions();   // ★ بدلاً من render()
     }
   }
   return;
 }
 
-/* ===== حفظ موسيقى الملف ===== */
-if(t.id === 'saveMusicBtn'){
-  const url = document.getElementById('musicUrlInput')?.value.trim() || '';
-  const ok = await saveCustomField('musicUrl', url);
-  if(ok) toast('تم الحفظ ✓');
-  return;
-}
-
-/* ===== منتقي الألوان المخصص ===== */
-if(t.id === 'avatarBorderColorPicker'){
-  t.addEventListener('change', async (e)=>{
-    const color = e.target.value;
-    await saveCustomField('avatarBorderColor', color);
-    const previewBox = document.getElementById('custPreviewBox');
-    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
-  }, { once: false });
-  return;
-}
-if(t.id === 'accentColorPicker'){
-  t.addEventListener('change', async (e)=>{
-    const color = e.target.value;
-    await saveCustomField('accentColor', color);
-    const previewBox = document.getElementById('custPreviewBox');
-    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
-  }, { once: false });
-  return;
-}
-
-/* ★ إجراءات الصورة */
-if(t.dataset.viewImage){
-  const url = t.dataset.viewImage === 'avatar'
-    ? state.profile?.avatarUrl : state.profile?.coverUrl;
-  openImageViewerModal(url);
-  return;
-}
-if(t.dataset.changeImage){ await changeProfileImage(t.dataset.changeImage); return; }
-if(t.dataset.deleteImage){ await deleteProfileImage(t.dataset.deleteImage); return; }
-
-/* ★ حظر */
-if(t.dataset.blockUser){ await toggleBlockUser(t.dataset.blockUser); return; }
-
-  if(t.dataset.nav){
-    if(t.dataset.reset === 'chat'){ state.chatWith = null; }
-    if(t.dataset.reset === 'game'){ state.activeGame = null; }
-    if(t.dataset.nav === 'more'){ openDrawer(); return; }
-    go(t.dataset.nav); return;
+  /* ============================================================
+     13) حفظ موسيقى الملف
+     ============================================================ */
+  if(t.id === 'saveMusicBtn'){
+    const url = document.getElementById('musicUrlInput')?.value.trim() || '';
+    const ok = await saveCustomField('musicUrl', url);
+    if(ok) toast('تم الحفظ ✓');
+    return;
   }
+
+  /* ============================================================
+     14) منتقي الألوان المخصص
+     ============================================================ */
+  if(t.id === 'avatarBorderColorPicker'){
+    t.addEventListener('change', async (ev)=>{
+      await saveCustomField('avatarBorderColor', ev.target.value);
+      const previewBox = document.getElementById('custPreviewBox');
+      if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+    }, { once: false });
+    return;
+  }
+  if(t.id === 'accentColorPicker'){
+    t.addEventListener('change', async (ev)=>{
+      await saveCustomField('accentColor', ev.target.value);
+      const previewBox = document.getElementById('custPreviewBox');
+      if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+    }, { once: false });
+    return;
+  }
+
+  /* ============================================================
+     15) إجراءات الصورة (عرض/تغيير/حذف)
+     ============================================================ */
+  /* ============================================================
+     15) إجراءات الصورة (عرض/تغيير/حذف/اقتصاص)
+     ============================================================ */
+  if(t.dataset.viewImage){
+    const url = t.dataset.viewImage === 'avatar'
+      ? state.profile?.avatarUrl : state.profile?.coverUrl;
+    openImageViewerModal(url);
+    return;
+  }
+  if(t.dataset.changeImage){ await changeProfileImage(t.dataset.changeImage); return; }
+  if(t.dataset.deleteImage){ await deleteProfileImage(t.dataset.deleteImage); return; }
+
+  /* ★★ جديد: إعادة اقتصاص الغلاف ★★ */
+  if(t.dataset.recropCover){
+    await recropCover();
+    return;
+  }
+
+  /* ============================================================
+     16) حظر مستخدم
+     ============================================================ */
+  if(t.dataset.blockUser){ await toggleBlockUser(t.dataset.blockUser); return; }
+
+  /* ============================================================
+     17) التنقل العام
+     ============================================================ */
+  if(t.dataset.nav){
+    if(t.dataset.reset === 'chat') state.chatWith = null;
+    if(t.dataset.reset === 'game') state.activeGame = null;
+    if(t.dataset.nav === 'more'){ openDrawer(); return; }
+    go(t.dataset.nav);
+    return;
+  }
+
+  /* ============================================================
+     18) إجراءات عامة (فتح/إغلاق/توست/مودالات)
+     ============================================================ */
   if(t.dataset.action === 'close-drawer'){ closeDrawer(); return; }
   if(t.dataset.action === 'modal-close'){ closeModal(); return; }
   if(t.dataset.action === 'toast'){ toast(t.dataset.msg || ''); return; }
   if(t.dataset.action === 'compose'){ composeModal(); return; }
   if(t.dataset.action === 'edit-profile'){ editProfileModal(); return; }
   if(t.dataset.action === 'create-team'){ createTeamModal(); return; }
-if(t.dataset.action === 'leave-team'){ await leaveTeam(); return; }
-if(t.dataset.action === 'back-to-teams'){ state.viewingTeamId = null; render(); return; }
+  if(t.dataset.action === 'leave-team'){ await leaveTeam(); return; }
+  if(t.dataset.action === 'back-to-teams'){ state.viewingTeamId = null; render(); return; }
 
-/* ★ جديد: إعادة محاولة تحميل الملف الشخصي */
-if(t.dataset.action === 'retry-profile'){
-  /* ★ مكافآت الدخول */
-if(t.id === 'claimDailyBtn'){ await claimDailyReward(); return; }
-if(t.dataset.action === 'show-daily'){ openDailyRewardModal(); return; }
+  /* ============================================================
+     19) إعادة محاولة تحميل الملف الشخصي (مفصولة الآن)
+     ============================================================ */
+  if(t.dataset.action === 'retry-profile'){
+    toast('جاري إعادة المحاولة…');
+    getDoc(doc(db,'users',state.user.uid)).then(s => {
+      if(s.exists()){
+        state.profile = s.data();
+        renderTopbar();
+        render();
+        toast('تم التحميل ✓');
+      } else {
+        toast('لم يتم العثور على الملف');
+      }
+    }).catch(e => {
+      console.error(e);
+      toast('فشل التحميل — تحقق من الاتصال');
+    });
+    return;
+  }
 
-/* ★ الحالة */
-if(t.dataset.action === 'edit-status'){ openStatusPickerModal(); return; }
-if(t.id === 'saveStatusBtn'){
-  const status = t.dataset.pendingStatus || 'available';
-  const msg = document.getElementById('statusMsgInput')?.value.trim() || '';
-  await setPlayerStatus(status, msg);
-  return;
-}
+  /* ============================================================
+     20) ★★★ المكافأة اليومية (كانت محشورة داخل retry-profile)
+     ============================================================ */
+  if(t.id === 'claimDailyBtn'){ await claimDailyReward(); return; }
+  if(t.dataset.action === 'show-daily'){ openDailyRewardModal(); return; }
 
-/* ★ التحديات */
-if(t.dataset.action === 'show-challenges'){ await openChallengesModal(); return; }
-if(t.dataset.sendChallenge){ await sendChallenge(t.dataset.sendChallenge); return; }
-if(t.dataset.acceptChallenge){ await acceptChallenge(t.dataset.acceptChallenge); return; }
-if(t.dataset.rejectChallenge){ await rejectChallenge(t.dataset.rejectChallenge); return; }
+  /* ============================================================
+     21) حالة اللاعب
+     ============================================================ */
+  if(t.dataset.action === 'edit-status'){ openStatusPickerModal(); return; }
+  if(t.id === 'saveStatusBtn'){
+    const status = t.dataset.pendingStatus || 'available';
+    const msg = document.getElementById('statusMsgInput')?.value.trim() || '';
+    await setPlayerStatus(status, msg);
+    return;
+  }
 
-/* ★ المقتنيات */
-if(t.dataset.invTab){ state.invTab = t.dataset.invTab; render(); return; }
-if(t.dataset.invItem){
-  const cat = t.dataset.invCat;
-  const id = t.dataset.invItem;
-  const equipped = (state.profile?.equipped || {})[cat] === id;
-  if(equipped) await unequipItem(cat);
-  else await equipItem(id, cat);
-  return;
-}
-if(t.dataset.unequip){ await unequipItem(t.dataset.unequip); return; }
+  /* ============================================================
+     22) التحديات
+     ============================================================ */
+  if(t.dataset.action === 'show-challenges'){ await openChallengesModal(); return; }
+  if(t.dataset.sendChallenge){ await sendChallenge(t.dataset.sendChallenge); return; }
+  if(t.dataset.acceptChallenge){ await acceptChallenge(t.dataset.acceptChallenge); return; }
+  if(t.dataset.rejectChallenge){ await rejectChallenge(t.dataset.rejectChallenge); return; }
 
-/* ★ طلبات الفرق */
-if(t.dataset.requestJoin){ await requestJoinTeam(t.dataset.requestJoin); return; }
-if(t.dataset.approveJoin){ await approveJoinRequest(t.dataset.teamId, t.dataset.approveJoin); return; }
-if(t.dataset.rejectJoin){ await rejectJoinRequest(t.dataset.teamId, t.dataset.rejectJoin); return; }
-if(t.dataset.kickMember){ await kickMember(t.dataset.teamId, t.dataset.kickMember); return; }
-if(t.dataset.promote){ await setTeamRole(t.dataset.teamId, t.dataset.promote, t.dataset.role); return; }
-  toast('جاري إعادة المحاولة…');
-  getDoc(doc(db,'users',state.user.uid)).then(s => {
-    if(s.exists()){
-      state.profile = s.data();
-      renderTopbar();
-      render();
-      toast('تم التحميل ✓');
-    } else {
-      toast('لم يتم العثور على الملف');
-    }
-  }).catch(e => {
-    console.error(e);
-    toast('فشل التحميل — تحقق من الاتصال');
-  });
-  return;
-}
-/* ★ بدء Quiz Clash */
-if(t.dataset.startQuiz){
-  await startQuizMatch(t.dataset.startQuiz, true);
-  return;
-}
-if(t.dataset.inviteRoom){
-  await openInviteMatchModal(t.dataset.inviteRoom);
-  return;
-}
-if(t.dataset.sendInvite){
-  await inviteFriendToMatch(t.dataset.sendInvite, t.dataset.roomId);
-  closeModal();
-  return;
-}
-/* ★ محادثة الفريق */
-if(t.dataset.sendTeamChat){
-  await sendTeamChat(t.dataset.sendTeamChat);
-  return;
-}
-if(t.dataset.teamTab){
-  state.viewingTeamTab = t.dataset.teamTab;
-  render();
-  return;
-}
+  /* ============================================================
+     23) المقتنيات
+     ============================================================ */
+  if(t.dataset.invTab){ state.invTab = t.dataset.invTab; render(); return; }
+  if(t.dataset.invItem){
+    const cat = t.dataset.invCat;
+    const id = t.dataset.invItem;
+    const equipped = (state.profile?.equipped || {})[cat] === id;
+    if(equipped) await unequipItem(cat);
+    else await equipItem(id, cat);
+    return;
+  }
+  if(t.dataset.unequip){ await unequipItem(t.dataset.unequip); return; }
 
-if(t.dataset.tab){ state.homeTab = t.dataset.tab; render(); return; }
-if(t.dataset.ptab){
-  const tabsEl = document.querySelector('.tabs.scrollable');
-  state._tabsScroll = tabsEl ? tabsEl.scrollLeft : 0;   /* ★ حفظ كما هو */
-  state.profileTab = t.dataset.ptab;
-  render();                                              /* ★ الاستعادة داخل render */
-  return;
-}
+  /* ============================================================
+     24) طلبات الفرق والرتب
+     ============================================================ */
+  if(t.dataset.requestJoin){ await requestJoinTeam(t.dataset.requestJoin); return; }
+  if(t.dataset.approveJoin){ await approveJoinRequest(t.dataset.teamId, t.dataset.approveJoin); return; }
+  if(t.dataset.rejectJoin){ await rejectJoinRequest(t.dataset.teamId, t.dataset.rejectJoin); return; }
+  if(t.dataset.kickMember){ await kickMember(t.dataset.teamId, t.dataset.kickMember); return; }
+  if(t.dataset.promote){ await setTeamRole(t.dataset.teamId, t.dataset.promote, t.dataset.role); return; }
 
+  /* ============================================================
+     25) Quiz Clash
+     ============================================================ */
+  if(t.dataset.startQuiz){
+    await startQuizMatch(t.dataset.startQuiz, true);
+    return;
+  }
+  if(t.dataset.inviteRoom){
+    await openInviteMatchModal(t.dataset.inviteRoom);
+    return;
+  }
+  if(t.dataset.sendInvite){
+    await inviteFriendToMatch(t.dataset.sendInvite, t.dataset.roomId);
+    closeModal();
+    return;
+  }
+
+  /* ============================================================
+     26) محادثة الفريق
+     ============================================================ */
+  if(t.dataset.sendTeamChat){
+    await sendTeamChat(t.dataset.sendTeamChat);
+    return;
+  }
+  if(t.dataset.teamTab){
+    state.viewingTeamTab = t.dataset.teamTab;
+    render();
+    return;
+  }
+
+  /* ============================================================
+     27) تبويبات الصفحة الرئيسية والملف
+     ============================================================ */
+  if(t.dataset.tab){ state.homeTab = t.dataset.tab; render(); return; }
+  if(t.dataset.ptab){
+    const tabsEl = document.querySelector('.tabs.scrollable');
+    state._tabsScroll = tabsEl ? tabsEl.scrollLeft : 0;
+    state.profileTab = t.dataset.ptab;
+    render();
+    return;
+  }
+
+  /* ============================================================
+     28) التفاعلات (متابعة/إعجاب/حفظ/دعم)
+     ============================================================ */
   if(t.dataset.follow){ await toggleFollow(t.dataset.follow); return; }
   if(t.dataset.like){ await toggleLike(t.dataset.like); return; }
   if(t.dataset.save){ await toggleSave(t.dataset.save); return; }
   if(t.dataset.profileLike){ await toggleProfileLike(t.dataset.profileLike); return; }
   if(t.dataset.support){ await sendSupport(t.dataset.support); return; }
 
+  /* ============================================================
+     29) عرض الملف الشخصي
+     ============================================================ */
   if(t.dataset.viewProfile){
+    state.profileTab = 'posts';
     if(t.dataset.viewProfile === state.user.uid){ go('profile'); return; }
-    go('userprofile', { viewingUid: t.dataset.viewProfile }); return;
+    go('userprofile', { viewingUid: t.dataset.viewProfile });
+    return;
   }
 
+  /* ============================================================
+     30) التعليقات
+     ============================================================ */
   if(t.dataset.openComments){ await openCommentsModal(t.dataset.openComments); return; }
   if(t.dataset.deleteComment){
     await deleteComment(t.dataset.postId, t.dataset.deleteComment);
-    // reopen modal
     const comments = state.comments[t.dataset.postId] || [];
     const listEl = document.getElementById('commentsList');
     if(listEl){
@@ -6436,9 +8374,15 @@ if(t.dataset.ptab){
   }
   if(t.dataset.deletePost){ await deletePost(t.dataset.deletePost); return; }
 
+  /* ============================================================
+     31) المحادثات
+     ============================================================ */
   if(t.dataset.chat){ await openChat(t.dataset.chat); return; }
   if(t.dataset.openChat){ await openChat(t.dataset.openChat); return; }
 
+  /* ============================================================
+     32) الألعاب والغرف
+     ============================================================ */
   if(t.dataset.gameOpen){ go('games', { activeGame: t.dataset.gameOpen }); return; }
   if(t.id === 'matchmakingBtn'){ startMatchmaking(t.dataset.game); return; }
   if(t.id === 'createRoomBtn'){ createRoom(t.dataset.game); return; }
@@ -6446,28 +8390,40 @@ if(t.dataset.ptab){
   if(t.dataset.joinRoom){ await joinRoom(t.dataset.joinRoom); return; }
   if(t.dataset.leaveRoom){ await leaveRoom(t.dataset.leaveRoom); return; }
 
+  /* ============================================================
+     33) البحث / الصدارة / الإعدادات
+     ============================================================ */
   if(t.dataset.scat){ state.searchCat = t.dataset.scat; render(); return; }
   if(t.dataset.lb){ state.lbTab = t.dataset.lb; render(); return; }
   if(t.dataset.toggle){ state.settings[t.dataset.toggle] = !state.settings[t.dataset.toggle]; render(); return; }
 
+  /* ============================================================
+     34) تسجيل الخروج
+     ============================================================ */
   if(t.id === 'confirmLogout'){ await handleLogout(); return; }
 
+  /* ============================================================
+     35) إرسال رسالة الدردشة
+     ============================================================ */
   if(t.id === 'sendMsgBtn'){
     const inp = document.getElementById('msgInput');
     const txt = inp?.value.trim();
     if(!txt || !state.chatWith) return;
     const chatId = [state.user.uid, state.chatWith].sort().join('_');
     inp.value = '';
-    try { await sendMessage(chatId, txt); } catch(e){ toast('فشل الإرسال'); }
+    try { await sendMessage(chatId, txt); } catch(err){ toast('فشل الإرسال'); }
     return;
   }
+
+  /* ============================================================
+     36) إرسال تعليق
+     ============================================================ */
   if(t.id === 'sendCommentBtn'){
     const inp = document.getElementById('commentInput');
     const txt = inp?.value.trim();
     if(!txt) return;
     inp.value = '';
     await addComment(t.dataset.postId, txt);
-    // refresh comments in modal
     const comments = state.comments[t.dataset.postId] || [];
     const listEl = document.getElementById('commentsList');
     if(listEl){
@@ -6487,6 +8443,9 @@ if(t.dataset.ptab){
     return;
   }
 
+  /* ============================================================
+     37) نشر منشور / حفظ الملف / إنشاء فريق
+     ============================================================ */
   if(t.id === 'submitPost'){
     const txt = document.getElementById('composeText').value.trim();
     if(!txt && !state.pendingImages.post){ toast('اكتب شيئاً أو أضف صورة'); return; }
@@ -6505,92 +8464,112 @@ if(t.dataset.ptab){
     return;
   }
 
+  /* ============================================================
+     38) المتجر / الفرق
+     ============================================================ */
   if(t.dataset.buyItem){
-    const item = STORE.find(x=>x.id === t.dataset.buyItem);
+    const item = STORE.find(x => x.id === t.dataset.buyItem);
     if(item) await buyItem(item);
     return;
   }
-
   if(t.dataset.openTeam){ state.viewingTeamId = t.dataset.openTeam; render(); return; }
   if(t.dataset.joinTeam){ await joinTeam(t.dataset.joinTeam); return; }
 
-  /* ★ البطولات */
-if(t.dataset.action === 'create-tournament'){ openCreateTournamentModal(); return; }
-if(t.dataset.viewTournament){ go('tournaments', { viewingTournamentId: t.dataset.viewTournament }); return; }
-if(t.dataset.joinTournament){ await joinTournament(t.dataset.joinTournament); render(); return; }
-if(t.dataset.action === 'back-from-tournament'){ state.viewingTournamentId = null; render(); return; }
-if(t.id === 'confirmCreateTournament'){
-  const name = document.getElementById('tnName').value.trim();
-  const size = document.getElementById('tnSize').value;
-  const coins = document.getElementById('tnCoins').value;
-  if(!name) return toast('الاسم مطلوب');
-  const id = await createTournament(name, size, coins);
-  closeModal();
-  if(id) go('tournaments', { viewingTournamentId: id });
-  return;
-}
-
-/* ★ الحروب */
-if(t.dataset.viewWar){ state.viewingWarId = t.dataset.viewWar; go('war'); return; }
-if(t.dataset.action === 'back-from-war'){ state.viewingWarId = null; render(); return; }
-if(t.dataset.declareWar){ await declareWar(t.dataset.declareWar); return; }
-if(t.dataset.playWarMatch){ 
-  toast('ستبدأ مباراة — النقاط تُضاف للحرب');
-  // انتقل إلى Quiz Clash
-  setTimeout(()=>startMatchmaking('g3'), 500);
-  return;
-}
-
-/* ★ الإشعارات */
-if(t.dataset.notifFilter){ state.notifFilter = t.dataset.notifFilter; render(); return; }
-
-/* ★ الإعدادات */
-if(t.dataset.action === 'save-settings'){ await saveSettings(); return; }
-
-/* ★ الإبلاغ */
-if(t.dataset.reportTarget){ openReportModal(t.dataset.reportType, t.dataset.reportTarget); return; }
-if(t.id === 'confirmReport'){
-  const reason = document.querySelector('.report-option.selected')?.dataset.reason;
-  const details = document.getElementById('reportDetails')?.value.trim() || '';
-  if(!reason) return toast('اختر سبباً');
-  await reportContent(t.dataset.reportType, t.dataset.reportTarget, reason, details);
-  closeModal();
-  return;
-}
-
-/* ★ الهدايا */
-if(t.dataset.sendGift){ openSendGiftModal(t.dataset.sendGift); return; }
-if(t.dataset.giftTab){ state.giftTab = t.dataset.giftTab; render(); return; }
-
-/* ★ المواسم */
-if(t.dataset.action === 'admin-season-end'){ await endCurrentSeason(); return; }
-
-/* ★ التخصيص */
-if(t.dataset.setTheme){
-  if(!canCustomizeTheme(state.profile)){
-    toast('🔒 الثيم يتطلب اشتراك'); return;
+  /* ============================================================
+     39) البطولات
+     ============================================================ */
+  if(t.dataset.action === 'create-tournament'){ openCreateTournamentModal(); return; }
+  if(t.dataset.viewTournament){ go('tournaments', { viewingTournamentId: t.dataset.viewTournament }); return; }
+  if(t.dataset.joinTournament){ await joinTournament(t.dataset.joinTournament); render(); return; }
+  if(t.dataset.action === 'back-from-tournament'){ state.viewingTournamentId = null; render(); return; }
+  if(t.id === 'confirmCreateTournament'){
+    const name = document.getElementById('tnName').value.trim();
+    const size = document.getElementById('tnSize').value;
+    const coins = document.getElementById('tnCoins').value;
+    if(!name) return toast('الاسم مطلوب');
+    const id = await createTournament(name, size, coins);
+    closeModal();
+    if(id) go('tournaments', { viewingTournamentId: id });
+    return;
   }
-  await applyTheme(t.dataset.setTheme);
-  return;
-}
-if(t.dataset.setFrame){
-  const frameId = t.dataset.setFrame;
-  if(!canUseFrame(state.profile, frameId)){
-    toast('🔒 هذا الإطار مقفل'); return;
-  }
-  await applyFrame(frameId);
-  return;
-}
 
-/* ★ الإدارة */
-if(t.dataset.adminTab){ state.adminTab = t.dataset.adminTab; render(); return; }
-if(t.dataset.action === 'admin-refresh'){ state.reports = []; await loadSeasonInfo(); render(); toast('تم التحديث'); return; }
-if(t.dataset.adminBan){ await adminBanUser(t.dataset.adminBan, t.dataset.adminBanned === '1'); return; }
-if(t.dataset.adminDeletePost){
-  await adminDeletePost(t.dataset.adminDeletePost, t.dataset.adminReport || null);
-  return;
-}
-if(t.dataset.adminDismiss){ await adminDismissReport(t.dataset.adminDismiss); return; }
+  /* ============================================================
+     40) الحروب
+     ============================================================ */
+  if(t.dataset.viewWar){ state.viewingWarId = t.dataset.viewWar; go('war'); return; }
+  if(t.dataset.action === 'back-from-war'){ state.viewingWarId = null; render(); return; }
+  if(t.dataset.declareWar){ await declareWar(t.dataset.declareWar); return; }
+  if(t.dataset.playWarMatch){
+    toast('ستبدأ مباراة — النقاط تُضاف للحرب');
+    setTimeout(()=>startMatchmaking('g3'), 500);
+    return;
+  }
+
+  /* ============================================================
+     41) الإشعارات
+     ============================================================ */
+  if(t.dataset.notifFilter){ state.notifFilter = t.dataset.notifFilter; render(); return; }
+
+  /* ============================================================
+     42) الإعدادات
+     ============================================================ */
+  if(t.dataset.action === 'save-settings'){ await saveSettings(); return; }
+
+  /* ============================================================
+     43) الإبلاغ
+     ============================================================ */
+  if(t.dataset.reportTarget){ openReportModal(t.dataset.reportType, t.dataset.reportTarget); return; }
+  if(t.id === 'confirmReport'){
+    const reason = document.querySelector('.report-option.selected')?.dataset.reason;
+    const details = document.getElementById('reportDetails')?.value.trim() || '';
+    if(!reason) return toast('اختر سبباً');
+    await reportContent(t.dataset.reportType, t.dataset.reportTarget, reason, details);
+    closeModal();
+    return;
+  }
+
+  /* ============================================================
+     44) الهدايا
+     ============================================================ */
+  if(t.dataset.sendGift){ openSendGiftModal(t.dataset.sendGift); return; }
+  if(t.dataset.giftTab){ state.giftTab = t.dataset.giftTab; render(); return; }
+
+  /* ============================================================
+     45) المواسم
+     ============================================================ */
+  if(t.dataset.action === 'admin-season-end'){ await endCurrentSeason(); return; }
+
+  /* ============================================================
+     46) التخصيص (ثيم / إطار)
+     ============================================================ */
+  if(t.dataset.setTheme){
+    if(!canCustomizeTheme(state.profile)){
+      toast('🔒 الثيم يتطلب اشتراك'); return;
+    }
+    await applyTheme(t.dataset.setTheme);
+    return;
+  }
+  if(t.dataset.setFrame){
+    const frameId = t.dataset.setFrame;
+    if(!canUseFrame(state.profile, frameId)){
+      toast('🔒 هذا الإطار مقفل'); return;
+    }
+    await applyFrame(frameId);
+    return;
+  }
+
+  /* ============================================================
+     47) الإدارة
+     ============================================================ */
+  if(t.dataset.adminTab){ state.adminTab = t.dataset.adminTab; render(); return; }
+  if(t.dataset.action === 'admin-refresh'){ state.reports = []; await loadSeasonInfo(); render(); toast('تم التحديث'); return; }
+  if(t.dataset.adminBan){ await adminBanUser(t.dataset.adminBan, t.dataset.adminBanned === '1'); return; }
+  if(t.dataset.adminDeletePost){
+    await adminDeletePost(t.dataset.adminDeletePost, t.dataset.adminReport || null);
+    return;
+  }
+  if(t.dataset.adminDismiss){ await adminDismissReport(t.dataset.adminDismiss); return; }
+
 });
 
 /* Input events */
@@ -6606,6 +8585,51 @@ if(e.target.id === 'nameColorPicker'){
   await saveCustomField('nameColor', e.target.value);
   const box = document.getElementById('custPreviewBox');
   if(box) box.innerHTML = renderCustomizationPreview();
+  return;
+}
+/* سمـاكة حدود الأفاتار */
+if(e.target.id === 'avatarBorderWidthSlider'){
+  await saveCustomField('avatarBorderWidth', parseInt(e.target.value));
+  const previewBox = document.getElementById('custPreviewBox');
+  if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+  const valEl = document.getElementById('borderWidthVal');
+  if(valEl) valEl.textContent = e.target.value + 'px';
+  return;
+}
+/* دوران الأفاتار */
+if(e.target.id === 'avatarRotationSlider'){
+  await saveCustomField('avatarRotation', parseInt(e.target.value));
+  const b = document.getElementById('custPreviewBox');
+  if(b) b.innerHTML = renderCustomizationPreview();
+  const v = document.getElementById('rotationVal');
+  if(v) v.textContent = e.target.value + '°';
+  return;
+}
+/* حجم الأفاتار */
+if(e.target.id === 'avatarScaleSlider'){
+  await saveCustomField('avatarScale', parseFloat(e.target.value));
+  const b = document.getElementById('custPreviewBox');
+  if(b) b.innerHTML = renderCustomizationPreview();
+  const v = document.getElementById('scaleVal');
+  if(v) v.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
+  return;
+}
+/* ضبابية الغلاف */
+if(e.target.id === 'coverBlurSlider'){
+  await saveCustomField('coverBlur', parseInt(e.target.value));
+  const b = document.getElementById('custPreviewBox');
+  if(b) b.innerHTML = renderCustomizationPreview();
+  const v = document.getElementById('blurVal');
+  if(v) v.textContent = e.target.value + 'px';
+  return;
+}
+/* تعتيم الغلاف */
+if(e.target.id === 'coverOverlaySlider'){
+  await saveCustomField('coverOverlay', parseInt(e.target.value));
+  const b = document.getElementById('custPreviewBox');
+  if(b) b.innerHTML = renderCustomizationPreview();
+  const v = document.getElementById('overlayVal');
+  if(v) v.textContent = e.target.value + '%';
   return;
 }
 if(e.target.id === 'usernameColorPicker'){
