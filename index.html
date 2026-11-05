@@ -42,11 +42,83 @@
   </div>
 </noscript>
 
-<!-- شاشة التحميل -->
+<!-- ===== شاشة بداية سينمائية ===== -->
 <div id="loader" class="loader-screen">
-  <img class="loader-logo" src="assets/logo.png" alt="NEXUS" onerror="this.onerror=null;this.src=window.LOGO_FALLBACK">
-  <div class="loader-spinner"></div>
-  <div class="loader-text">نكسوس</div>
+  <!-- جزيئات متحركة -->
+  <div class="loader-particles" id="loaderParticles"></div>
+
+  <!-- توهج خلفي -->
+  <div class="loader-glow"></div>
+
+  <!-- المحتوى المركزي -->
+  <div class="loader-content">
+
+    <!-- الشعار المتوهج -->
+    <div class="loader-logo-wrap">
+      <div class="loader-logo-ring"></div>
+      <div class="loader-logo-ring loader-logo-ring-2"></div>
+      <img class="loader-logo"
+           src="assets/logo.png"
+           alt="NEXUS"
+           onerror="this.onerror=null;this.src=window.LOGO_FALLBACK">
+      <div class="loader-shine"></div>
+    </div>
+
+    <!-- الاسم -->
+    <div class="loader-brand">
+      <span class="loader-brand-text">نكسوس</span>
+      <span class="loader-brand-sub">NEXUS</span>
+    </div>
+
+    <!-- حلقة التقدم الدائرية -->
+    <div class="loader-progress-wrap">
+      <svg class="loader-progress-svg" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="loaderGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#6c5ce7"/>
+            <stop offset="50%" stop-color="#00d2ff"/>
+            <stop offset="100%" stop-color="#ff3d71"/>
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="52" class="loader-progress-bg"/>
+        <circle cx="60" cy="60" r="52"
+                class="loader-progress-bar"
+                id="loaderProgressBar"
+                stroke="url(#loaderGrad)"/>
+      </svg>
+      <div class="loader-percentage" id="loaderPercentage">0</div>
+    </div>
+
+    <!-- نص الحالة المتغير -->
+    <div class="loader-status" id="loaderStatus">جاري التحميل…</div>
+
+    <!-- شريط تقدم خطي -->
+    <div class="loader-bar-wrap">
+      <div class="loader-bar" id="loaderBar"></div>
+    </div>
+
+    <!-- نقاط تحميل -->
+    <div class="loader-dots" id="loaderDots">
+      <span class="dot active"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+
+    <!-- نصائح -->
+    <div class="loader-tip" id="loaderTip">
+      <span class="loader-tip-icon">💡</span>
+      <span id="loaderTipText">لعبة Quiz Clash — 7 أسئلة في 15 ثانية!</span>
+    </div>
+
+  </div>
+
+  <!-- زر تخطي -->
+  <button class="loader-skip" id="loaderSkip" type="button">
+    تخطي ⟵
+  </button>
+
+  <!-- نسخة التطبيق -->
+  <div class="loader-version">v3.0.0</div>
 </div>
 
 <!-- شاشة الإعداد -->
@@ -184,69 +256,207 @@
 <script type="module" src="script.js"></script>
 
 <script>
-  /* ===== إخفاء شاشة التحميل ===== */
-  window.addEventListener('load', () => {
-    const l = document.getElementById('loader');
-    if(l && !l.classList.contains('hidden')){
-      l.style.transition = 'opacity .4s ease';
-      l.style.opacity = '0';
-      setTimeout(() => l.classList.add('hidden'), 450);
+/* ============================================================
+   🎬 محرك شاشة البداية السينمائية
+   ============================================================ */
+(function initLoader(){
+
+  const loader     = document.getElementById('loader');
+  const progressEl = document.getElementById('loaderProgressBar');
+  const percentEl  = document.getElementById('loaderPercentage');
+  const barEl      = document.getElementById('loaderBar');
+  const statusEl   = document.getElementById('loaderStatus');
+  const tipEl      = document.getElementById('loaderTipText');
+  const dotsEl     = document.getElementById('loaderDots');
+  const skipBtn    = document.getElementById('loaderSkip');
+
+  if (!loader) return;
+
+  /* ===== النصوص المتغيرة ===== */
+  const STATUS_MESSAGES = [
+    { at: 0,   text: 'تهيئة النظام…' },
+    { at: 15,  text: 'تحميل الموارد…' },
+    { at: 30,  text: 'الاتصال بالخادم…' },
+    { at: 50,  text: 'تحضير الألعاب…' },
+    { at: 65,  text: 'تجديد بياناتك…' },
+    { at: 80,  text: 'تحميل التخصيصات…' },
+    { at: 92,  text: 'على وشك الانتهاء…' },
+    { at: 100, text: 'مرحباً بك في نكسوس ✨' },
+  ];
+
+  const TIPS = [
+    '💡 لعبة Quiz Clash — 7 أسئلة في 15 ثانية!',
+    '💎 اشترك في بلس لفتح ألوان الاسم والموسيقى',
+    '👑 بلس دبل يفتح كل التخصيصات الحصرية',
+    '⚔️ تحدَّ أصدقاءك في مباريات 1v1',
+    '🎨 يمكنك تغيير شكل صورتك الشخصية',
+    '🏆 التنافس في البطولات يمنحك مكافآت ضخمة',
+    '🔥 سلسلة الدخول اليومي = مكافآت متزايدة',
+    '🌟 الإطارات الحصرية تُشترى مباشرة',
+  ];
+
+  /* ===== الحالة ===== */
+  let progress = 0;
+  let targetProgress = 0;
+  let completed = false;
+  let statusIdx = 0;
+  let tipIdx = Math.floor(Math.random() * TIPS.length);
+  let dotIdx = 0;
+
+  /* ===== إنشاء الجزيئات ===== */
+  const particlesContainer = document.getElementById('loaderParticles');
+  if (particlesContainer) {
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('span');
+      p.style.cssText = `
+        position:absolute;
+        width:${2 + Math.random() * 3}px;
+        height:${2 + Math.random() * 3}px;
+        border-radius:50%;
+        background:${['#00d2ff','#6c5ce7','#ff3d71','#f5b301','#fff'][Math.floor(Math.random()*5)]};
+        left:${Math.random() * 100}%;
+        top:${Math.random() * 100}%;
+        opacity:${0.3 + Math.random() * 0.5};
+        box-shadow:0 0 ${4 + Math.random()*8}px currentColor;
+        animation:floatParticle ${5 + Math.random() * 10}s ease-in-out infinite;
+        animation-delay:${Math.random() * 5}s;
+      `;
+      particlesContainer.appendChild(p);
     }
+
+    // keyframe ديناميكي
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes floatParticle {
+        0%, 100% {
+          transform: translate(0, 0) scale(1);
+          opacity: 0.3;
+        }
+        50% {
+          transform: translate(${Math.random() > 0.5 ? '' : '-'}${10 + Math.random()*20}px, -${20 + Math.random()*40}px) scale(1.5);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  /* ===== تحديث شريط التقدم ===== */
+  function updateProgressUI() {
+    const p = Math.min(100, Math.round(progress));
+
+    /* الرقم */
+    if (percentEl) percentEl.textContent = p;
+
+    /* حلقة دائرية */
+    if (progressEl) {
+      const circumference = 327;
+      progressEl.style.strokeDashoffset = circumference - (p / 100) * circumference;
+    }
+
+    /* شريط خطي */
+    if (barEl) barEl.style.width = p + '%';
+
+    /* نص الحالة */
+    const msg = [...STATUS_MESSAGES].reverse().find(m => p >= m.at);
+    if (msg && statusEl && statusEl.textContent !== msg.text) {
+      statusEl.style.opacity = '0';
+      setTimeout(() => {
+        statusEl.textContent = msg.text;
+        statusEl.style.transition = 'opacity .3s';
+        statusEl.style.opacity = '1';
+      }, 200);
+    }
+  }
+
+  /* ===== محاكاة تقدم واقعي (يصل لـ 90% بسرعة ثم ينتظر) ===== */
+  function simulateProgress() {
+    if (completed) return;
+
+    // كل 100ms يزيد بمقدار يناسب مرحلة "الانتظار"
+    const increment = progress < 60 ? 2 + Math.random() * 4
+                    : progress < 85 ? 1 + Math.random() * 2
+                    : 0.3 + Math.random() * 0.8;
+
+    progress = Math.min(90, progress + increment);
+    updateProgressUI();
+
+    if (progress < 90) {
+      setTimeout(simulateProgress, 120 + Math.random() * 100);
+    }
+  }
+
+  /* ===== الانتقال النهائي ===== */
+  function finishLoader() {
+    if (completed) return;
+    completed = true;
+
+    progress = 100;
+    updateProgressUI();
+
+    setTimeout(() => {
+      loader.style.opacity = '0';
+      setTimeout(() => {
+        loader.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 700);
+    }, 500);
+  }
+
+  /* ===== API عام للتحكم ===== */
+  window.NexusLoader = {
+    setProgress(p) {
+      if (completed) return;
+      targetProgress = Math.max(targetProgress, p);
+      progress = Math.max(progress, Math.min(95, targetProgress));
+      updateProgressUI();
+    },
+    finish() { finishLoader(); },
+    isActive() { return !completed; }
+  };
+
+  /* ===== زر التخطي ===== */
+  skipBtn?.addEventListener('click', () => {
+    finishLoader();
   });
 
-  /* ===== مراقبة الاتصال (مع تأخير أولي) ===== */
-  const offlineBanner = document.getElementById('offlineBanner');
-  let _offlineFlag = false;
-  
-  function showOffline(){ 
-    if(offlineBanner) offlineBanner.classList.add('show');
-    _offlineFlag = true;
-  }
-  function hideOffline(){ 
-    if(offlineBanner) offlineBanner.classList.remove('show');
-    _offlineFlag = false;
-  }
-  
-  window.addEventListener('offline', showOffline);
-  window.addEventListener('online', hideOffline);
-  
-  /* تحقق أولي بعد 3 ثوان (لتجنّب الوميض أثناء التحميل) */
+  /* ===== تدوير النصائح ===== */
+  setInterval(() => {
+    tipIdx = (tipIdx + 1) % TIPS.length;
+    if (tipEl) {
+      tipEl.style.opacity = '0';
+      setTimeout(() => {
+        tipEl.textContent = TIPS[tipIdx];
+        tipEl.style.transition = 'opacity .4s';
+        tipEl.style.opacity = '1';
+      }, 200);
+    }
+  }, 4000);
+
+  /* ===== تدوير النقاط ===== */
+  setInterval(() => {
+    const dots = dotsEl?.querySelectorAll('.dot');
+    if (!dots || !dots.length) return;
+    dots.forEach(d => d.classList.remove('active'));
+    dotIdx = (dotIdx + 1) % dots.length;
+    dots[dotIdx]?.classList.add('active');
+  }, 500);
+
+  /* ===== البدء ===== */
+  document.body.style.overflow = 'hidden';
+  updateProgressUI();
+  setTimeout(simulateProgress, 400);
+
+  /* ===== حد أقصى 20 ثانية قسرياً ===== */
   setTimeout(() => {
-    if(!navigator.onLine) showOffline();
-  }, 3000);
-
-  /* ===== زر العودة للأعلى ===== */
-  const scrollBtn = document.getElementById('scrollTopBtn');
-  window.addEventListener('scroll', () => {
-    if(scrollBtn) scrollBtn.classList.toggle('show', window.scrollY > 400);
-  }, { passive:true });
-  scrollBtn?.addEventListener('click', () => {
-    window.scrollTo({ top:0, behavior:'smooth' });
-  });
-
-  /* ===== التقاط الأخطاء العامة ===== */
-  window.addEventListener('error', (e) => {
-    console.error('Global error:', e.error || e.message);
-  });
-  window.addEventListener('unhandledrejection', (e) => {
-    console.error('Unhandled rejection:', e.reason);
-  });
-
-  /* ===== Esc يغلق المودال/القائمة ===== */
-  document.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape'){
-      const modalRoot = document.getElementById('modalRoot');
-      if(modalRoot && modalRoot.children.length){
-        modalRoot.innerHTML = '';
-      }
-      const drawer = document.getElementById('drawer');
-      const overlay = document.getElementById('overlay');
-      if(drawer?.classList.contains('open')){
-        drawer.classList.remove('open');
-        overlay?.classList.remove('show');
-      }
+    if (!completed) {
+      console.warn('Loader timeout — forcing finish');
+      finishLoader();
     }
-  });
+  }, 20000);
+
+
+})();
 </script>
 </body>
 </html>

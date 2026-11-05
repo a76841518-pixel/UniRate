@@ -2173,3 +2173,378 @@ html[dir="rtl"] .scroll-top-btn { left: auto; right: 16px; }
   0%, 100% { box-shadow: 0 0 0 0 rgba(245,179,1,.4); }
   50% { box-shadow: 0 0 0 6px rgba(245,179,1,0); }
 }
+
+/* ============================================================
+   🎬 شاشة البداية السينمائية
+   ============================================================ */
+.loader-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 30%, #0d1220 0%, #070a11 60%, #030509 100%);
+  overflow: hidden;
+  transition: opacity 0.8s ease, visibility 0.8s;
+}
+.loader-screen.hidden {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ===== جزيئات متحركة ===== */
+.loader-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.loader-particles::before,
+.loader-particles::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, rgba(0,210,255,.8), transparent),
+    radial-gradient(2px 2px at 60% 70%, rgba(108,92,231,.8), transparent),
+    radial-gradient(1px 1px at 85% 20%, rgba(255,255,255,.7), transparent),
+    radial-gradient(2px 2px at 40% 90%, rgba(255,61,113,.6), transparent),
+    radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,.5), transparent),
+    radial-gradient(2px 2px at 75% 45%, rgba(0,210,255,.6), transparent),
+    radial-gradient(1px 1px at 33% 55%, rgba(245,179,1,.7), transparent);
+  background-size: 200px 200px;
+  animation: particlesRise 25s linear infinite;
+  opacity: 0.7;
+}
+.loader-particles::after {
+  background-size: 300px 300px;
+  animation-duration: 40s;
+  animation-direction: reverse;
+  opacity: 0.4;
+}
+@keyframes particlesRise {
+  from { transform: translateY(0) rotate(0deg); }
+  to   { transform: translateY(-200px) rotate(3deg); }
+}
+
+/* ===== توهج خلفي ===== */
+.loader-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(108,92,231,.35) 0%,
+    rgba(0,210,255,.2) 30%,
+    rgba(255,61,113,.08) 55%,
+    transparent 75%
+  );
+  filter: blur(40px);
+  animation: glowPulse 3s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: .8; }
+  50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+}
+
+/* ===== محتوى شاشة التحميل ===== */
+.loader-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  text-align: center;
+  animation: loaderFadeIn .6s ease both;
+}
+@keyframes loaderFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== الشعار مع الحلقات ===== */
+.loader-logo-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+  animation: logoFloat 4s ease-in-out infinite;
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.loader-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  object-fit: cover;
+  position: relative;
+  z-index: 2;
+  box-shadow:
+    0 0 40px rgba(108,92,231,.7),
+    0 0 80px rgba(0,210,255,.4),
+    0 20px 60px rgba(0,0,0,.6);
+  animation: logoPulse 2.5s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+.loader-logo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(0,210,255,.9);
+  border-right-color: rgba(108,92,231,.6);
+  animation: ringSpin 2s linear infinite;
+}
+.loader-logo-ring-2 {
+  inset: -12px;
+  border-top-color: rgba(255,61,113,.5);
+  border-right-color: rgba(245,179,1,.4);
+  animation-direction: reverse;
+  animation-duration: 3s;
+}
+@keyframes ringSpin {
+  to { transform: rotate(360deg); }
+}
+
+.loader-shine {
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,.4) 50%, transparent 60%);
+  border-radius: 24px;
+  animation: shineSlide 2.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+@keyframes shineSlide {
+  0%   { transform: translate(-40px, -40px); opacity: 0; }
+  50%  { opacity: 1; }
+  100% { transform: translate(40px, 40px); opacity: 0; }
+}
+
+/* ===== الاسم ===== */
+.loader-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+.loader-brand-text {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #fff 0%, #a5b4ff 40%, #00d2ff 70%, #6c5ce7 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brandGradient 4s ease infinite;
+  text-shadow: 0 0 30px rgba(0,210,255,.3);
+}
+@keyframes brandGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+.loader-brand-sub {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: rgba(255,255,255,.4);
+  animation: brandSubPulse 2s ease-in-out infinite;
+}
+@keyframes brandSubPulse {
+  0%, 100% { opacity: .4; letter-spacing: 8px; }
+  50%      { opacity: .9; letter-spacing: 12px; }
+}
+
+/* ===== حلقة التقدم ===== */
+.loader-progress-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-top: 8px;
+}
+.loader-progress-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.loader-progress-bg {
+  fill: none;
+  stroke: rgba(255,255,255,.08);
+  stroke-width: 4;
+}
+.loader-progress-bar {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 327;
+  stroke-dashoffset: 327;
+  transition: stroke-dashoffset .3s ease;
+  filter: drop-shadow(0 0 8px rgba(0,210,255,.8));
+}
+.loader-percentage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 20px rgba(0,210,255,.6);
+}
+.loader-percentage::after {
+  content: '%';
+  font-size: 13px;
+  margin-inline-start: 2px;
+  color: rgba(255,255,255,.5);
+}
+
+/* ===== نص الحالة ===== */
+.loader-status {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,.75);
+  min-height: 20px;
+  letter-spacing: .3px;
+  animation: statusFade 2s ease-in-out infinite;
+}
+@keyframes statusFade {
+  0%, 100% { opacity: .7; }
+  50%      { opacity: 1; }
+}
+
+/* ===== شريط تقدم خطي ===== */
+.loader-bar-wrap {
+  width: min(280px, 70vw);
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+  position: relative;
+}
+.loader-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #6c5ce7, #00d2ff, #ff3d71);
+  background-size: 200% 100%;
+  transition: width .3s ease;
+  box-shadow: 0 0 12px rgba(0,210,255,.6);
+  animation: barGradient 2s linear infinite;
+}
+@keyframes barGradient {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* ===== نقاط تحميل ===== */
+.loader-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.loader-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  transition: all .3s;
+}
+.loader-dots .dot.active {
+  background: #00d2ff;
+  box-shadow: 0 0 10px #00d2ff;
+  transform: scale(1.4);
+}
+
+/* ===== نصائح ===== */
+.loader-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 340px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  font-size: 11.5px;
+  color: rgba(255,255,255,.65);
+  line-height: 1.5;
+  margin-top: 8px;
+  animation: tipFadeIn 0.6s ease both;
+  animation-delay: 1s;
+}
+@keyframes tipFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.loader-tip-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(245,179,1,.6));
+}
+
+/* ===== زر التخطي ===== */
+.loader-skip {
+  position: absolute;
+  top: 20px;
+  inset-inline-end: 20px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.7);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .25s;
+  z-index: 10;
+  font-family: inherit;
+}
+.loader-skip:hover {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  transform: translateX(-2px);
+}
+
+/* ===== نسخة التطبيق ===== */
+.loader-version {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: rgba(255,255,255,.25);
+  letter-spacing: 2px;
+  font-weight: 700;
+  z-index: 10;
+}
+
+/* ===== شاشة صغيرة ===== */
+@media (max-width: 400px) {
+  .loader-brand-text { font-size: 26px; }
+  .loader-logo { width: 72px; height: 72px; }
+  .loader-logo-wrap { width: 120px; height: 120px; }
+  .loader-progress-wrap { width: 100px; height: 100px; }
+  .loader-percentage { font-size: 22px; }
+  .loader-tip { font-size: 10.5px; }
+}
