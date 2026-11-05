@@ -3647,10 +3647,7 @@ html[dir="rtl"] .scroll-top-btn { left: auto; right: 16px; }
   margin-bottom: 7px;
 }
 
-/* إصلاح المعاينة - الأفاتار مع clip path */
 .preview-avatar .av{
-  width: 82px !important;
-  height: 82px !important;
   border: 2.5px solid #0c111c;
 }
 
@@ -3773,3 +3770,520 @@ html[dir="rtl"] .scroll-top-btn { left: auto; right: 16px; }
   40%  { opacity: 0; transform: translateY(-8px); }
   100% { opacity: 0; transform: translateY(-8px); }
 }
+
+/* ============================================================
+   🎨 أنماط خلفية البطاقة
+   ============================================================ */
+.bg-pattern{
+  position:absolute;inset:0;pointer-events:none;z-index:0;
+  border-radius:inherit;
+  opacity:.85;
+}
+.pc-body-section > .pc-body,
+.pc-body-section > .pc-level{ position:relative;z-index:1; }
+
+.bg-dots{
+  background-image:radial-gradient(circle,rgba(255,255,255,.08) 1px,transparent 1px);
+  background-size:12px 12px;
+}
+.bg-grid{
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:20px 20px;
+}
+.bg-stripes{
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 6px,transparent 6px 12px);
+}
+.bg-waves{
+  background-image:radial-gradient(ellipse at top,rgba(255,255,255,.06),transparent 70%);
+}
+.bg-stars{
+  background-image:
+    radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1px 1px at 60% 70%,rgba(255,255,255,.4),transparent),
+    radial-gradient(1px 1px at 85% 20%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1px 1px at 40% 90%,rgba(255,255,255,.3),transparent);
+}
+
+.pc-avatar{
+  width:88px;height:88px;
+  border-radius:26px;
+  margin-top:-46px;flex:0 0 auto;
+  padding:0;background:none;box-shadow:none;
+  position:relative;
+}
+.pc-avatar .av{
+  width:100%;height:100%;
+  border:3px solid #0c111c;
+  font-size:30px;
+  border-radius:23px;
+}
+
+.pc-avatar{
+  width:88px;height:88px;
+  margin-top:-46px;flex:0 0 auto;
+  padding:0;background:none;box-shadow:none;
+  position:relative;
+}
+.pc-avatar .av{
+  width:100%;height:100%;
+  border:3px solid #0c111c;
+  font-size:30px;
+}
+
+/* ============================================================
+   🎨 أنماط خلفية البطاقة (bgPattern)
+   ============================================================ */
+.pc-body-section{ position:relative; }
+.pc-body-section > .pc-body,
+.pc-body-section > .pc-level{ position:relative; z-index:1; }
+
+.bg-pattern{
+  position:absolute;inset:0;pointer-events:none;z-index:0;
+  border-radius:inherit;
+  opacity:.85;
+}
+
+.bg-dots{
+  background-image:radial-gradient(circle,rgba(255,255,255,.08) 1px,transparent 1px);
+  background-size:12px 12px;
+}
+.bg-grid{
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:20px 20px;
+}
+.bg-stripes{
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 6px,transparent 6px 12px);
+}
+.bg-waves{
+  background-image:radial-gradient(ellipse at top,rgba(255,255,255,.06),transparent 70%);
+}
+.bg-stars{
+  background-image:
+    radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1px 1px at 60% 70%,rgba(255,255,255,.4),transparent),
+    radial-gradient(1px 1px at 85% 20%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1px 1px at 40% 90%,rgba(255,255,255,.3),transparent),
+    radial-gradient(1px 1px at 10% 50%,rgba(255,255,255,.35),transparent);
+}
+
+/* ============================================================
+   📜 سجل اللعب — تصميم جديد
+   ============================================================ */
+.history-summary{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:8px;margin-bottom:16px;
+}
+.hs-cell{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:12px 8px;text-align:center;
+}
+.hs-val{font-size:18px;font-weight:900;color:var(--brand-2)}
+.hs-lbl{font-size:10px;color:var(--muted);margin-top:3px;font-weight:700}
+
+.history-list{display:flex;flex-direction:column;gap:10px}
+.history-card{
+  display:flex;gap:12px;padding:13px;border-radius:16px;
+  background:var(--card);border:1px solid var(--line);
+  position:relative;overflow:hidden;transition:.2s;
+}
+.history-card::before{
+  content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;
+}
+.history-card.win::before{background:linear-gradient(180deg,#22c55e,#00d2ff)}
+.history-card.loss::before{background:linear-gradient(180deg,#ff3d71,#f5b301)}
+.history-card:hover{transform:translateX(-2px);border-color:rgba(108,92,231,.4)}
+
+.hc-result{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto}
+.hc-icon{font-size:28px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
+.hc-badge{font-size:8.5px;font-weight:900;padding:2px 7px;border-radius:6px}
+.hc-badge.win{background:rgba(34,197,94,.18);color:#5ee08a;border:1px solid rgba(34,197,94,.4)}
+.hc-badge.loss{background:rgba(255,61,113,.18);color:#ff7b9d;border:1px solid rgba(255,61,113,.4)}
+
+.hc-body{flex:1;min-width:0}
+.hc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.hc-game{font-size:13px;font-weight:800}
+.hc-time{font-size:9.5px;color:var(--muted)}
+.hc-scores{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;background:rgba(255,255,255,.03);
+  border-radius:10px;margin-bottom:5px;
+}
+.hc-score{flex:1;text-align:center}
+.hc-score-label{font-size:9.5px;color:var(--muted);font-weight:700;display:block}
+.hc-score-value{font-size:17px;font-weight:900;color:var(--txt);display:block;margin-top:1px}
+.hc-score-value.win{color:var(--ok)}
+.hc-vs{font-size:10px;font-weight:900;color:var(--muted)}
+.hc-diff{font-size:11px;font-weight:800;text-align:center}
+
+/* ============================================================
+   📋 النشاطات — Timeline
+   ============================================================ */
+.activity-container{display:flex;flex-direction:column;gap:20px}
+.activity-group{display:flex;flex-direction:column}
+.activity-date-label{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.adl-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent)}
+.adl-text{
+  font-size:11px;font-weight:900;color:var(--muted);
+  padding:4px 12px;background:var(--card);
+  border:1px solid var(--line);border-radius:8px;white-space:nowrap;
+}
+
+.activity-timeline{
+  display:flex;flex-direction:column;
+  padding-inline-start:8px;border-inline-start:2px solid var(--line);
+  margin-inline-start:12px;position:relative;
+}
+.timeline-item{display:flex;gap:10px;padding:8px 0;position:relative}
+.tl-dot{
+  position:absolute;inset-inline-start:-14px;top:22px;
+  width:10px;height:10px;border-radius:50%;
+  border:2px solid #070a11;z-index:1;
+}
+.tl-content{
+  display:flex;gap:10px;flex:1;padding:10px;
+  background:var(--card);border:1px solid var(--line);
+  border-radius:12px;transition:.2s;
+}
+.tl-content:hover{background:var(--card-2);border-color:rgba(108,92,231,.35)}
+.tl-icon{
+  width:36px;height:36px;border-radius:11px;
+  display:grid;place-items:center;font-size:16px;flex:0 0 auto;
+}
+.tl-body{flex:1;min-width:0}
+.tl-text{font-size:12.5px;font-weight:700;line-height:1.5}
+.tl-time{font-size:9.5px;color:var(--muted);margin-top:3px}
+
+/* ============================================================
+   📌 تحسينات المنشورات
+   ============================================================ */
+.post.pinned{
+  border-color:rgba(245,179,1,.45);
+  background:linear-gradient(135deg,rgba(245,179,1,.06),transparent);
+}
+.pinned-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:9.5px;font-weight:900;color:#f5c451;
+  padding:3px 9px;background:rgba(245,179,1,.14);
+  border:1px solid rgba(245,179,1,.3);border-radius:7px;margin-bottom:8px;
+}
+.post.hidden-post{
+  opacity:.5;border-color:rgba(255,61,113,.35);position:relative;
+}
+.post.hidden-post::after{
+  content:"مخفي";position:absolute;top:10px;inset-inline-end:50px;
+  padding:2px 9px;background:var(--pink);color:#fff;
+  font-size:9px;font-weight:900;border-radius:6px;
+}
+.post-sub .visibility-badge{
+  display:inline-flex;align-items:center;gap:2px;
+  font-size:9px;color:var(--muted);
+}
+.pact.reblogged{color:var(--ok)}
+.pact.reblogged .ic{fill:var(--ok);stroke:var(--ok)}
+
+/* ============================================================
+   ♻️ بطاقة إعادة النشر
+   ============================================================ */
+.reblog-card{border-color:rgba(34,197,94,.25)}
+.reblog-indicator{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:9.5px;font-weight:800;color:var(--ok);
+  padding:2px 7px;background:rgba(34,197,94,.1);
+  border-radius:6px;margin-inline-start:6px;
+}
+.reblog-original{
+  padding:11px;background:rgba(255,255,255,.03);
+  border:1px solid var(--line);border-radius:12px;
+  margin-bottom:10px;transition:.2s;
+}
+.reblog-original:hover{border-color:rgba(108,92,231,.4);background:rgba(255,255,255,.05)}
+.reblog-deleted{
+  padding:14px;text-align:center;color:var(--muted);
+  font-size:12px;background:rgba(255,255,255,.03);
+  border-radius:12px;margin-bottom:10px;font-style:italic;
+}
+
+.pact.reblogged {
+  color: var(--ok);
+}
+.pact.reblogged .ic {
+  fill: var(--ok);
+  stroke: var(--ok);
+}
+
+/* ============================================================
+   🔥 نظام المنشورات الدارجة
+   ============================================================ */
+.trending-info-card{
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,61,113,.08), rgba(245,179,1,.05));
+  border: 1px solid rgba(255,61,113,.25);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.trending-info-card::before{
+  content: "";
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  background: radial-gradient(circle, rgba(255,61,113,.35), transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.trending-header{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+.trending-icon{
+  font-size: 32px;
+  filter: drop-shadow(0 4px 12px rgba(255,61,113,.6));
+  animation: trendingPulse 2s ease-in-out infinite;
+}
+@keyframes trendingPulse{
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
+.trending-title{
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--txt);
+}
+.trending-desc{
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+.trending-legend{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  position: relative;
+  z-index: 1;
+}
+.tl-item{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.tl-emoji{ font-size: 14px; }
+
+.trending-details{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  position: relative;
+  z-index: 1;
+}
+.trending-details summary{
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--brand-2);
+  list-style: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.trending-details summary::-webkit-details-marker{ display: none; }
+.trending-details summary::before{
+  content: '▸';
+  display: inline-block;
+  transition: transform .2s;
+}
+.trending-details[open] summary::before{
+  transform: rotate(90deg);
+}
+.trending-formula{
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: rgba(7,10,17,.55);
+  border-radius: 10px;
+  font-size: 10.5px;
+  line-height: 1.9;
+  color: var(--muted);
+}
+.trending-formula p{ margin: 0; }
+.trending-formula b{ color: var(--txt); }
+
+/* ---- شارة الرواج على البطاقات ---- */
+.trending-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.trending-badge.hot{
+  background: linear-gradient(135deg, rgba(255,61,113,.22), rgba(245,179,1,.15));
+  color: #ff7b9d;
+  border: 1px solid rgba(255,61,113,.4);
+  animation: hotGlow 2s ease-in-out infinite;
+}
+@keyframes hotGlow{
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,61,113,.4); }
+  50%      { box-shadow: 0 0 10px 2px rgba(255,61,113,.5); }
+}
+.trending-badge.speed{
+  background: rgba(245,179,1,.18);
+  color: #f5c451;
+  border: 1px solid rgba(245,179,1,.4);
+}
+.trending-badge.rising{
+  background: rgba(34,197,94,.16);
+  color: #5ee08a;
+  border: 1px solid rgba(34,197,94,.35);
+}
+.trending-badge.discuss{
+  background: rgba(0,210,255,.15);
+  color: #5fe3ff;
+  border: 1px solid rgba(0,210,255,.35);
+}
+
+/* ============================================================
+   🤝 زر الثقة
+   ============================================================ */
+.trust-btn{
+  background: linear-gradient(135deg, rgba(34,197,94,.08), rgba(0,210,255,.04));
+  border-color: rgba(34,197,94,.3) !important;
+}
+.trust-btn .sr-n{ color: var(--txt); }
+.trust-btn:hover{
+  background: linear-gradient(135deg, rgba(34,197,94,.16), rgba(0,210,255,.08));
+  border-color: rgba(34,197,94,.5) !important;
+}
+.trust-btn.trusted{
+  background: linear-gradient(135deg, rgba(34,197,94,.2), rgba(0,210,255,.1));
+  border-color: var(--ok) !important;
+  box-shadow: 0 0 12px rgba(34,197,94,.35);
+}
+.trust-btn.trusted .sr-n{ color: var(--ok); font-weight: 900; }
+
+.set-row.liked-final{
+  opacity: .7;
+  cursor: not-allowed;
+  background: rgba(255,61,113,.05);
+  border-color: rgba(255,61,113,.3) !important;
+}
+.set-row.liked-final .sr-n{ color: #ff7b9d; }
+.set-row[disabled]{ pointer-events: none; opacity: .6; }
+
+/* ============================================================
+   ⭐ بطاقة السمعة والهيبة
+   ============================================================ */
+.reputation-card{
+  margin-top: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(108,92,231,.1), rgba(245,179,1,.05));
+  border: 1px solid rgba(108,92,231,.28);
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.reputation-card::before{
+  content: "";
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(245,179,1,.25), transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.rep-header{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+.rep-icon{
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  display: grid; place-items: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.rep-rank-label{
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .3px;
+}
+.rep-heba-value{
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--txt);
+  letter-spacing: -.5px;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.rep-heba-value span{
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-inline-start: 4px;
+}
+
+.rep-formula{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(7,10,17,.5);
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+.rep-formula span:nth-child(even){ color: var(--brand-2); }
+
+.rep-breakdown{
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+.rb-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(255,255,255,.03);
+  border-radius: 8px;
+  font-size: 11px;
+}
+.rb-lbl{ color: var(--muted); font-weight: 700; }
+.rb-val{
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.rb-val.pos{ color: var(--ok); }
+.rb-val.neg{ color: var(--pink); }

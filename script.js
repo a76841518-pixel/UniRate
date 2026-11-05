@@ -130,6 +130,53 @@ const QUIZ_CONFIG = {
   pointsPerCorrect: 100,
   bonusPerSecond: 5,
 };
+
+/* ============================================================
+   🔥 نظام المنشورات الدارجة — ثوابت الخوارزمية
+   ============================================================ */
+const TRENDING_CONFIG = {
+  /* ---- أوزان التفاعل ---- */
+  W_LIKE:    1,      // إعجاب = 1 نقطة (إشارة خفيفة)
+  W_COMMENT: 3,      // تعليق = 3 نقاط (نقاش)
+  W_REBLOG:  5,      // إعادة نشر = 5 نقاط (انتشار)
+
+  /* ---- الانحدار الزمني (Hacker News) ---- */
+  GRAVITY: 1.5,
+
+  /* ---- طبقات الحداثة (سقف الساعات → معامل) ---- */
+  FRESHNESS: [
+    { maxHours: 1,        mult: 2.00 },   // أقل من ساعة
+    { maxHours: 3,        mult: 1.65 },
+    { maxHours: 6,        mult: 1.35 },
+    { maxHours: 12,       mult: 1.15 },
+    { maxHours: 24,       mult: 1.00 },   // يوم
+    { maxHours: 48,       mult: 0.80 },
+    { maxHours: 168,      mult: 0.50 },   // أسبوع
+    { maxHours: 720,      mult: 0.20 },   // شهر
+    { maxHours: Infinity, mult: 0.05 },   // قديم
+  ],
+
+  /* ---- سمعة الناشر ---- */
+  AUTHOR_BOOST_CAP:     0.5,      // حد أقصى +50%
+  AUTHOR_FAME_DIVISOR:  20000,
+
+  /* ---- السرعة ---- */
+  VELOCITY_LOG_FACTOR:  0.3,
+
+  /* ---- عمق النقاش ---- */
+  DISCUSSION_BOOST_CAP: 1.5,
+  DISCUSSION_DIVISOR:   50,
+
+  /* ---- حماية من التلاعب ---- */
+  SUSPICIOUS_LIKES:  50,     // فوق هذا بدون تعليقات/نشر = مشبوه
+  SUSPICIOUS_DAMPEN: 0.5,    // عقوبة −50%
+
+  /* ---- أخرى ---- */
+  MIN_AGE_HOURS:    0.5,     // تجنّب القسمة على صفر
+  MAX_PER_AUTHOR:   2,       // حد أقصى لكل ناشر في الدارج
+  MAX_TRENDING:     30,
+};
+
 /* ============ مكافآت الدخول اليومي ============ */
 const DAILY_REWARDS = [
   { day: 1, coins: 50,  xp: 10  },
@@ -667,6 +714,7 @@ const state = {
   mmUnsub: null,
   custActiveZone: null,
     _tabsScroll: null,   /* حفظ موضع تمرير التبويبات */
+    lastViewedProfileUid: null,   // ★ حقل جديد
 };
 
 /* ============ نظام المستويات ============ */
@@ -713,12 +761,12 @@ function timeAgo(ts){
   if(sec < 604800) return `قبل ${Math.floor(sec/86400)} ي`;
   return d.toLocaleDateString('ar-SA');
 }
-function avatar(u, size=44, extra='', square=false){
-  if(!u) return `<div class="av" style="--s:${size}px;background:#333"></div>`;
+function avatar(u, size=44, extra='', square=false, extraStyle=''){
+  if(!u) return `<div class="av" style="--s:${size}px;background:#333;${extraStyle}"></div>`;
   const init = (u.name||u.displayName||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('');
   const bg = u.grad || pickGrad(u.uid||u.id||u.name||'');
   const img = u.avatarUrl ? `<img src="${esc(u.avatarUrl)}" alt="">` : init;
-  return `<div class="av ${square?'sq':''} ${extra}" style="--s:${size}px;background:${bg}">${img}</div>`;
+  return `<div class="av ${square?'sq':''} ${extra}" style="--s:${size}px;background:${bg};${extraStyle}">${img}</div>`;
 }
 
 /* ============ Image Upload System ============ */
@@ -822,7 +870,6 @@ async function notify(uid, type, text, link = '') {
 
 /* ============ Navigation ============ */
 function go(page, opt={}){
-  /* ★ تصفير المنطقة النشطة عند مغادرة التخصيص */
   if(state.page === 'customization' && page !== 'customization'){
     state.custActiveZone = null;
   }
@@ -831,6 +878,10 @@ function go(page, opt={}){
     try { state.chatUnsub(); } catch(e){}
     state.chatUnsub = null; state.chatWith = null;
   }
+
+  // ★ صفّر حارس المشاهدة عند كل تنقل
+  state.lastViewedProfileUid = null;
+
   state.page = page;
   Object.assign(state, opt);
   closeDrawer();
@@ -971,6 +1022,7 @@ await setDoc(doc(db,'users',cred.user.uid), {
   likesGames: 0,
   followers: 0,
   following: 0,
+  views: 0,
   coins: 1000,
   role: 'user',
   status: 'available',
@@ -982,6 +1034,16 @@ await setDoc(doc(db,'users',cred.user.uid), {
   dailyStreak: 0,
   lastDailyReward: null,
   achievements: {},
+
+  /* ★★★ الحقول الجديدة للسمعة والهيبة ★★★ */
+  uniqueViewers:    0,
+  trustReceived:    0,
+  reportsReceived:  0,
+  blocksReceived:   0,
+  warningsReceived: 0,
+  reputation:       0,
+  heba:             0,
+
   createdAt: serverTimestamp()
 });
     await setDoc(doc(db,'usernames',username), { uid: cred.user.uid });
@@ -1030,6 +1092,7 @@ await setDoc(userRef, {
   likesGames: 0,
   followers: 0,
   following: 0,
+  views: 0,
   coins: 1000,
   role: 'user',
   status: 'available',
@@ -1041,6 +1104,16 @@ await setDoc(userRef, {
   dailyStreak: 0,
   lastDailyReward: null,
   achievements: {},
+
+  /* ★★★ الحقول الجديدة ★★★ */
+  uniqueViewers:    0,
+  trustReceived:    0,
+  reportsReceived:  0,
+  blocksReceived:   0,
+  warningsReceived: 0,
+  reputation:       0,
+  heba:             0,
+
   createdAt: serverTimestamp()
 });
       await setDoc(doc(db,'usernames',username), { uid: cred.user.uid });
@@ -1068,21 +1141,33 @@ onAuthStateChanged(auth, async (user) => {
         state.profile = snap.data();
       } else {
         console.warn('User document missing, creating placeholder...');
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          name: user.displayName || 'مستخدم',
-          username: (user.email || 'user').split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'') + Math.floor(Math.random()*1000),
-          email: user.email || '',
-          bio: 'مرحباً!',
-          avatarUrl: '', coverUrl: '',
-          grad: pickGrad(user.uid),
-          teamId: '', teamName: '', teamEmblem: '',
-          level: 1, xp: 0, fame: 0, power: 0, support: 0,
-          likesProfile: 0, likesGames: 0,
-          followers: 0, following: 0,
-          coins: 1000, role: 'user',
-          createdAt: serverTimestamp()
-        });
+console.warn('User document missing, creating placeholder...');
+await setDoc(doc(db, 'users', user.uid), {
+  uid: user.uid,
+  name: user.displayName || 'مستخدم',
+  username: (user.email || 'user').split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'') + Math.floor(Math.random()*1000),
+  email: user.email || '',
+  bio: 'مرحباً!',
+  avatarUrl: '', coverUrl: '',
+  grad: pickGrad(user.uid),
+  teamId: '', teamName: '', teamEmblem: '',
+  level: 1, xp: 0, fame: 0, power: 0, support: 0,
+  likesProfile: 0, likesGames: 0,
+  followers: 0, following: 0,
+  views: 0,
+  coins: 1000, role: 'user',
+
+  /* ★★★ الحقول الجديدة ★★★ */
+  uniqueViewers:    0,
+  trustReceived:    0,
+  reportsReceived:  0,
+  blocksReceived:   0,
+  warningsReceived: 0,
+  reputation:       0,
+  heba:             0,
+
+  createdAt: serverTimestamp()
+});
         const snap2 = await getDoc(doc(db, 'users', user.uid));
         if (snap2.exists()) state.profile = snap2.data();
       }
@@ -1188,7 +1273,9 @@ if (['profile','stats','settings','userprofile','customization'].includes(state.
 state.unsubs.push(onSnapshot(
   query(collection(db,'posts'), orderBy('createdAt','desc'), limit(50)),
   snap => {
-    state.posts = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    state.posts = snap.docs
+      .map(d => ({id: d.id, ...d.data()}))
+      .filter(p => !p.reblogOf);   /* ★ إخفاء إعادة النشر القديمة */
     if (['home','profile','userprofile'].includes(state.page)) render();
   },
   err => console.error('Posts snapshot error:', err)
@@ -1304,52 +1391,106 @@ async function toggleSave(postId){
 }
 
 async function toggleFollow(targetId){
-  const followId = `${state.user.uid}_${targetId}`;
-  const followRef = doc(db,'follows',followId);
+  const followId  = `${state.user.uid}_${targetId}`;
+  const followRef = doc(db, 'follows', followId);
   const snap = await getDoc(followRef);
+
   try {
     if(snap.exists()){
       await deleteDoc(followRef);
-      await updateDoc(doc(db,'users',state.user.uid), { following: increment(-1) });
-      await updateDoc(doc(db,'users',targetId), { followers: increment(-1) });
+      await updateDoc(doc(db, 'users', state.user.uid), { following: increment(-1) });
+      await updateDoc(doc(db, 'users', targetId), {
+        followers:  increment(-1),
+        reputation: increment(-REPUTATION_WEIGHTS.follower),
+      });
     } else {
-      await setDoc(followRef, { followerId: state.user.uid, followingId: targetId, createdAt: serverTimestamp() });
-      await updateDoc(doc(db,'users',state.user.uid), { following: increment(1) });
-      await updateDoc(doc(db,'users',targetId), { followers: increment(1) });
+      await setDoc(followRef, {
+        followerId:  state.user.uid,
+        followingId: targetId,
+        createdAt:   serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'users', state.user.uid), { following: increment(1) });
+      await updateDoc(doc(db, 'users', targetId), {
+        followers:  increment(1),
+        reputation: increment(REPUTATION_WEIGHTS.follower),
+      });
       await notify(targetId, 'follow', `<b>${esc(state.profile.name)}</b> بدأ متابعتك`);
     }
-  } catch(e){ toast('تعذّر التحديث'); }
+  } catch(e){
+    toast('تعذّر التحديث');
+  }
 }
 
 async function toggleProfileLike(targetUid){
   if(targetUid === state.user.uid) return toast('لا يمكنك إعجاب ملفك');
-  const likeRef = doc(db,'profileLikes',`${state.user.uid}_${targetUid}`);
+
+  const likeRef = doc(db, 'profileLikes', `${state.user.uid}_${targetUid}`);
   const snap = await getDoc(likeRef);
+
+  /* ★ الإعجاب نهائي — إذا وُجد، لا يمكن إزالته */
+  if(snap.exists()){
+    return toast('أعجبت بهذا الملف مسبقاً — الإعجاب نهائي');
+  }
+
   try {
-    if(snap.exists()){
-      await deleteDoc(likeRef);
-      await updateDoc(doc(db,'users',targetUid), {
-        likesProfile: increment(-1),
-        fame: increment(-10)
-      });
-      toast('تم إزالة الإعجاب');
-    } else {
-      await setDoc(likeRef, {
-        from: state.user.uid,
-        to: targetUid,
-        createdAt: serverTimestamp()
-      });
-      await updateDoc(doc(db,'users',targetUid), {
-        likesProfile: increment(1),
-        fame: increment(10)
-      });
-      await notify(targetUid, 'like',
-        `<b>${esc(state.profile.name)}</b> أعجبه ملفك الشخصي`);
-      toast('تم إعجاب الملف ✓');
-    }
+    await setDoc(likeRef, {
+      from:      state.user.uid,
+      to:        targetUid,
+      createdAt: serverTimestamp(),
+    });
+
+    await updateDoc(doc(db, 'users', targetUid), {
+      likesProfile: increment(1),
+      fame:         increment(10),
+      reputation:   increment(REPUTATION_WEIGHTS.profileLike),
+    });
+
+    await notify(targetUid, 'like',
+      `<b>${esc(state.profile.name)}</b> أعجبه ملفك الشخصي`);
+    toast('تم إعجاب الملف ✓ (نهائي)');
   } catch(e){
     console.error(e);
     toast('تعذّر التحديث');
+  }
+}
+
+/* ============================================================
+   🤝 نظام الثقة
+   ============================================================ */
+async function toggleTrust(targetUid){
+  if(targetUid === state.user.uid) return toast('لا يمكنك الثقة بنفسك');
+
+  const trustId  = `${state.user.uid}_${targetUid}`;
+  const trustRef = doc(db, 'trusts', trustId);
+  const snap     = await getDoc(trustRef);
+
+  try {
+    if(snap.exists()){
+      /* ★ إزالة الثقة */
+      await deleteDoc(trustRef);
+      await updateDoc(doc(db, 'users', targetUid), {
+        trustReceived: increment(-1),
+        reputation:    increment(-REPUTATION_WEIGHTS.trust),
+      });
+      toast('تم سحب الثقة');
+    } else {
+      /* ★ إضافة الثقة */
+      await setDoc(trustRef, {
+        from:      state.user.uid,
+        to:        targetUid,
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'users', targetUid), {
+        trustReceived: increment(1),
+        reputation:    increment(REPUTATION_WEIGHTS.trust),
+      });
+      await notify(targetUid, 'trust',
+        `<b>${esc(state.profile.name)}</b> منحك ثقته 🤝`);
+      toast('تم منح الثقة ✓');
+    }
+  } catch(e){
+    console.error(e);
+    toast('فشل تحديث الثقة');
   }
 }
 
@@ -1430,8 +1571,20 @@ async function openCommentsModal(postId){
             <div class="comment-name">${esc(c.author?.name||'')} <span class="comment-time">${timeAgo(c.createdAt)}</span></div>
             <div class="comment-text">${esc(c.text)}</div>
           </div>
+
+          <!-- ★ زر الحذف (لصاحب التعليق) -->
           ${c.authorId === state.user.uid
             ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)" data-delete-comment="${c.id}" data-post-id="${postId}">${ic('trash','xs')}</button>`
+            : ''}
+
+          <!-- ★ زر الإبلاغ (لغير صاحب التعليق) -->
+          ${c.authorId !== state.user.uid
+            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)"
+                       data-report-target="${postId}::${c.id}"
+                       data-report-type="comment"
+                       title="إبلاغ">
+                 ${ic('dots','xs')}
+               </button>`
             : ''}
         </div>`).join('') : `<div class="empty" style="padding:30px 0">${ic('comment')}<div>لا تعليقات بعد — كن الأول</div></div>`}
     </div>
@@ -1463,20 +1616,23 @@ async function createPost(data){
       }
     }
     setTimeout(checkAchievements, 500);
-    await addDoc(collection(db,'posts'), {
-      authorId: state.user.uid,
+await addDoc(collection(db,'posts'), {
+  authorId: state.user.uid,
       author: {
         name: state.profile.name,
         username: state.profile.username,
         avatarUrl: state.profile.avatarUrl || '',
         grad: state.profile.grad || pickGrad(state.user.uid)
       },
-      text: data.text,
-      media: mediaUrl,  // Base64 data URL
-      place: data.place || '',
-      likes: 0, comments: 0,
-      createdAt: serverTimestamp()
-    });
+  text: data.text,
+  media: mediaUrl,
+  place: data.place || '',
+  likes: 0, comments: 0, reblogs: 0,
+  rebloggedBy: [],       /* ★ جديد */
+  visibility: 'public',
+  pinned: false,
+  createdAt: serverTimestamp()
+});
     closeModal();
     toast('تم النشر ✓');
   } catch(e){
@@ -2501,14 +2657,42 @@ function subscribeToActivity(){
 async function reportContent(targetType, targetId, reason, details){
   try {
     await addDoc(collection(db,'reports'), {
-      reporterId: state.user.uid,
+      reporterId: state.reporterId || state.user.uid,
       reporterName: state.profile.name,
       targetType, targetId, reason, details,
       status: 'pending',
       createdAt: serverTimestamp(),
     });
+
+    /* ★ تحديد صاحب البلاغ */
+    let targetUid = null;
+    if(targetType === 'user'){
+      targetUid = targetId;
+    } else if(targetType === 'post'){
+      const ps = await getDoc(doc(db, 'posts', targetId));
+      if(ps.exists()) targetUid = ps.data().authorId;
+    } else if(targetType === 'comment'){
+      /* ★ تنسيق: postId::commentId */
+      const [postId, commentId] = String(targetId).split('::');
+      if(postId && commentId){
+        const cs = await getDoc(doc(db, 'posts', postId, 'comments', commentId));
+        if(cs.exists()) targetUid = cs.data().authorId;
+      }
+    }
+
+    /* ★ عقوبة السمعة */
+    if(targetUid && targetUid !== state.user.uid){
+      await updateDoc(doc(db, 'users', targetUid), {
+        reportsReceived: increment(1),
+        reputation:      increment(-REPUTATION_WEIGHTS.reportPenalty),
+      });
+    }
+
     toast('تم إرسال البلاغ — شكراً لك ✓');
-  } catch(e){ toast('فشل الإرسال'); }
+  } catch(e){
+    console.error(e);
+    toast('فشل الإرسال');
+  }
 }
 
 /* ============================================================
@@ -2763,6 +2947,158 @@ function emptyState(msg, icon='grid'){
   return `<div class="empty">${ic(icon)}<div>${msg}</div></div>`;
 }
 
+/* ============================================================
+   🧮 حساب درجة الرواج لمنشور
+   ============================================================ */
+function calculateTrendingScore(post){
+  if(!post || !post.createdAt) return 0;
+
+  const now = Date.now();
+  const createdAt = post.createdAt.seconds
+    ? post.createdAt.seconds * 1000
+    : (post.createdAt.toDate?.().getTime() || now);
+
+  const ageHours = Math.max(
+    TRENDING_CONFIG.MIN_AGE_HOURS,
+    (now - createdAt) / 3600000
+  );
+
+  const likes    = post.likes    || 0;
+  const comments = post.comments || 0;
+  const reblogs  = post.reblogs  || 0;
+
+  /* ---- 1) التفاعل المرجّح ---- */
+  let engagement =
+    likes    * TRENDING_CONFIG.W_LIKE +
+    comments * TRENDING_CONFIG.W_COMMENT +
+    reblogs  * TRENDING_CONFIG.W_REBLOG;
+
+  if(engagement === 0) return 0;
+
+  /* ---- 2) حماية من التلاعب (إعجابات بدون نقاش) ---- */
+  if(
+    likes > TRENDING_CONFIG.SUSPICIOUS_LIKES &&
+    comments === 0 &&
+    reblogs === 0
+  ){
+    engagement *= TRENDING_CONFIG.SUSPICIOUS_DAMPEN;
+  }
+
+  /* ---- 3) عامل الحداثة ---- */
+  let freshness = 0.05;
+  for(const tier of TRENDING_CONFIG.FRESHNESS){
+    if(ageHours <= tier.maxHours){
+      freshness = tier.mult;
+      break;
+    }
+  }
+
+  /* ---- 4) سمعة الناشر ---- */
+  const authorFame =
+    state.users[post.authorId]?.fame ||
+    post.author?.fame ||
+    0;
+  const authorBoost = 1 + Math.min(
+    TRENDING_CONFIG.AUTHOR_BOOST_CAP,
+    authorFame / TRENDING_CONFIG.AUTHOR_FAME_DIVISOR
+  );
+
+  /* ---- 5) عامل السرعة ---- */
+  const velocity = engagement / ageHours;
+  const velocityBoost = 1 + Math.log10(1 + velocity) * TRENDING_CONFIG.VELOCITY_LOG_FACTOR;
+
+  /* ---- 6) عمق النقاش ---- */
+  const discussionBoost = Math.min(
+    TRENDING_CONFIG.DISCUSSION_BOOST_CAP,
+    1 + comments / TRENDING_CONFIG.DISCUSSION_DIVISOR
+  );
+
+  /* ---- 7) الانحدار الزمني ---- */
+  const gravityDecay = Math.pow(
+    ageHours + 2,
+    TRENDING_CONFIG.GRAVITY
+  );
+
+  /* ---- النتيجة النهائية ---- */
+  const rawScore = (
+    engagement *
+    freshness *
+    authorBoost *
+    velocityBoost *
+    discussionBoost
+  ) / gravityDecay;
+
+  return Math.round(rawScore * 1000);
+}
+
+/* ============================================================
+   🏷️ تصنيف المنشور الدارج
+   ============================================================ */
+function getTrendingLabel(post, score){
+  if(!post || !post.createdAt) return null;
+
+  const now = Date.now();
+  const createdAt = post.createdAt.seconds
+    ? post.createdAt.seconds * 1000
+    : (post.createdAt.toDate?.().getTime() || now);
+  const ageHours = Math.max(0.5, (now - createdAt) / 3600000);
+
+  const engagement =
+    (post.likes    || 0) * TRENDING_CONFIG.W_LIKE +
+    (post.comments || 0) * TRENDING_CONFIG.W_COMMENT +
+    (post.reblogs  || 0) * TRENDING_CONFIG.W_REBLOG;
+  const velocity = engagement / ageHours;
+
+  /* أولوية التصنيف */
+  if(ageHours <= 3 && velocity >= 15){
+    return { icon: '⚡', label: 'سريع الانتشار', class: 'speed' };
+  }
+  if((post.comments || 0) >= 10){
+    return { icon: '💎', label: 'نقاش عميق', class: 'discuss' };
+  }
+  if(score >= 5000 && ageHours <= 12){
+    return { icon: '🔥', label: 'رواج', class: 'hot' };
+  }
+  if(score >= 1500){
+    return { icon: '📈', label: 'تصاعدي', class: 'rising' };
+  }
+  return null;
+}
+
+/* ============================================================
+   📊 بطاقة تعريفية — تُعرض أعلى تبويب الدارج
+   ============================================================ */
+function renderTrendingInfoCard(){
+  return `
+    <div class="trending-info-card">
+      <div class="trending-header">
+        <div class="trending-icon">🔥</div>
+        <div>
+          <div class="trending-title">المنشورات الدارجة</div>
+          <div class="trending-desc">ترتيب ذكي: تفاعل مرجّح + سرعة + حداثة + سمعة الناشر</div>
+        </div>
+      </div>
+      <div class="trending-legend">
+        <div class="tl-item"><span class="tl-emoji">⚡</span> سريع الانتشار</div>
+        <div class="tl-item"><span class="tl-emoji">🔥</span> رواج</div>
+        <div class="tl-item"><span class="tl-emoji">📈</span> تصاعدي</div>
+        <div class="tl-item"><span class="tl-emoji">💎</span> نقاش عميق</div>
+      </div>
+      <details class="trending-details">
+        <summary>كيف يُحسب الترتيب؟</summary>
+        <div class="trending-formula">
+          <p>• <b>الإعجاب</b> = 1 نقطة · <b>التعليق</b> = 3 · <b>إعادة النشر</b> = 5</p>
+          <p>• <b>عامل الحداثة</b> = ×2 لأقل من ساعة → ×0.05 بعد شهر</p>
+          <p>• <b>عامل السرعة</b> = التفاعل ÷ العمر (بمقياس لوغاريتمي)</p>
+          <p>• <b>سمعة الناشر</b> = حتى +50% حسب الشهرة</p>
+          <p>• <b>الانحدار</b> = 1 / (العمر + 2)<sup>1.5</sup> — نمط Hacker News</p>
+          <p>• <b>حماية</b> = إعجابات كثيرة بدون نقاش تُخفَّض 50%</p>
+        </div>
+      </details>
+    </div>
+  `;
+}
+
 function pageHome(){
   const tabs = `
     <div class="tabs">
@@ -2783,14 +3119,33 @@ function pageHome(){
   } else if(state.homeTab === 'follow'){
     const posts = state.posts.filter(p=>state.followed.has(p.authorId));
     body = posts.length ? posts.map(p=>postCard(p)).join('') : emptyState('تابع المزيد لتظهر منشوراتهم','users');
-  } else {
-    const posts = [...state.posts].sort((a,b)=>{
-      const sa = ((a.likes*2)+(a.comments*3)) / Math.max(((Date.now()-(a.createdAt?.seconds*1000||0))/3600000), 0.4);
-      const sb = ((b.likes*2)+(b.comments*3)) / Math.max(((Date.now()-(b.createdAt?.seconds*1000||0))/3600000), 0.4);
-      return sb-sa;
-    });
-    body = `<div class="section-title">${ic('fire','sm')} الأكثر تفاعلاً</div>` +
-      (posts.length ? posts.map(p=>postCard(p,true)).join('') : emptyState('لا توجد منشورات دارجة','fire'));
+} else {
+    /* 🔥 الخوارزمية العميقة */
+    const scored = state.posts
+      .filter(p => !p.hidden && !p.reblogOf)   // استبعاد المخفي والنسخ القديمة
+      .map(p => ({
+        post: p,
+        score: calculateTrendingScore(p),
+      }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    /* تنويع: 2 كحد أقصى لكل ناشر */
+    const seen = new Map();
+    const diversified = [];
+    for(const x of scored){
+      const count = seen.get(x.post.authorId) || 0;
+      if(count < TRENDING_CONFIG.MAX_PER_AUTHOR){
+        diversified.push(x);
+        seen.set(x.post.authorId, count + 1);
+      }
+      if(diversified.length >= TRENDING_CONFIG.MAX_TRENDING) break;
+    }
+
+    body = renderTrendingInfoCard() +
+      (diversified.length
+        ? diversified.map(x => postCard(x.post, true, x.score)).join('')
+        : emptyState('لا توجد منشورات دارجة بعد — كن أول من ينشر!', 'fire'));
   }
   return `<h1 class="page-title">الرئيسية</h1>${tabs}${body}`;
 }
@@ -2805,12 +3160,29 @@ function suggestCard(u){
   </div>`;
 }
 
-function postCard(p, trendMode=false){
+function postCard(p, trendMode=false, trendingScore=null){
+  /* ♻️ إعادة نشر — مع حماية كاملة */
+  if(p && p.reblogOf){
+    try {
+      return renderReblogCard(p, trendMode);
+    } catch(err){
+      console.error('renderReblogCard crashed:', err, p);
+      return `<article class="post card reblog-card" style="padding:16px;text-align:center">
+        <div style="color:var(--muted);font-size:12px">
+          ⚠️ تعذّر عرض إعادة النشر
+        </div>
+      </article>`;
+    }
+  }
+  if(!p || !p.id) return '';
+
   const liked = state.liked[p.id];
   const saved = state.saved[p.id];
-  const isMine = p.authorId === state.user.uid;
-  const score = (((p.likes||0)*2 + (p.comments||0)*3) / Math.max(((Date.now()-(p.createdAt?.seconds*1000||0))/3600000), 0.4)).toFixed(0);
-  return `<article class="post card">
+  const visIcon = p.visibility==='followers'?'users':p.visibility==='private'?'lock':'globe';
+  const visLabel = p.visibility==='followers'?'متابعون':p.visibility==='private'?'خاص':'';
+
+  return `<article class="post card ${p.pinned?'pinned':''} ${p.hidden?'hidden-post':''}">
+    ${p.pinned ? '<div class="pinned-badge">📌 مثبّت</div>' : ''}
     <header class="post-h">
       <div data-view-profile="${p.authorId}" style="cursor:pointer">${avatar(p.author, 44)}</div>
       <div style="flex:1;min-width:0">
@@ -2818,29 +3190,299 @@ function postCard(p, trendMode=false){
         <div class="post-sub">
           <span>@${esc(p.author?.username||'')}</span>·
           <span>${timeAgo(p.createdAt)}</span>
+          ${p.edited?'· <span>معدّل</span>':''}
+          ${visLabel?`· <span class="visibility-badge">${ic(visIcon,'xs')} ${visLabel}</span>`:''}
           ${p.place?`·<span style="display:inline-flex;align-items:center;gap:3px">${ic('location','xs')}${esc(p.place)}</span>`:''}
         </div>
       </div>
-      ${trendMode ? `<span class="pill pink">${ic('fire','xs')} ${nf(score)}</span>` : ''}
-      ${isMine ? `<button class="post-menu-btn" data-delete-post="${p.id}" title="حذف">${ic('trash','sm')}</button>` : ''}
+${trendMode ? (() => {
+  try {
+    /* ★ حل دفاعي: إذا لم يُمرَّر trendingScore — احسبه */
+    const ts = (typeof trendingScore === 'number' && trendingScore > 0)
+      ? trendingScore
+      : (typeof calculateTrendingScore === 'function' ? calculateTrendingScore(p) : 0);
+
+    const label = typeof getTrendingLabel === 'function'
+      ? getTrendingLabel(p, ts)
+      : null;
+
+    if(label){
+      return `<span class="trending-badge ${label.class}">${label.icon} ${label.label}</span>`;
+    }
+    if(ts > 0){
+      return `<span class="pill pink">${ic('fire','xs')} ${nf(ts)}</span>`;
+    }
+    return '';
+  } catch(err){
+    console.warn('trending badge error:', err);
+    return '';
+  }
+})() : ''}
+      <button class="post-menu-btn" data-post-menu="${p.id}" title="خيارات">${ic('dots','sm')}</button>
     </header>
-    <p class="post-text">${esc(p.text).replace(/\n/g,'<br>')}</p>
+    <p class="post-text">${esc(p.text||'').replace(/\n/g,'<br>')}</p>
     ${p.media ? `<div class="post-media"><img src="${esc(p.media)}" alt="" onerror="this.style.display='none'"></div>` : ''}
     <div class="post-actions">
       <button class="pact ${liked?'liked':''}" data-like="${p.id}">${ic('heart','sm')} ${nf(p.likes)}</button>
       <button class="pact" data-open-comments="${p.id}">${ic('comment','sm')} ${nf(p.comments)}</button>
-      <button class="pact" data-action="toast" data-msg="تم نسخ الرابط">${ic('share','sm')}</button>
+${(()=>{
+  const wasReblogged = (p.rebloggedBy || []).includes(state.user.uid);
+  return `<button class="pact ${wasReblogged?'reblogged':''}" data-reblog="${p.id}" title="${wasReblogged?'إلغاء إعادة النشر':'إعادة النشر'}">
+    ${ic('share','sm')} ${nf(p.reblogs||0)}
+  </button>`;
+})()}
       <button class="pact ml ${saved?'saved':''}" data-save="${p.id}">${ic('bookmark','sm')}</button>
-      ${!isMine ? `
-  <button class="post-menu-btn" 
-          data-report-target="${p.id}" 
-          data-report-type="post" 
-          title="إبلاغ">
-    ${ic('dots','sm')}
-  </button>
-` : ''}
     </div>
   </article>`;
+}
+
+function renderReblogCard(p, trendMode){
+  const snap = p.reblogSnapshot;
+  const original = (!snap && p.reblogOf)
+    ? state.posts.find(x => x.id === p.reblogOf)
+    : null;
+
+  const oAuthor  = snap?.author  || original?.author  || null;
+  const oText    = snap?.text    ?? original?.text    ?? '';
+  const oMedia   = snap?.media   ?? original?.media   ?? '';
+  const oTime    = snap?.createdAt || original?.createdAt || null;
+  const isDeleted = !snap && !original;
+
+  return `<article class="post card reblog-card">
+    <header class="post-h">
+      <div data-view-profile="${esc(p.authorId||'')}" style="cursor:pointer">${avatar(p.author||{}, 44)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="post-name">
+          <span data-view-profile="${esc(p.authorId||'')}" style="cursor:pointer">${esc(p.author?.name||'مستخدم')}</span>
+          <span class="reblog-indicator">${ic('share','xs')} أعاد النشر</span>
+        </div>
+        <div class="post-sub">
+          <span>@${esc(p.author?.username||'')}</span>·<span>${timeAgo(p.createdAt)}</span>
+        </div>
+      </div>
+      <button class="post-menu-btn" data-post-menu="${esc(p.id||'')}">${ic('dots','sm')}</button>
+    </header>
+
+    ${isDeleted ? `
+      <div class="reblog-deleted">⚠️ المحتوى الأصلي غير متوفر</div>
+    ` : `
+      <div class="reblog-original">
+        <header class="post-h" style="margin-bottom:8px">
+          ${avatar(oAuthor||{}, 32)}
+          <div style="flex:1;min-width:0">
+            <div class="post-name" style="font-size:12.5px">${esc(oAuthor?.name||'مستخدم')}</div>
+            <div class="post-sub">
+              <span>@${esc(oAuthor?.username||'')}</span>·<span>${timeAgo(oTime)}</span>
+            </div>
+          </div>
+        </header>
+        <p class="post-text" style="font-size:13px">${esc(oText||'').replace(/\n/g,'<br>')}</p>
+        ${oMedia ? `<div class="post-media" style="height:150px"><img src="${esc(oMedia)}" alt="" onerror="this.style.display='none'"></div>` : ''}
+      </div>
+    `}
+
+    <div class="post-actions">
+      <button class="pact ${state.liked[p.id]?'liked':''}" data-like="${esc(p.id||'')}">${ic('heart','sm')} ${nf(p.likes)}</button>
+      <button class="pact" data-open-comments="${esc(p.id||'')}">${ic('comment','sm')} ${nf(p.comments)}</button>
+    </div>
+  </article>`;
+}
+
+/* ============ ♻️ إعادة النشر ============ */
+async function toggleReblog(postId){
+  const original = state.posts.find(p => p.id === postId);
+  if(!original) return toast('المنشور غير موجود');
+  if(original.authorId === state.user.uid) return toast('لا يمكنك إعادة نشر منشورك');
+  if(original.hidden) return toast('المنشور مخفي');
+  if(original.reblogOf) return toast('لا يمكن إعادة نشر منشور معاد');
+
+  const already = (original.rebloggedBy || []).includes(state.user.uid);
+
+  try {
+    if(already){
+      await updateDoc(doc(db,'posts',postId), {
+        rebloggedBy: arrayRemove(state.user.uid),
+        reblogs: increment(-1),
+      });
+      toast('تم إلغاء إعادة النشر');
+    } else {
+      await updateDoc(doc(db,'posts',postId), {
+        rebloggedBy: arrayUnion(state.user.uid),
+        reblogs: increment(1),
+      });
+      await notify(original.authorId, 'reblog',
+        `<b>${esc(state.profile.name)}</b> أعاد نشر منشورك`);
+      toast('تمت إعادة النشر ✓');
+    }
+  } catch(e){
+    console.error(e);
+    toast('فشل');
+  }
+}
+
+/* ============ 📋 قائمة خيارات المنشور ============ */
+function openPostActionsModal(postId){
+  const p = state.posts.find(x => x.id === postId);
+  if(!p) return toast('المنشور غير موجود');
+  const isMine = p.authorId === state.user.uid;
+  const isAdmin = state.profile?.role === 'admin';
+
+  let actions = '';
+
+  if(isMine && !p.reblogOf){
+    actions += `
+      <button class="set-row" data-edit-post="${postId}">
+        ${ic('edit','sm')} <span class="sr-txt"><span class="sr-n">تعديل المنشور</span></span>
+      </button>
+      <button class="set-row" data-pin-post="${postId}">
+        ${ic('star','sm')} <span class="sr-txt"><span class="sr-n">${p.pinned?'إلغاء التثبيت':'تثبيت على الملف'}</span></span>
+      </button>
+      <button class="set-row" data-set-visibility="${postId}">
+        ${ic('eye','sm')} <span class="sr-txt"><span class="sr-n">الخصوصية</span><span class="sr-d">${p.visibility==='followers'?'المتابعون فقط':p.visibility==='private'?'خاص':'عام'}</span></span>
+      </button>
+    `;
+  }
+
+  if(!isMine && !p.reblogOf){
+    actions += `
+${(()=>{
+  const wasReblogged = (p.rebloggedBy || []).includes(state.user.uid);
+  return `<button class="set-row" data-reblog="${postId}" style="${wasReblogged?'color:var(--ok)':''}">
+    ${ic('share','sm')} <span class="sr-txt"><span class="sr-n" style="${wasReblogged?'color:var(--ok)':''}">${wasReblogged?'إلغاء إعادة النشر':'إعادة النشر'}</span></span>
+  </button>`;
+})()}
+      <button class="set-row" data-report-target="${postId}" data-report-type="post">
+        ${ic('shield','sm')} <span class="sr-txt"><span class="sr-n">إبلاغ</span></span>
+      </button>
+    `;
+  }
+
+  if(isMine || isAdmin){
+    actions += `
+      <button class="set-row" data-delete-post="${postId}" style="color:#ff7b9d">
+        ${ic('trash','sm')} <span class="sr-txt"><span class="sr-n" style="color:#ff7b9d">حذف المنشور</span></span>
+      </button>
+    `;
+  }
+
+  if(isAdmin && !isMine){
+    actions += `
+      <button class="set-row" data-admin-hide-post="${postId}" style="color:#f5c451">
+        ${ic('lock','sm')} <span class="sr-txt"><span class="sr-n" style="color:#f5c451">${p.hidden?'إظهار المنشور':'إخفاء المنشور'}</span></span>
+      </button>
+      <button class="set-row" data-admin-ban="${p.authorId}" data-admin-banned="0" style="color:#ff7b9d">
+        ${ic('lock','sm')} <span class="sr-txt"><span class="sr-n" style="color:#ff7b9d">حظر صاحب المنشور</span></span>
+      </button>
+    `;
+  }
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">خيارات المنشور</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">${ic('close','sm')}</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">${actions}</div>
+  `);
+}
+
+/* ============ ✏️ تعديل المنشور ============ */
+function editPostModal(postId){
+  const p = state.posts.find(x => x.id === postId);
+  if(!p) return toast('المنشور غير موجود');
+
+  openModal(`
+    <h3>✏️ تعديل المنشور</h3>
+    <div class="field">
+      <label>النص</label>
+      <textarea class="input" id="editPostText" rows="4"
+        style="resize:vertical;max-height:200px">${esc(p.text||'')}</textarea>
+      <div class="char-counter" id="editPostCounter">${(p.text||'').length} / 1000</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="savePostEditBtn" data-post-id="${postId}">حفظ</button>
+    </div>
+  `);
+  const el = document.getElementById('editPostText');
+  const counter = document.getElementById('editPostCounter');
+  el?.addEventListener('input', () => {
+    counter.textContent = `${el.value.length} / 1000`;
+    if(el.value.length > 1000) el.value = el.value.slice(0,1000);
+  });
+}
+
+async function savePostEdit(postId){
+  const text = document.getElementById('editPostText')?.value.trim() || '';
+  try {
+    await updateDoc(doc(db,'posts',postId), {
+      text, edited: true, editedAt: serverTimestamp(),
+    });
+    closeModal();
+    toast('تم الحفظ ✓');
+  } catch(e){ toast('فشل'); }
+}
+
+/* ============ 📌 تثبيت المنشور ============ */
+async function togglePinPost(postId){
+  const p = state.posts.find(x => x.id === postId);
+  if(!p) return;
+  try {
+    await updateDoc(doc(db,'posts',postId), { pinned: !p.pinned });
+    closeModal();
+    toast(p.pinned ? 'تم إلغاء التثبيت' : 'تم التثبيت 📌');
+  } catch(e){ toast('فشل'); }
+}
+
+/* ============ 👁️ خصوصية المنشور ============ */
+function openVisibilityPicker(postId){
+  const p = state.posts.find(x => x.id === postId);
+  if(!p) return;
+  const cur = p.visibility || 'public';
+
+  openModal(`
+    <h3>👁️ خصوصية المنشور</h3>
+    <div class="sub">من يمكنه رؤية المنشور؟</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${[
+        ['public','🌐','عام','الجميع يمكنه الرؤية'],
+        ['followers','👥','المتابعون فقط',''],
+        ['private','🔒','خاص','أنت فقط'],
+      ].map(([k,emoji,lbl,desc])=>`
+        <button class="set-row" data-save-visibility="${k}" data-post-id="${postId}"
+                style="${cur===k?'border-color:var(--brand-2)':''}">
+          <span style="font-size:20px">${emoji}</span>
+          <span class="sr-txt">
+            <span class="sr-n">${lbl}</span>
+            ${desc?`<span class="sr-d">${desc}</span>`:''}
+          </span>
+          ${cur===k?ic('check','sm'):''}
+        </button>
+      `).join('')}
+    </div>
+  `);
+}
+
+async function savePostVisibility(postId, visibility){
+  try {
+    await updateDoc(doc(db,'posts',postId), { visibility });
+    closeModal();
+    toast('تم التحديث ✓');
+  } catch(e){ toast('فشل'); }
+}
+
+/* ============ 🚫 إخفاء/إظهار (للمشرف) ============ */
+async function adminHidePost(postId){
+  const p = state.posts.find(x => x.id === postId);
+  if(!p) return;
+  try {
+    await updateDoc(doc(db,'posts',postId), {
+      hidden: !p.hidden,
+      hiddenBy: state.user.uid,
+      hiddenAt: serverTimestamp(),
+    });
+    closeModal();
+    toast(p.hidden ? 'تم الإظهار' : 'تم الإخفاء');
+  } catch(e){ toast('فشل'); }
 }
 
 function pageMessages(){
@@ -3241,15 +3883,23 @@ function formatJoinDate(ts){
 /* ============================================================
    🎯 مودال إجراءات اللاعب (لسِواه)
    ============================================================ */
-function openProfileActionsModal(uid){
+async function openProfileActionsModal(uid){
   const u = state.users[uid];
   if(!u) return;
   if(uid === state.user.uid){
     toast('هذا ملفك الشخصي — استخدم زر تعديل');
     return;
   }
+
   const blocked = (state.profile.blockedUsers || []).includes(uid);
-  const liked = state.profileLiked[uid];
+  const liked   = state.profileLiked[uid];
+
+  /* ★ جلب حالة الثقة */
+  let hasTrusted = false;
+  try {
+    const trustSnap = await getDoc(doc(db, 'trusts', `${state.user.uid}_${uid}`));
+    hasTrusted = trustSnap.exists();
+  } catch(e){}
 
   openModal(`
     <div style="text-align:center;margin-bottom:16px">
@@ -3258,28 +3908,61 @@ function openProfileActionsModal(uid){
       <div class="muted" style="font-size:11px">@${esc(u.username)}</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
+
+      <!-- ★ زر الثقة (الأهم) -->
+      <button class="set-row trust-btn ${hasTrusted?'trusted':''}"
+              data-toggle-trust="${uid}" data-close-modal="1">
+        <span style="font-size:20px">${hasTrusted ? '✅' : '🤝'}</span>
+        <span class="sr-txt">
+          <span class="sr-n">${hasTrusted ? 'سحب الثقة' : 'منح الثقة'}</span>
+          <span class="sr-d">${hasTrusted ? 'أنت تثق بهذا اللاعب' : 'الأهم في السمعة (+100)'}</span>
+        </span>
+      </button>
+
       <button class="set-row" data-open-chat="${uid}" data-close-modal="1">
         ${ic('message','sm')} <span class="sr-txt"><span class="sr-n">مراسلة</span></span>
       </button>
-      <button class="set-row" data-profile-like="${uid}" data-close-modal="1">
-        ${ic('heart','sm')} <span class="sr-txt"><span class="sr-n">${liked?'إزالة الإعجاب':'إعجاب الملف'}</span></span>
+
+      <!-- ★ الإعجاب نهائي -->
+      <button class="set-row ${liked?'liked-final':''}"
+              ${liked ? 'disabled' : `data-profile-like="${uid}" data-close-modal="1"`}>
+        ${ic('heart','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n">${liked ? 'معجب ✓ (نهائي)' : 'إعجاب الملف'}</span>
+          <span class="sr-d">${liked ? 'لا يمكن إزالة الإعجاب' : '+10 شهرة +5 سمعة'}</span>
+        </span>
       </button>
+
       <button class="set-row" data-support="${uid}" data-close-modal="1">
         ${ic('star','sm')} <span class="sr-txt"><span class="sr-n">دعم +10</span></span>
       </button>
+
       <button class="set-row" data-send-gift="${uid}" data-close-modal="1">
         ${ic('crown','sm')} <span class="sr-txt"><span class="sr-n">إهداء</span></span>
       </button>
+
       <button class="set-row" data-send-challenge="${uid}" data-close-modal="1">
         ${ic('bolt','sm')} <span class="sr-txt"><span class="sr-n">تحدي</span></span>
       </button>
+
       <button class="set-row" data-report-target="${uid}" data-report-type="user" data-close-modal="1">
         ${ic('shield','sm')} <span class="sr-txt"><span class="sr-n">إبلاغ</span></span>
       </button>
+
       <button class="set-row" data-block-user="${uid}" data-close-modal="1"
               style="${blocked?'color:#ff7b9d':''}">
         ${ic('lock','sm')} <span class="sr-txt"><span class="sr-n" style="${blocked?'color:#ff7b9d':''}">${blocked?'إلغاء الحظر':'حظر'}</span></span>
       </button>
+
+      ${state.profile?.role === 'admin' ? `
+        <button class="set-row" data-warn-user="${uid}" data-close-modal="1" style="color:#f5c451">
+          ${ic('shield','sm')} <span class="sr-txt">
+            <span class="sr-n" style="color:#f5c451">تحذير إداري</span>
+            <span class="sr-d">−${REPUTATION_WEIGHTS.warningPenalty} سمعة</span>
+          </span>
+        </button>
+      ` : ''}
+
     </div>
     <div class="row" style="margin-top:14px">
       <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إغلاق</button>
@@ -3525,16 +4208,27 @@ async function deleteProfileImage(type){
    ============================================================ */
 async function toggleBlockUser(uid){
   if(uid === state.user.uid) return toast('لا يمكنك حظر نفسك');
+
   const blocked = state.profile.blockedUsers || [];
   try {
     if(blocked.includes(uid)){
       await updateDoc(doc(db,'users',state.user.uid), { blockedUsers: arrayRemove(uid) });
+      await updateDoc(doc(db,'users',uid), {
+        blocksReceived: increment(-1),
+        reputation:     increment(REPUTATION_WEIGHTS.blockPenalty),
+      });
       toast('تم إلغاء الحظر');
     } else {
       await updateDoc(doc(db,'users',state.user.uid), { blockedUsers: arrayUnion(uid) });
+      await updateDoc(doc(db,'users',uid), {
+        blocksReceived: increment(1),
+        reputation:     increment(-REPUTATION_WEIGHTS.blockPenalty),
+      });
       toast('تم الحظر');
     }
-  } catch(e){ toast('فشل'); }
+  } catch(e){
+    toast('فشل');
+  }
 }
 
 /* ============================================================
@@ -3733,23 +4427,60 @@ async function renderStatsContent(){
 /* ============================================================
    📋 محتوى تبويب النشاطات
    ============================================================ */
-function renderActivityContent(){
-  if(!state.activityLog.length){
-    return emptyState('لا نشاطات بعد','clock');
-  }
-  return `
-    <div class="card">
-      ${state.activityLog.map(a=>`
-        <div class="activity-item">
-          <div class="activity-icon" style="background:rgba(108,92,231,.15)">${a.icon || '📌'}</div>
-          <div class="activity-text">
-            <div class="activity-desc">${esc(a.text || '')}</div>
-            <div class="activity-time">${timeAgo(a.createdAt)}</div>
-          </div>
+function renderActivityTimeline(activities){
+  const groups = {};
+  activities.forEach(a => {
+    const d = a.createdAt?.toDate?.() || new Date(a.createdAt || Date.now());
+    const key = d.toDateString();
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  });
+
+  const typeColors = {
+    match:'#6c5ce7', gift_sent:'#f5b301', gift_received:'#22c55e',
+    subscription:'#00d2ff', achievement:'#ec4899', team:'#ff8a00',
+    post:'#22d3ee', like:'#ff3d71', follow:'#10b981',
+  };
+
+  return Object.entries(groups).map(([dateStr, items]) => {
+    const date = new Date(dateStr);
+    const isToday = new Date().toDateString() === dateStr;
+    const isYesterday = new Date(Date.now()-86400000).toDateString() === dateStr;
+    const label = isToday ? 'اليوم' : isYesterday ? 'أمس'
+      : date.toLocaleDateString('ar-EG', {day:'numeric', month:'long'});
+
+    return `
+      <div class="activity-group">
+        <div class="activity-date-label">
+          <span class="adl-line"></span>
+          <span class="adl-text">${label}</span>
+          <span class="adl-line"></span>
         </div>
-      `).join('')}
-    </div>
-  `;
+        <div class="activity-timeline">
+          ${items.map(a => {
+            const color = typeColors[a.type] || '#6c5ce7';
+            return `
+              <div class="timeline-item">
+                <div class="tl-dot" style="background:${color};box-shadow:0 0 12px ${color}88"></div>
+                <div class="tl-content">
+                  <div class="tl-icon" style="background:${color}18;color:${color}">${a.icon||'📌'}</div>
+                  <div class="tl-body">
+                    <div class="tl-text">${esc(a.text||'')}</div>
+                    <div class="tl-time">${timeAgo(a.createdAt)}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderActivityContent(){
+  if(!state.activityLog.length) return emptyState('لا نشاطات بعد','clock');
+  return `<div class="activity-container">${renderActivityTimeline(state.activityLog)}</div>`;
 }
 
 /* ============================================================
@@ -3758,13 +4489,13 @@ function renderActivityContent(){
 async function renderGiftsContent(){
   try {
     const [rSnap, sSnap] = await Promise.all([
-      getDocs(query(collection(db,'gifts'), where('to','==',state.user.uid),
-                    orderBy('createdAt','desc'), limit(50))),
-      getDocs(query(collection(db,'gifts'), where('from','==',state.user.uid),
-                    orderBy('createdAt','desc'), limit(50))),
+      getDocs(query(collection(db,'gifts'), where('to','==',state.user.uid), limit(100))),
+      getDocs(query(collection(db,'gifts'), where('from','==',state.user.uid), limit(100))),
     ]);
-    const received = rSnap.docs.map(d=>({id:d.id, ...d.data()}));
-    const sent = sSnap.docs.map(d=>({id:d.id, ...d.data()}));
+    const received = rSnap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+    const sent = sSnap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
     const tab = state.giftTab || 'received';
     const list = tab === 'received' ? received : sent;
 
@@ -3800,35 +4531,61 @@ async function renderGiftsContent(){
 /* ============================================================
    🕒 محتوى تبويب سجل اللعب
    ============================================================ */
+function renderHistoryCard(h){
+  const isWin = h.result === 'win';
+  const diff = (h.myScore||0) - (h.opponentScore||0);
+  return `
+    <div class="history-card ${isWin?'win':'loss'}">
+      <div class="hc-result">
+        <div class="hc-icon">${isWin?'🏆':'💔'}</div>
+        <div class="hc-badge ${isWin?'win':'loss'}">${isWin?'فوز':'خسارة'}</div>
+      </div>
+      <div class="hc-body">
+        <div class="hc-top">
+          <div class="hc-game">${esc(h.gameName||'Quiz Clash')}</div>
+          <div class="hc-time">${timeAgo(h.playedAt)}</div>
+        </div>
+        <div class="hc-scores">
+          <div class="hc-score">
+            <span class="hc-score-label">أنت</span>
+            <span class="hc-score-value ${isWin?'win':''}">${h.myScore||0}</span>
+          </div>
+          <div class="hc-vs">VS</div>
+          <div class="hc-score">
+            <span class="hc-score-label">الخصم</span>
+            <span class="hc-score-value">${h.opponentScore||0}</span>
+          </div>
+        </div>
+        <div class="hc-diff" style="color:${isWin?'var(--ok)':'var(--pink)'}">
+          ${diff > 0 ? '+' : ''}${diff} نقطة
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function renderHistoryContent(){
   try {
-    const snap = await getDocs(
-      query(collection(db,'users',state.user.uid,'matchHistory'),
-            orderBy('playedAt','desc'), limit(30))
-    );
+    const snap = await getDocs(query(
+      collection(db,'users',state.user.uid,'matchHistory'),
+      orderBy('playedAt','desc'), limit(50)
+    ));
     const history = snap.docs.map(d=>({id:d.id, ...d.data()}));
     if(!history.length) return emptyState('لم تلعب أي مباراة بعد','gamepad');
 
-    return history.map(h=>`
-      <div class="card" style="margin-bottom:8px;padding:12px">
-        <div class="row">
-          <div style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
-            background:${h.result==='win'?'rgba(34,197,94,.15)':'rgba(255,61,113,.15)'};
-            color:${h.result==='win'?'var(--ok)':'var(--pink)'};font-weight:900;flex:0 0 auto">
-            ${h.result==='win'?'✓':'✗'}
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:800">${esc(h.gameName||'Quiz Clash')}</div>
-            <div class="muted" style="font-size:10.5px">${timeAgo(h.playedAt)}</div>
-          </div>
-          <div style="text-align:left">
-            <div style="font-size:14px;font-weight:900;color:${h.result==='win'?'var(--ok)':'var(--pink)'}">
-              ${h.myScore || 0} - ${h.opponentScore || 0}
-            </div>
-            <div class="muted" style="font-size:9.5px">${h.result==='win'?'فوز':'خسارة'}</div>
-          </div>
-        </div>
-      </div>`).join('');
+    const wins = history.filter(h=>h.result==='win').length;
+    const losses = history.filter(h=>h.result==='loss').length;
+    const wr = Math.round(wins/history.length*100);
+
+    return `
+      <div class="history-summary">
+        <div class="hs-cell"><div class="hs-val">${history.length}</div><div class="hs-lbl">مباراة</div></div>
+        <div class="hs-cell"><div class="hs-val" style="color:var(--ok)">${wins}</div><div class="hs-lbl">فوز</div></div>
+        <div class="hs-cell"><div class="hs-val" style="color:var(--pink)">${losses}</div><div class="hs-lbl">خسارة</div></div>
+        <div class="hs-cell"><div class="hs-val">${wr}%</div><div class="hs-lbl">نسبة فوز</div></div>
+      </div>
+      <div class="history-list">${history.map(h=>renderHistoryCard(h)).join('')}</div>
+    `;
   } catch(e){
     console.error(e);
     return emptyState('خطأ في التحميل','gamepad');
@@ -3989,37 +4746,105 @@ async function renderGamesContent(){
 /* ============================================================
    🧭 موجّه محتوى تبويبات الملف
    ============================================================ */
-/* ============================================================
-   🧭 موجّه محتوى تبويبات الملف
-   ============================================================ */
 async function renderProfileTabBody(){
   const tab = state.profileTab || 'posts';
 
-  /* ★ المنشورات */
-  if(tab === 'posts'){
-    const myPosts = state.posts.filter(x => x.authorId === state.user.uid);
-    return myPosts.length
-      ? myPosts.map(x => postCard(x)).join('')
-      : emptyState('لم تنشر بعد','grid');
+  try {
+    /* ★ المنشورات (بدون إعادة النشر) */
+    if(tab === 'posts'){
+      const myPosts = state.posts.filter(x =>
+        x.authorId === state.user.uid && !x.reblogOf
+      );
+      return myPosts.length
+        ? myPosts.map(x => postCard(x)).join('')
+        : emptyState('لم تنشر بعد','grid');
+    }
+
+    /* ★ إعادة النشر */
+if(tab === 'reblogs'){
+  const myReblogs = state.posts.filter(x =>
+    (x.rebloggedBy || []).includes(state.user.uid)
+  );
+  return myReblogs.length
+    ? myReblogs.map(x => postCard(x)).join('')
+    : emptyState('لم تعد نشر أي منشور','share');
+}
+
+    /* ★ المحفوظات */
+    if(tab === 'saved'){
+      const saved = state.posts.filter(x => state.saved[x.id]);
+      return saved.length
+        ? saved.map(x => postCard(x)).join('')
+        : emptyState('لا توجد منشورات محفوظة','bookmark');
+    }
+
+    if(tab === 'history')      return await renderHistoryContent();
+    if(tab === 'games')        return await renderGamesContent();
+    if(tab === 'inventory')    return await renderInventoryContent();
+    if(tab === 'achievements') return renderAchievementsContent();
+    if(tab === 'stats')        return await renderStatsContent();
+    if(tab === 'activity')     return renderActivityContent();
+    if(tab === 'gifts')        return await renderGiftsContent();
+
+    return emptyState('اختر تبويباً','grid');
+
+  } catch(err) {
+    console.error('renderProfileTabBody error:', err);
+    return emptyState('تعذّر تحميل المحتوى — حاول مجدداً','close');
   }
+}
 
-  /* ★ المحفوظات */
-  if(tab === 'saved'){
-    const saved = state.posts.filter(x => state.saved[x.id]);
-    return saved.length
-      ? saved.map(x => postCard(x)).join('')
-      : emptyState('لا توجد منشورات محفوظة','bookmark');
-  }
+/* ============================================================
+   ⭐ نظام السمعة والثقة والهيبة
+   ============================================================ */
+const REPUTATION_WEIGHTS = {
+  uniqueViewer:   3,      // ★ المشاهدات الفريدة (ضعيف)
+  follower:       15,     // ★ المتابعون
+  profileLike:    5,      // ★ إعجاب الملف (نهائي)
+  trust:          100,    // ★ الثقة (الأهم)
 
-  if(tab === 'history')      return await renderHistoryContent();
-  if(tab === 'games')        return await renderGamesContent();
-  if(tab === 'inventory')    return await renderInventoryContent();
-  if(tab === 'achievements') return renderAchievementsContent();
-  if(tab === 'stats')        return await renderStatsContent();
-  if(tab === 'activity')     return renderActivityContent();
-  if(tab === 'gifts')        return await renderGiftsContent();
+  reportPenalty:  50,     // ★ بلاغ
+  blockPenalty:   30,     // ★ حظر
+  warningPenalty: 100,    // ★ تنبيه إداري
+};
 
-  return emptyState('اختر تبويباً','grid');
+/* حساب السمعة من البيانات (للعرض فقط — الحفظ يتم بـ increment) */
+function calculateReputationFromData(u){
+  if(!u) return 0;
+  const W = REPUTATION_WEIGHTS;
+
+  const positive =
+    (u.uniqueViewers || 0)    * W.uniqueViewer +
+    (u.followers || 0)        * W.follower +
+    (u.likesProfile || 0)     * W.profileLike +
+    (u.trustReceived || 0)    * W.trust;
+
+  const negative =
+    (u.reportsReceived || 0)  * W.reportPenalty +
+    (u.blocksReceived || 0)   * W.blockPenalty +
+    (u.warningsReceived || 0) * W.warningPenalty;
+
+  return Math.max(0, positive - negative);
+}
+
+/* الهيبة = الشهرة + القوة + السمعة */
+function calculateHeba(u){
+  if(!u) return 0;
+  const rep = typeof u.reputation === 'number'
+    ? u.reputation
+    : calculateReputationFromData(u);
+  return (u.fame || 0) + (u.power || 0) + rep;
+}
+
+/* تصنيف المكانة حسب الهيبة */
+function getHebaRank(heba){
+  if(heba < 500)      return { emoji:'🥚', label:'مبتدئ',   color:'#8a95ad' };
+  if(heba < 2000)     return { emoji:'🌱', label:'ناشئ',    color:'#22c55e' };
+  if(heba < 5000)     return { emoji:'⭐', label:'معروف',   color:'#00d2ff' };
+  if(heba < 15000)    return { emoji:'💎', label:'بارز',    color:'#a78bfa' };
+  if(heba < 50000)    return { emoji:'👑', label:'مرموق',   color:'#f5b301' };
+  if(heba < 150000)   return { emoji:'🔥', label:'نخبة',    color:'#ff3d71' };
+  return                     { emoji:'🌌', label:'أسطورة', color:'#ec4899' };
 }
 
 /* ============================================================
@@ -4062,49 +4887,59 @@ async function calculatePower(uid) {
   } catch (e) { return 0; }
 }
 
-async function recalcFamePower(uid) {
+async function recalcFamePower(uid){
   try {
-    const [fame, power] = await Promise.all([calculateFame(uid), calculatePower(uid)]);
-    await updateDoc(doc(db, 'users', uid), { fame, power });
-  } catch (e) { console.warn('recalcFamePower:', e); }
+    const [fame, power] = await Promise.all([
+      calculateFame(uid),
+      calculatePower(uid),
+    ]);
+
+    /* اقرأ reputation الحالي لحساب heba */
+    const uSnap = await getDoc(doc(db, 'users', uid));
+    const rep = uSnap.exists() ? (uSnap.data().reputation || 0) : 0;
+    const heba = fame + power + rep;
+
+    await updateDoc(doc(db, 'users', uid), { fame, power, heba });
+  } catch(e){
+    console.warn('recalcFamePower:', e);
+  }
 }
 
 /* ============================================================
    👁️ تسجيل مشاهدة الملف (Requirement 4)
    ============================================================ */
-async function recordProfileView(targetUid) {
-  if (!targetUid || targetUid === state.user.uid) return;
-  
-  // ★ الحل: فحص الـ sessionStorage أولاً لمنع تكرار المشاهدة في نفس الجلسة
-  const sessionKey = `viewed_${targetUid}`;
-  if (sessionStorage.getItem(sessionKey)) return; 
+/* ============================================================
+   👁️ تسجيل مشاهدة الملف — بدون أي حدود
+   (لا sessionStorage، لا نافذة ساعة، كل مشاهدة = +1)
+   ============================================================ */
+async function recordProfileView(targetUid){
+  if(!targetUid || targetUid === state.user.uid) return;
 
   try {
     const viewId = `${state.user.uid}_${targetUid}`;
     const viewRef = doc(db, 'profileViews', viewId);
-    const snap = await getDoc(viewRef);
-    const hourAgo = Date.now() - 60 * 60 * 1000;
-    if (snap.exists()) {
-      const last = snap.data().lastViewAt?.toMillis?.() || 0;
-      if (last > hourAgo) {
-        sessionStorage.setItem(sessionKey, 'true'); // حفظ في الجلسة
-        return; // تجاهل إذا شوهد في آخر ساعة
-      }
-    }
-    
-    // تسجيل المشاهدة
+    const viewSnap = await getDoc(viewRef);
+    const isFirstView = !viewSnap.exists();
+
     await setDoc(viewRef, {
-      viewerId: state.user.uid,
-      targetId: targetUid,
+      viewerId:   state.user.uid,
+      targetId:   targetUid,
       lastViewAt: serverTimestamp(),
-      views: increment(1),
+      views:      increment(1),
     }, { merge: true });
-    
-    await updateDoc(doc(db, 'users', targetUid), { views: increment(1) });
-    
-    // ★ حفظ في الجلسة لمنع التكرار
-    sessionStorage.setItem(sessionKey, 'true'); 
-  } catch (e) { console.warn('recordProfileView:', e); }
+
+    const updates = {
+      views:         increment(1),
+      reputation:    increment(REPUTATION_WEIGHTS.uniqueViewer),
+    };
+    if(isFirstView){
+      updates.uniqueViewers = increment(1);
+    }
+
+    await updateDoc(doc(db, 'users', targetUid), updates);
+  } catch(e){
+    console.warn('recordProfileView:', e);
+  }
 }
 
 /* ============================================================
@@ -4233,138 +5068,248 @@ async function openInteractionsModal(uid, type) {
 /* ============================================================
    📑 محتوى تبويبات ملف الغير (Requirement 7)
    ============================================================ */
-async function renderUserTabBody(uid, tab) {
-  if (tab === 'posts') {
-    const posts = state.posts.filter(x => x.authorId === uid);
-    return posts.length ? posts.map(x => postCard(x)).join('') : emptyState('لا منشورات','grid');
-  }
+async function renderUserTabBody(uid, tab){
+  if(!uid) return emptyState('مستخدم غير موجود','user');
 
-  if (tab === 'achievements') {
-    const user = state.users[uid] || {};
-    const unlocked = user.achievements || {};
-    const all = Object.entries(ACHIEVEMENT_DEFS);
-    const done = all.filter(([id]) => unlocked[id]).length;
-    return `
-      <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:14px">
-        <div class="ach-icon" style="width:56px;height:56px;font-size:26px">🏅</div>
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:900">${done} / ${all.length}</div>
-          <div class="ach-prog" style="margin-top:8px">
-            <span style="width:${(done/all.length*100).toFixed(0)}%"></span>
+  try {
+    /* ★ المنشورات */
+    if(tab === 'posts'){
+      const posts = state.posts.filter(x => x.authorId === uid && !x.reblogOf);
+      return posts.length
+        ? posts.map(x => postCard(x)).join('')
+        : emptyState('لا منشورات','grid');
+    }
+
+    /* ★ إعادة النشر */
+if(tab === 'reblogs'){
+  const reblogs = state.posts.filter(x =>
+    (x.rebloggedBy || []).includes(uid)
+  );
+  return reblogs.length
+    ? reblogs.map(x => postCard(x)).join('')
+    : emptyState('لا إعادة نشر','share');
+}
+
+    /* ★ سجل اللعب — بدون orderBy */
+    if(tab === 'history'){
+      try {
+        const snap = await getDocs(
+          collection(db, 'users', uid, 'matchHistory')
+        );
+        const history = snap.docs
+          .map(d => ({id: d.id, ...d.data()}))
+          .sort((a,b) => (b.playedAt?.seconds || 0) - (a.playedAt?.seconds || 0))
+          .slice(0, 50);
+
+        if(!history.length) return emptyState('لم يلعب أي مباراة بعد','gamepad');
+
+        const wins   = history.filter(h => h.result === 'win').length;
+        const losses = history.filter(h => h.result === 'loss').length;
+        const wr     = Math.round(wins / history.length * 100);
+
+        return `
+          <div class="history-summary">
+            <div class="hs-cell"><div class="hs-val">${history.length}</div><div class="hs-lbl">مباراة</div></div>
+            <div class="hs-cell"><div class="hs-val" style="color:var(--ok)">${wins}</div><div class="hs-lbl">فوز</div></div>
+            <div class="hs-cell"><div class="hs-val" style="color:var(--pink)">${losses}</div><div class="hs-lbl">خسارة</div></div>
+            <div class="hs-cell"><div class="hs-val">${wr}%</div><div class="hs-lbl">نسبة فوز</div></div>
+          </div>
+          <div class="history-list">${history.map(h => renderHistoryCard(h)).join('')}</div>
+        `;
+      } catch(e){
+        console.error('history error:', e);
+        return emptyState('تعذّر تحميل سجل اللعب','gamepad');
+      }
+    }
+
+    /* ★ النشاطات — بدون orderBy */
+    if(tab === 'activity'){
+      try {
+        const snap = await getDocs(
+          collection(db, 'users', uid, 'activity')
+        );
+        const acts = snap.docs
+          .map(d => ({id: d.id, ...d.data()}))
+          .sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+          .slice(0, 50);
+
+        if(!acts.length) return emptyState('لا نشاطات','clock');
+        return `<div class="activity-container">${renderActivityTimeline(acts)}</div>`;
+      } catch(e){
+        console.error('activity error:', e);
+        return emptyState('تعذّر تحميل النشاطات','clock');
+      }
+    }
+
+    /* ★ المقتنيات */
+    if(tab === 'inventory'){
+      try {
+        const snap = await getDocs(
+          collection(db, 'users', uid, 'inventory')
+        );
+        const items = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        if(!items.length) return emptyState('لا مقتنيات','store');
+        return `
+          <div class="inv-grid">
+            ${items.map(item => `
+              <div class="inv-item" style="cursor:default">
+                <div class="ii-emoji">${item.emoji || '🎁'}</div>
+                <div class="ii-name">${esc(item.name || '')}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch(e){
+        console.error('inventory error:', e);
+        return emptyState('تعذّر تحميل المقتنيات','store');
+      }
+    }
+
+    /* ★ الإنجازات */
+    if(tab === 'achievements'){
+      const user = state.users[uid] || {};
+      const unlocked = user.achievements || {};
+      const all = Object.entries(ACHIEVEMENT_DEFS);
+      const done = all.filter(([id]) => unlocked[id]).length;
+      return `
+        <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:14px">
+          <div class="ach-icon" style="width:56px;height:56px;font-size:26px">🏅</div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:900">${done} / ${all.length}</div>
+            <div class="ach-prog" style="margin-top:8px">
+              <span style="width:${(done/all.length*100).toFixed(0)}%"></span>
+            </div>
           </div>
         </div>
-      </div>
-      ${all.map(([id, def]) => {
-        const isUnlocked = !!unlocked[id];
-        return `
-          <div class="achievement-card ${isUnlocked?'unlocked':'locked'}">
-            <div class="ach-tier-icon ${def.tier}">${def.icon}</div>
+        ${all.map(([id, def]) => {
+          const isUnlocked = !!unlocked[id];
+          return `
+            <div class="achievement-card ${isUnlocked?'unlocked':'locked'}">
+              <div class="ach-tier-icon ${def.tier}">${def.icon}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:800">${def.name}</div>
+                <div class="ach-d">${def.desc}</div>
+              </div>
+              ${isUnlocked ? '<span class="pill ok">✓</span>' : '<span class="muted" style="font-size:10px">مقفل</span>'}
+            </div>
+          `;
+        }).join('')}
+      `;
+    }
+
+    /* ★ الإحصائيات */
+    if(tab === 'stats'){
+      const user = state.users[uid] || {};
+      let matches = [];
+      try {
+        const snap = await getDocs(
+          collection(db, 'users', uid, 'matchHistory')
+        );
+        matches = snap.docs.map(d => d.data());
+      } catch(e){ console.error('stats history:', e); }
+      const wins = matches.filter(m => m.result === 'win').length;
+      const losses = matches.filter(m => m.result === 'loss').length;
+      return `
+        <div class="stat-grid" style="margin-bottom:16px">
+          <div class="stat-box"><div class="sv">${nf(user.fame)}</div><div class="sl">الشهرة</div></div>
+          <div class="stat-box"><div class="sv">${nf(user.power)}</div><div class="sl">القوة</div></div>
+          <div class="stat-box"><div class="sv">${nf(user.support)}</div><div class="sl">الدعم</div></div>
+          <div class="stat-box"><div class="sv">${nf(user.views||0)}</div><div class="sl">مشاهدات</div></div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-box"><div class="sv">${matches.length}</div><div class="sl">مباراة</div></div>
+          <div class="stat-box"><div class="sv">${wins}</div><div class="sl">فوز</div></div>
+          <div class="stat-box"><div class="sv">${losses}</div><div class="sl">خسارة</div></div>
+          <div class="stat-box"><div class="sv">${matches.length ? Math.round(wins/matches.length*100) : 0}%</div><div class="sl">نسبة الفوز</div></div>
+        </div>
+      `;
+    }
+
+    /* ★ الألعاب */
+    if(tab === 'games'){
+      try {
+        const snap = await getDocs(
+          collection(db, 'users', uid, 'matchHistory')
+        );
+        const matches = snap.docs.map(d => d.data());
+        const byGame = {};
+        GAMES.forEach(g => { byGame[g.id] = { played:0, wins:0, losses:0, xp:0 }; });
+        matches.forEach(m => {
+          const gid = m.gameId || 'g3';
+          if(!byGame[gid]) byGame[gid] = { played:0, wins:0, losses:0, xp:0 };
+          byGame[gid].played++;
+          if(m.result === 'win'){ byGame[gid].wins++; byGame[gid].xp += 100; }
+          else { byGame[gid].losses++; byGame[gid].xp += 30; }
+        });
+        const hasAny = GAMES.some(g => byGame[g.id].played > 0);
+        if(!hasAny) return emptyState('لم يلعب بعد','gamepad');
+
+        return GAMES.map(g => {
+          const s = byGame[g.id];
+          if(!s.played) return '';
+          const wr = Math.round(s.wins/s.played*100);
+          const lvl = Math.floor(s.xp/500)+1;
+          return `
+            <div class="game-stat-card">
+              <div class="gs-header">
+                <div class="gs-icon" style="background:${g.grad}">${ic(g.icon,'sm')}</div>
+                <div style="flex:1">
+                  <div class="gs-title">${g.name}</div>
+                  <div class="gs-sub">${g.cat}</div>
+                </div>
+                <div class="game-level-badge" style="background:${g.grad}">
+                  <span class="glb-l">LV</span><span class="glb-v">${lvl}</span>
+                </div>
+              </div>
+              <div class="gs-grid">
+                <div class="gs-cell"><div class="v">${s.played}</div><div class="l">مباراة</div></div>
+                <div class="gs-cell"><div class="v" style="color:var(--ok)">${s.wins}</div><div class="l">فوز</div></div>
+                <div class="gs-cell"><div class="v" style="color:var(--pink)">${s.losses}</div><div class="l">خسارة</div></div>
+                <div class="gs-cell"><div class="v">${wr}%</div><div class="l">نسبة</div></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch(e){
+        console.error('games error:', e);
+        return emptyState('تعذّر تحميل الألعاب','gamepad');
+      }
+    }
+
+    /* ★ الهدايا — بدون orderBy */
+    if(tab === 'gifts'){
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'gifts'), where('to','==',uid), limit(100))
+        );
+        const gifts = snap.docs
+          .map(d => ({id: d.id, ...d.data()}))
+          .sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+          .slice(0, 50);
+
+        return gifts.length ? gifts.map(g => `
+          <div class="gift-history-item received">
+            <div style="font-size:26px">${g.giftEmoji || '🎁'}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:800">${def.name}</div>
-              <div class="ach-d">${def.desc}</div>
+              <div style="font-size:12.5px;font-weight:800">${esc(g.fromName || 'مجهول')}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(g.message || g.giftName || '')}</div>
+              <div style="font-size:9.5px;color:var(--muted);margin-top:3px">${timeAgo(g.createdAt)}</div>
             </div>
-            ${isUnlocked ? '<span class="pill ok">✓</span>' : '<span class="muted" style="font-size:10px">مقفل</span>'}
+            <div class="pill gold">${ic('coin','xs')} ${nf(g.price || 0)}</div>
           </div>
-        `;
-      }).join('')}
-    `;
-  }
+        `).join('') : emptyState('لا هدايا','star');
+      } catch(e){
+        console.error('gifts error:', e);
+        return emptyState('تعذّر تحميل الهدايا','star');
+      }
+    }
 
-  if (tab === 'stats') {
-    const user = state.users[uid] || {};
-    let matches = [];
-    try {
-      const snap = await getDocs(query(
-        collection(db,'users',uid,'matchHistory'),
-        orderBy('playedAt','desc'), limit(100)
-      ));
-      matches = snap.docs.map(d => d.data());
-    } catch (e) {}
-    const wins = matches.filter(m=>m.result==='win').length;
-    const losses = matches.filter(m=>m.result==='loss').length;
-    return `
-      <div class="stat-grid" style="margin-bottom:16px">
-        <div class="stat-box"><div class="sv">${nf(user.fame)}</div><div class="sl">الشهرة</div></div>
-        <div class="stat-box"><div class="sv">${nf(user.power)}</div><div class="sl">القوة</div></div>
-        <div class="stat-box"><div class="sv">${nf(user.support)}</div><div class="sl">الدعم</div></div>
-        <div class="stat-box"><div class="sv">${nf(user.views||0)}</div><div class="sl">مشاهدات</div></div>
-      </div>
-      <div class="stat-grid">
-        <div class="stat-box"><div class="sv">${matches.length}</div><div class="sl">مباراة</div></div>
-        <div class="stat-box"><div class="sv">${wins}</div><div class="sl">فوز</div></div>
-        <div class="stat-box"><div class="sv">${losses}</div><div class="sl">خسارة</div></div>
-        <div class="stat-box"><div class="sv">${matches.length?Math.round(wins/matches.length*100):0}%</div><div class="sl">نسبة الفوز</div></div>
-      </div>
-    `;
-  }
+    return emptyState('اختر تبويباً','grid');
 
-  if (tab === 'games') {
-    try {
-      const snap = await getDocs(query(
-        collection(db,'users',uid,'matchHistory'),
-        orderBy('playedAt','desc'), limit(500)
-      ));
-      const matches = snap.docs.map(d => d.data());
-      const byGame = {};
-      GAMES.forEach(g => { byGame[g.id] = { played:0, wins:0, losses:0, xp:0 }; });
-      matches.forEach(m => {
-        const gid = m.gameId || 'g3';
-        if (!byGame[gid]) byGame[gid] = { played:0, wins:0, losses:0, xp:0 };
-        byGame[gid].played++;
-        if (m.result === 'win') { byGame[gid].wins++; byGame[gid].xp += 100; }
-        else { byGame[gid].losses++; byGame[gid].xp += 30; }
-      });
-      return GAMES.map(g => {
-        const s = byGame[g.id];
-        if (!s.played) return '';
-        const wr = Math.round(s.wins/s.played*100);
-        const lvl = Math.floor(s.xp/500)+1;
-        return `
-          <div class="game-stat-card">
-            <div class="gs-header">
-              <div class="gs-icon" style="background:${g.grad}">${ic(g.icon,'sm')}</div>
-              <div style="flex:1">
-                <div class="gs-title">${g.name}</div>
-                <div class="gs-sub">${g.cat}</div>
-              </div>
-              <div class="game-level-badge" style="background:${g.grad}">
-                <span class="glb-l">LV</span><span class="glb-v">${lvl}</span>
-              </div>
-            </div>
-            <div class="gs-grid">
-              <div class="gs-cell"><div class="v">${s.played}</div><div class="l">مباراة</div></div>
-              <div class="gs-cell"><div class="v" style="color:var(--ok)">${s.wins}</div><div class="l">فوز</div></div>
-              <div class="gs-cell"><div class="v" style="color:var(--pink)">${s.losses}</div><div class="l">خسارة</div></div>
-              <div class="gs-cell"><div class="v">${wr}%</div><div class="l">نسبة</div></div>
-            </div>
-          </div>
-        `;
-      }).join('') || emptyState('لم يلعب بعد','gamepad');
-    } catch (e) { return emptyState('خطأ','gamepad'); }
+  } catch(err) {
+    console.error('renderUserTabBody top-level error:', err);
+    return emptyState('تعذّر تحميل المحتوى','close');
   }
-
-  if (tab === 'gifts') {
-    try {
-      const snap = await getDocs(query(
-        collection(db,'gifts'), where('to','==',uid),
-        orderBy('createdAt','desc'), limit(50)
-      ));
-      const gifts = snap.docs.map(d => ({id:d.id, ...d.data()}));
-      return gifts.length ? gifts.map(g => `
-        <div class="gift-history-item received">
-          <div style="font-size:26px">${g.giftEmoji || '🎁'}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12.5px;font-weight:800">${esc(g.fromName||'مجهول')}</div>
-            <div style="font-size:11px;color:var(--muted)">${esc(g.message||g.giftName||'')}</div>
-            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">${timeAgo(g.createdAt)}</div>
-          </div>
-          <div class="pill gold">${ic('coin','xs')} ${nf(g.price||0)}</div>
-        </div>
-      `).join('') : emptyState('لا هدايا','star');
-    } catch (e) { return emptyState('خطأ','star'); }
-  }
-
-  return emptyState('اختر تبويباً','grid');
 }
 
 /* ============================================================
@@ -4570,11 +5515,11 @@ function renderCustomizationPreview(){
             <div class="preview-theme-tag">${ic('image','xs')} ${theme.name}</div>
           </div>
 
-          <div class="pc-avatar preview-avatar cust-zone-target ${activeZone==='avatar'?'active':''}"
-               data-cust-zone="avatar">
-            <div class="av" style="--s:82px;${buildAvatarInnerStyle(cust)}">
-              ${avatar(p, 82)}
-            </div>
+<div class="pc-avatar preview-avatar cust-zone-target ${activeZone==='avatar'?'active':''}"
+     data-cust-zone="avatar">
+  ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
+  <div class="cust-zone-hint-avatar">${ic('camera','xs')}</div>
+</div>
             <div class="cust-zone-hint-avatar">${ic('camera','xs')}</div>
           </div>
         </div>
@@ -4647,6 +5592,26 @@ async function saveCustomField(field, value){
   }
 }
 
+function buildBgPattern(pattern){
+  if(!pattern || pattern === 'none') return '';
+  return `<div class="bg-pattern bg-${pattern}" aria-hidden="true"></div>`;
+}
+
+function buildEffectiveLevelStyle(cust, levelStyle){
+  if(cust.levelColor && cust.levelColor !== '#00d2ff'){
+    return `background:${cust.levelColor};color:#070a11;`;
+  }
+  return levelStyle || '';
+}
+
+function buildLevelStyle(cust, levelStyle){
+  // إذا المستخدم اختار لوناً مخصصاً — يستخدمه كخلفية بدلاً من الستايل
+  if(cust.levelColor && cust.levelColor !== '#00d2ff'){
+    return `background:${cust.levelColor};color:#070a11;box-shadow:0 4px 12px ${cust.levelColor}66;`;
+  }
+  return levelStyle;
+}
+
 function pageProfile(){ // ★ تم إزالة async
   const p = state.profile;
   if(!p){
@@ -4671,17 +5636,18 @@ function pageProfile(){ // ★ تم إزالة async
     </div>`;
   }
 
-  const tabs = [
-    {id:'posts',        label:'المنشورات', icon:'grid'},
-    {id:'saved',        label:'المحفوظات', icon:'bookmark'},
-    {id:'history',      label:'سجل اللعب',  icon:'clock'},
-    {id:'games',        label:'الألعاب',    icon:'gamepad'},
-    {id:'inventory',    label:'المقتنيات', icon:'store'},
-    {id:'achievements', label:'الإنجازات', icon:'medal'},
-    {id:'stats',        label:'الإحصائيات', icon:'chart'},
-    {id:'activity',     label:'النشاطات', icon:'clock'},
-    {id:'gifts',        label:'الهدايا',    icon:'star'},
-  ];
+const tabs = [
+  {id:'posts',        label:'المنشورات',   icon:'grid'},
+  {id:'reblogs',      label:'إعادة النشر', icon:'share'},       // ★
+  {id:'saved',        label:'المحفوظات',   icon:'bookmark'},
+  {id:'history',      label:'سجل اللعب',   icon:'clock'},
+  {id:'games',        label:'الألعاب',     icon:'gamepad'},
+  {id:'inventory',    label:'المقتنيات',   icon:'store'},
+  {id:'achievements', label:'الإنجازات',   icon:'medal'},
+  {id:'stats',        label:'الإحصائيات',  icon:'chart'},
+  {id:'activity',     label:'النشاطات',    icon:'clock'},
+  {id:'gifts',        label:'الهدايا',     icon:'star'},
+];
 
   const validIds = tabs.map(t=>t.id);
   if(!validIds.includes(state.profileTab)) state.profileTab = 'posts';
@@ -4694,20 +5660,19 @@ function pageProfile(){ // ★ تم إزالة async
   const avatarShapeClass = `shape-${cust.avatarShape}`;
   const avatarBorderClass = `border-${cust.avatarBorder}`;
 
-  const levelStyle = {
-    default: '', badge: 'background:linear-gradient(135deg,#a78bfa,#6c5ce7);',
-    gem: 'background:linear-gradient(135deg,#00d2ff,#0891b2);',
-    crown: 'background:linear-gradient(135deg,#f5b301,#ff8a00);',
-    star: 'background:linear-gradient(135deg,#ec4899,#f43f5e);',
-    minimal: 'background:rgba(255,255,255,.1);color:#fff;',
-  }[cust.levelStyle] || '';
+const levelStyle = {
+  default:'', badge:'background:linear-gradient(135deg,#a78bfa,#6c5ce7);',
+  gem:'background:linear-gradient(135deg,#00d2ff,#0891b2);',
+  crown:'background:linear-gradient(135deg,#f5b301,#ff8a00);',
+  star:'background:linear-gradient(135deg,#ec4899,#f43f5e);',
+  minimal:'background:rgba(255,255,255,.1);color:#fff;',
+}[cust.levelStyle] || '';
 
   const levelBarBg = cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` : '';
   const levelBadgeBg = cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : '';
 
-  // ★ [التحديث الجديد] جلب البيانات في الخلفية بعد رسم الصفحة
-  setTimeout(() => {
-    // 1. جلب التواقيع وتحديث الواجهة
+setTimeout(() => {
+    // 1. التواقيع
     getDocs(query(collection(db, 'users', state.user.uid, 'signatures'), orderBy('createdAt', 'desc'), limit(3)))
       .then(sSnap => {
         const signatures = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -4721,13 +5686,64 @@ function pageProfile(){ // ★ تم إزالة async
             sigContainer.innerHTML = `<div class="sig-preview-item" style="animation:none; opacity:0.6; color:#64748b;">✍️ لا تواقيع</div>`;
           }
         }
-      }).catch(e => console.warn(e));
+      }).catch(e => console.warn('signatures:', e));
 
-    // 2. جلب محتوى التبويب الحالي
-    renderProfileTabBody().then(bodyHtml => {
-      const bodyContainer = document.getElementById('profileTabBody');
-      if (bodyContainer) bodyContainer.innerHTML = bodyHtml;
-    }).catch(e => console.warn(e));
+/* ★ بطاقة السمعة */
+try {
+  const repBox = document.getElementById('reputationBox');
+  if(repBox){
+    const p = state.profile;
+    const rep = typeof p.reputation === 'number'
+      ? p.reputation
+      : calculateReputationFromData(p);
+    const heba = calculateHeba({ ...p, reputation: rep });
+    const rank = getHebaRank(heba);
+
+    repBox.innerHTML = `
+      <div class="rep-header">
+        <div class="rep-icon" style="background:${rank.color}22;color:${rank.color};border:1px solid ${rank.color}55">
+          ${rank.emoji}
+        </div>
+        <div style="flex:1">
+          <div class="rep-rank-label" style="color:${rank.color}">${rank.label}</div>
+          <div class="rep-heba-value">${nf(heba)} <span>هيبة</span></div>
+        </div>
+      </div>
+
+      <div class="rep-formula">
+        <span>شهرة ${nf(p.fame)}</span>
+        <span>+</span>
+        <span>قوة ${nf(p.power)}</span>
+        <span>+</span>
+        <span>سمعة ${nf(rep)}</span>
+      </div>
+
+      <div class="rep-breakdown">
+        <div class="rb-row"><span class="rb-lbl">🤝 ثقة</span><span class="rb-val pos">+${nf((p.trustReceived||0)*100)}</span></div>
+        <div class="rb-row"><span class="rb-lbl">👥 متابعون</span><span class="rb-val pos">+${nf((p.followers||0)*15)}</span></div>
+        <div class="rb-row"><span class="rb-lbl">❤️ إعجابات الملف</span><span class="rb-val pos">+${nf((p.likesProfile||0)*5)}</span></div>
+        <div class="rb-row"><span class="rb-lbl">👁️ مشاهدون فريدون</span><span class="rb-val pos">+${nf((p.uniqueViewers||0)*3)}</span></div>
+        ${(p.reportsReceived||0) > 0 ? `<div class="rb-row"><span class="rb-lbl">🚨 بلاغات</span><span class="rb-val neg">−${nf((p.reportsReceived||0)*50)}</span></div>` : ''}
+        ${(p.blocksReceived||0) > 0 ? `<div class="rb-row"><span class="rb-lbl">🚫 حظر</span><span class="rb-val neg">−${nf((p.blocksReceived||0)*30)}</span></div>` : ''}
+        ${(p.warningsReceived||0) > 0 ? `<div class="rb-row"><span class="rb-lbl">⚠️ تنبيهات</span><span class="rb-val neg">−${nf((p.warningsReceived||0)*100)}</span></div>` : ''}
+      </div>
+    `;
+  }
+} catch(e){
+  console.warn('rep card:', e);
+}
+
+    // 2. محتوى التبويب — ★ مع حماية صارمة
+    renderProfileTabBody()
+      .then(bodyHtml => {
+        const bodyContainer = document.getElementById('profileTabBody');
+        if (bodyContainer) bodyContainer.innerHTML = bodyHtml || emptyState('لا محتوى','grid');
+      })
+      .catch(e => {
+        console.error('Tab body error:', e);
+        const bodyContainer = document.getElementById('profileTabBody');
+        if (bodyContainer) bodyContainer.innerHTML = emptyState('تعذّر تحميل المحتوى','close');
+      });
   }, 50);
 
   return `
@@ -4746,8 +5762,9 @@ function pageProfile(){ // ★ تم إزالة async
         <button class="pc-act-btn" data-action="preview-profile">${ic('eye','xs')} معاينة</button>
       </div>
 
-      <div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12">
-        <div class="pc-body">
+<div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12;position:relative">
+  ${buildBgPattern(cust.bgPattern)}
+  <div class="pc-body">
           <div class="pc-info">
             <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
               ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
@@ -4783,11 +5800,10 @@ function pageProfile(){ // ★ تم إزالة async
             <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
           </div>
 
-          <div class="avatar-sig-wrapper">
-            <div class="pc-avatar ${avatarShapeClass} ${avatarBorderClass} ${frameClass}"
-                 data-action="avatar-click" style="cursor:pointer">
-              ${avatar(p, 82)}
-            </div>
+<div class="avatar-sig-wrapper">
+  <div class="pc-avatar" data-action="avatar-click" style="cursor:pointer">
+    ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
+  </div>
             
             <!-- ★ حاوية التواقيع (فارغة حالياً وسيتم تعبئتها في الخلفية) -->
             <div class="sig-slider-preview" id="mySigSlider">
@@ -4796,10 +5812,16 @@ function pageProfile(){ // ★ تم إزالة async
           </div>
         </div>
 
-        <div class="pc-level">
-          <div class="pc-level-bar"><span style="width:${Math.min(100,(p.xp||0)%100)}%;${levelBarBg}"></span></div>
-          <div class="pc-level-num" style="${levelStyle}${levelBadgeBg}">المستوى ${p.level||1}</div>
-        </div>
+<div class="pc-level">
+  <div class="pc-level-bar">
+    <span style="width:${Math.min(100,(p.xp||0)%100)}%;${levelBarBg}"></span>
+  </div>
+  <div class="pc-level-num" style="${
+    cust.levelColor && cust.levelColor !== '#00d2ff'
+      ? `background:${cust.levelColor};color:#070a11;`
+      : levelStyle
+  }${levelBadgeBg}">المستوى ${p.level||1}</div>
+</div>
       </div>
     </div>
 
@@ -4808,6 +5830,10 @@ function pageProfile(){ // ★ تم إزالة async
       <div class="pc-stat p"><div class="v">${nf(p.power)}</div><div class="l">القوة</div></div>
       <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
     </div>
+    <!-- ★ بطاقة السمعة والهيبة -->
+<div class="reputation-card" id="reputationBox">
+  <div class="spinner" style="margin:20px auto;width:24px;height:24px"></div>
+</div>
 
     <div class="pc-interactions">
       <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="views">
@@ -4854,8 +5880,11 @@ function pageUserProfile(){ // ★ بدون async لضمان سرعة العرض
   const p = state.users[state.viewingUid];
   if(!p) return emptyState('المستخدم غير موجود','user');
 
-  // تسجيل المشاهدة في الخلفية (مرة واحدة في الجلسة عبر recordProfileView)
+// تسجيل المشاهدة — مرة واحدة لكل تنقل (بدون حد زمني)
+if (state.lastViewedProfileUid !== state.viewingUid) {
+  state.lastViewedProfileUid = state.viewingUid;
   recordProfileView(state.viewingUid);
+}
 
   const on = state.followed.has(state.viewingUid);
   const cust = getProfileCustomization(p);
@@ -4864,13 +5893,17 @@ function pageUserProfile(){ // ★ بدون async لضمان سرعة العرض
   const avatarShapeClass = `shape-${cust.avatarShape}`;
   const avatarBorderClass = `border-${cust.avatarBorder}`;
 
-  const tabs = [
-    {id:'posts',        label:'المنشورات',  icon:'grid'},
-    {id:'games',        label:'الألعاب',    icon:'gamepad'},
-    {id:'achievements', label:'الإنجازات',  icon:'medal'},
-    {id:'stats',        label:'الإحصائيات', icon:'chart'},
-    {id:'gifts',        label:'الهدايا',    icon:'star'},
-  ];
+const tabs = [
+  {id:'posts',        label:'المنشورات',   icon:'grid'},
+  {id:'reblogs',      label:'إعادة النشر', icon:'share'},       // ★
+  {id:'history',      label:'سجل اللعب',   icon:'clock'},       // ★
+  {id:'games',        label:'الألعاب',     icon:'gamepad'},
+  {id:'inventory',    label:'المقتنيات',   icon:'store'},       // ★
+  {id:'achievements', label:'الإنجازات',   icon:'medal'},
+  {id:'stats',        label:'الإحصائيات',  icon:'chart'},
+  {id:'activity',     label:'النشاطات',    icon:'clock'},       // ★
+  {id:'gifts',        label:'الهدايا',     icon:'star'},
+];
   if(!tabs.find(t => t.id === state.profileTab)) state.profileTab = 'posts';
 
   // ★ جلب البيانات في الخلفية لتجنب تجميد الواجهة
@@ -4953,13 +5986,15 @@ function pageUserProfile(){ // ★ بدون async لضمان سرعة العرض
       console.warn('❌ Error loading signatures:', e);
     }
 
-    // 5. تحميل محتوى التبويب (المنشورات، الألعاب، إلخ)
+    // 5. تحميل محتوى التبويب
     try {
       const bodyHtml = await renderUserTabBody(state.viewingUid, state.profileTab);
       const bodyContainer = document.getElementById('profileTabBody');
-      if (bodyContainer) bodyContainer.innerHTML = bodyHtml;
+      if (bodyContainer) bodyContainer.innerHTML = bodyHtml || emptyState('لا محتوى','grid');
     } catch(e) {
-      console.warn('❌ Error loading tab body:', e);
+      console.error('Tab body error:', e);
+      const bodyContainer = document.getElementById('profileTabBody');
+      if (bodyContainer) bodyContainer.innerHTML = emptyState('تعذّر تحميل المحتوى','close');
     }
   }, 50);
 
@@ -4985,8 +6020,9 @@ function pageUserProfile(){ // ★ بدون async لضمان سرعة العرض
         </button>
       </div>
 
-      <div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12">
-        <div class="pc-body">
+<div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12;position:relative">
+  ${buildBgPattern(cust.bgPattern)}
+  <div class="pc-body">
           <div class="pc-info">
             <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
               ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
@@ -5015,10 +6051,10 @@ function pageUserProfile(){ // ★ بدون async لضمان سرعة العرض
             <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
           </div>
 
-          <div class="avatar-sig-wrapper">
-            <div class="pc-avatar ${avatarShapeClass} ${avatarBorderClass} ${frameClass}">
-              ${avatar(p, 82)}
-            </div>
+<div class="avatar-sig-wrapper">
+  <div class="pc-avatar">
+    ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
+  </div>
             
             <!-- حاوية التواقيع المتحركة (تُملأ في الخلفية) -->
             <div class="sig-slider-preview" id="userSigSlider">
@@ -5173,6 +6209,13 @@ async function openFullPreviewModal(){
   const cust = getProfileCustomization(p);
   const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
   const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+  const levelStyle = {
+    default:'', badge:'background:linear-gradient(135deg,#a78bfa,#6c5ce7);',
+    gem:'background:linear-gradient(135deg,#00d2ff,#0891b2);',
+    crown:'background:linear-gradient(135deg,#f5b301,#ff8a00);',
+    star:'background:linear-gradient(135deg,#ec4899,#f43f5e);',
+    minimal:'background:rgba(255,255,255,.1);color:#fff;',
+  }[cust.levelStyle] || '';
 
   openModal(`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -5182,44 +6225,50 @@ async function openFullPreviewModal(){
       </button>
     </div>
 
-    <div class="preview-full-wrap" id="previewCaptureTarget">
-      <div class="player-card" style="${buildCardStyle(cust)}">
+    <div class="preview-full-wrap">
+      <div class="player-card" id="previewCaptureTarget" style="${buildCardStyle(cust)}">
         <div class="pc-cover" style="${buildCoverStyle(p, cust, theme)}">
           ${!p.coverUrl ? `<div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})"></div>` : ''}
           ${cust.bannerEffect !== 'none'
             ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0;z-index:2"></div>` : ''}
         </div>
-        <div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12">
+        <div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12;position:relative">
+          ${buildBgPattern(cust.bgPattern)}
           <div class="pc-body">
             <div class="pc-info">
               <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
                 ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
                 ${esc(p.name)} ${getAdminBadge(p)}
+                ${cust.pronouns ? `<span class="pc-pronouns">${esc(cust.pronouns)}</span>` : ''}
               </div>
               <div class="pc-user" style="${buildUsernameStyle(cust)}">@${esc(p.username)}</div>
               <div class="pc-joined" style="color:${cust.joinDateColor}">
                 ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
               </div>
               <div class="pc-social">
-                <span class="pc-social-btn" style="color:${cust.followersBtnColor}">
+                <span class="pc-social-btn" style="color:${cust.followersBtnColor};background:${cust.followersBtnBg==='transparent'?'transparent':cust.followersBtnBg}">
                   <b style="color:${cust.followersBtnColor}">${nf(p.followers)}</b> متابع
                 </span>
-                <span class="pc-social-btn" style="color:${cust.followersBtnColor}">
+                <span class="pc-social-btn" style="color:${cust.followersBtnColor};background:${cust.followersBtnBg==='transparent'?'transparent':cust.followersBtnBg}">
                   <b style="color:${cust.followersBtnColor}">${nf(p.following)}</b> متابَع
                 </span>
               </div>
-              ${cust.location ? `<div class="pc-meta-row"><span style="color:${cust.locationColor}">${ic('location','xs')} ${esc(cust.location)}</span></div>` : ''}
+              ${(cust.location || cust.website) ? `
+                <div class="pc-meta-row">
+                  ${cust.location ? `<span style="color:${cust.locationColor}">${ic('location','xs')} ${esc(cust.location)}</span>` : ''}
+                  ${cust.website ? `<a href="${esc(cust.website)}" target="_blank" rel="noopener">${ic('globe','xs')} ${esc(cust.website.replace(/^https?:\/\//,'').slice(0,30))}</a>` : ''}
+                </div>` : ''}
               <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
             </div>
-            <div class="pc-avatar shape-${cust.avatarShape} border-${cust.avatarBorder} ${frameClass}">
-              ${avatar(p, 82)}
+            <div class="pc-avatar">
+              ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
             </div>
           </div>
           <div class="pc-level">
             <div class="pc-level-bar">
               <span style="width:${Math.min(100,(p.xp||0)%100)}%;${cust.levelBarColor ? `background:${cust.levelBarColor};` : ''}"></span>
             </div>
-            <div class="pc-level-num" style="${cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : ''}">المستوى ${p.level||1}</div>
+            <div class="pc-level-num" style="${buildEffectiveLevelStyle(cust, levelStyle)}${cust.levelTextColor?`background:${cust.levelTextColor};color:#070a11;`:''}">المستوى ${p.level||1}</div>
           </div>
         </div>
       </div>
@@ -5240,29 +6289,65 @@ async function saveProfilePreview(){
   const target = document.getElementById('previewCaptureTarget');
   if(!target) return;
   toast('جاري إنشاء الصورة…');
+
+  /* ===== 1) تحميل html-to-image (يدعم CSS كاملاً) ===== */
   try {
-    if(!window.html2canvas){
+    if(!window.htmlToImage){
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        s.src = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js';
         s.onload = resolve;
         s.onerror = reject;
         document.head.appendChild(s);
       });
     }
-    const canvas = await window.html2canvas(target, {
-      backgroundColor: '#070a11',
-      scale: 2,
-      useCORS: true,
-    });
+  } catch(e){
+    console.error('load lib:', e);
+    toast('فشل تحميل مكتبة الصور');
+    return;
+  }
+
+  /* ===== 2) انتظار الخطوط ===== */
+  try { await document.fonts.ready; } catch(e){}
+
+  /* ===== 3) تجميد الحركات (لأنها تُلتقط في لقطة عشوائية) ===== */
+  const freezeStyle = document.createElement('style');
+  freezeStyle.id = 'capture-freeze';
+  freezeStyle.textContent = `
+    #previewCaptureTarget *,
+    #previewCaptureTarget *::before,
+    #previewCaptureTarget *::after {
+      animation: none !important;
+      transition: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+  `;
+  document.head.appendChild(freezeStyle);
+
+  /* ===== 4) انتظار إطارين لضمان اكتمال الـ layout ===== */
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  try {
+const dataUrl = await window.htmlToImage.toPng(target, {
+  backgroundColor: '#0f172a',
+  pixelRatio: 2,
+  cacheBust: true,
+  skipFonts: true,          // ← ★ الحل: تجاوز قراءة CSS من Google Fonts
+  width: target.offsetWidth,
+  height: target.scrollHeight,
+});
+
     const link = document.createElement('a');
     link.download = `nexus-${state.profile.username}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.href = dataUrl;
     link.click();
     toast('تم حفظ الصورة ✓');
   } catch(e){
-    console.error(e);
+    console.error('capture:', e);
     toast('فشل إنشاء الصورة');
+  } finally {
+    freezeStyle.remove();
   }
 }
 
@@ -5473,19 +6558,57 @@ function pageAchievements(){
 }
 
 function pageLeaderboard(){
-  const tabs = [['fame','الشهرة'],['power','القوة'],['support','الدعم'],['followers','المتابعون']];
-  const users = Object.values(state.users).sort((a,b)=>(b[state.lbTab]||0)-(a[state.lbTab]||0));
+  const tabs = [
+    ['heba',       'الهيبة'],
+    ['fame',       'الشهرة'],
+    ['power',      'القوة'],
+    ['reputation', 'السمعة'],
+    ['followers',  'المتابعون'],
+  ];
+
+  /* ★ ترتيب حسب القيمة المطلوبة */
+  const users = Object.values(state.users).sort((a, b) => {
+    if(state.lbTab === 'heba'){
+      return calculateHeba(b) - calculateHeba(a);
+    }
+    return (b[state.lbTab] || 0) - (a[state.lbTab] || 0);
+  });
+
+  /* ★ قيمة العرض */
+  const getValue = (u) => {
+    if(state.lbTab === 'heba') return calculateHeba(u);
+    if(state.lbTab === 'reputation') {
+      return typeof u.reputation === 'number'
+        ? u.reputation
+        : calculateReputationFromData(u);
+    }
+    return u[state.lbTab] || 0;
+  };
+
   return `<h1 class="page-title">لوحة الصدارة</h1>
     <div class="chips" style="margin-bottom:14px">
-      ${tabs.map(([k,l])=>`<button class="chip ${state.lbTab===k?'active':''}" data-lb="${k}">${l}</button>`).join('')}
+      ${tabs.map(([k, l]) =>
+        `<button class="chip ${state.lbTab === k ? 'active' : ''}" data-lb="${k}">${l}</button>`
+      ).join('')}
     </div>
-    ${users.length ? users.map((u,i)=>`<div class="lb-row ${u.uid===state.user.uid?'me':''}" data-view-profile="${u.uid}" style="cursor:pointer">
-      <div class="lb-rank ${i<3?'r'+(i+1):''}">${i+1}</div>
-      ${avatar(u,40)}
-      <div class="lb-mid"><div class="lb-n">${esc(u.name)} ${u.uid===state.user.uid?'<span class="pill" style="font-size:9px">أنت</span>':''}</div>
-      <div class="lb-s">@${esc(u.username)}</div></div>
-      <div class="lb-v">${nf(u[state.lbTab])}</div>
-    </div>`).join('') : emptyState('لا يوجد لاعبون بعد','trophy')}`;
+    ${users.length ? users.map((u, i) => {
+      const value = getValue(u);
+      const rank = state.lbTab === 'heba' ? getHebaRank(value) : null;
+      return `
+        <div class="lb-row ${u.uid === state.user.uid ? 'me' : ''}" data-view-profile="${u.uid}" style="cursor:pointer">
+          <div class="lb-rank ${i < 3 ? 'r' + (i + 1) : ''}">${i + 1}</div>
+          ${avatar(u, 40)}
+          <div class="lb-mid">
+            <div class="lb-n">
+              ${esc(u.name)}
+              ${u.uid === state.user.uid ? '<span class="pill" style="font-size:9px">أنت</span>' : ''}
+              ${rank ? `<span style="font-size:11px;color:${rank.color}">${rank.emoji}</span>` : ''}
+            </div>
+            <div class="lb-s">@${esc(u.username)}</div>
+          </div>
+          <div class="lb-v">${nf(value)}</div>
+        </div>`;
+    }).join('') : emptyState('لا يوجد لاعبون بعد', 'trophy')}`;
 }
 
 function pageSettings(){
@@ -5692,6 +6815,65 @@ async function adminBanUser(uid, currentlyBanned){
     toast(currentlyBanned ? 'تم إلغاء الحظر' : 'تم الحظر ✓');
     render();
   } catch(e){ toast('فشل'); }
+}
+
+/* ============================================================
+   ⚠️ تنبيه إداري
+   ============================================================ */
+async function adminWarnUser(uid, reason){
+  if(state.profile?.role !== 'admin') return toast('غير مصرح');
+  if(uid === state.user.uid) return toast('لا يمكنك تحذير نفسك');
+
+  if(!reason || !reason.trim()) return toast('اذكر سبب التحذير');
+
+  try {
+    await updateDoc(doc(db, 'users', uid), {
+      warningsReceived: increment(1),
+      reputation:       increment(-REPUTATION_WEIGHTS.warningPenalty),
+      lastWarning: {
+        reason: reason.trim(),
+        by:     state.user.uid,
+        at:     serverTimestamp(),
+      },
+    });
+
+    await notify(uid, 'warning',
+      `⚠️ تنبيه من الإدارة: ${esc(reason)}`);
+
+    await logActivity('admin_action',
+      `حذّر ${state.users[uid]?.name || 'مستخدم'}: ${reason}`,
+      '⚠️');
+
+    toast('تم إرسال التنبيه');
+  } catch(e){
+    console.error(e);
+    toast('فشل');
+  }
+}
+
+/* مودال إدخال السبب */
+function openAdminWarnModal(uid){
+  const u = state.users[uid];
+  if(!u) return;
+
+  openModal(`
+    <h3>⚠️ تحذير ${esc(u.name)}</h3>
+    <div class="sub">
+      التحذير يخفض السمعة بمقدار ${REPUTATION_WEIGHTS.warningPenalty} نقطة.
+    </div>
+    <div class="field">
+      <label>سبب التحذير</label>
+      <textarea class="input" id="warnReason" rows="3"
+                maxlength="200"
+                placeholder="مثال: مخالفة قواعد المجتمع"></textarea>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-danger" style="flex:1" data-warn-confirm="${uid}">
+        إرسال التحذير
+      </button>
+    </div>
+  `);
 }
 
 async function adminDeletePost(postId, reportId){
@@ -6692,19 +7874,17 @@ async function sendGift(toUid, gift, message, anonymous){
 
 async function pageGifts(){
   try {
-    // استلمت
-    const rSnap = await getDocs(
-      query(collection(db,'gifts'), where('to','==',state.user.uid),
-            orderBy('createdAt','desc'), limit(50))
-    );
-    const received = rSnap.docs.map(d=>({id:d.id, ...d.data()}));
-    
-    // أرسلت
-    const sSnap = await getDocs(
-      query(collection(db,'gifts'), where('from','==',state.user.uid),
-            orderBy('createdAt','desc'), limit(50))
-    );
-    const sent = sSnap.docs.map(d=>({id:d.id, ...d.data()}));
+    const rSnap = await getDocs(query(
+      collection(db,'gifts'), where('to','==',state.user.uid), limit(100)
+    ));
+    const received = rSnap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+
+    const sSnap = await getDocs(query(
+      collection(db,'gifts'), where('from','==',state.user.uid), limit(100)
+    ));
+    const sent = sSnap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
     
     const tab = state.giftTab || 'received';
     const list = tab === 'received' ? received : sent;
@@ -7941,18 +9121,22 @@ const t = e.target.closest(
   '[data-toggle],[data-view-profile],[data-open-comments],[data-delete-comment],' +
   '[data-delete-post],[data-profile-like],[data-support],[data-buy-item],' +
   '[data-open-team],[data-join-team],[data-leave-team],[data-cust],' +
-  '[data-cust-zone],' +   /* ★ أضف هذه */
+  '[data-cust-zone],' +
   '[data-toggle-tag],[data-inv-tab],[data-inv-item],[data-unequip],' +
-    '[data-gift-tab],[data-team-tab],[data-edit-tab],[data-view-image],' +
-    '[data-change-image],[data-delete-image],[data-block-user],[data-start-quiz],' +
-    '[data-invite-room],[data-send-invite],[data-send-team-chat],[data-send-challenge],' +
-    '[data-send-gift],[data-accept-challenge],[data-reject-challenge],[data-approve-join],' +
-    '[data-reject-join],[data-kick-member],[data-promote],[data-request-join],' +
-    '[data-set-theme],[data-set-frame],[data-view-tournament],[data-join-tournament],' +
-    '[data-view-war],[data-declare-war],[data-play-war-match],[data-admin-tab],' +
-    '[data-admin-ban],[data-admin-delete-post],[data-admin-dismiss],[data-report-target],' +
-    '[data-notif-filter],[data-gift-id],[data-reason],[data-pick-image],button'
-  );
+  '[data-gift-tab],[data-team-tab],[data-edit-tab],[data-view-image],' +
+  '[data-change-image],[data-delete-image],[data-block-user],[data-start-quiz],' +
+  '[data-invite-room],[data-send-invite],[data-send-team-chat],[data-send-challenge],' +
+  '[data-send-gift],[data-accept-challenge],[data-reject-challenge],[data-approve-join],' +
+  '[data-reject-join],[data-kick-member],[data-promote],[data-request-join],' +
+  '[data-set-theme],[data-set-frame],[data-view-tournament],[data-join-tournament],' +
+  '[data-view-war],[data-declare-war],[data-play-war-match],[data-admin-tab],' +
+  '[data-admin-ban],[data-admin-delete-post],[data-admin-dismiss],[data-report-target],' +
+  '[data-notif-filter],[data-gift-id],[data-reason],[data-pick-image],' +
+  '[data-post-menu],[data-reblog],[data-edit-post],[data-pin-post],' +
+  '[data-set-visibility],[data-save-visibility],[data-admin-hide-post],' +
+  '[data-toggle-trust],[data-warn-user],[data-warn-confirm],' +   // ★ جديد
+  'button'
+);
 
   /* 3) حماية null */
   if(!t) return;
@@ -8133,9 +9317,9 @@ if(t.dataset.action === 'show-plans'){
     document.querySelectorAll(`[data-cust="${field}"]`).forEach(el=>{
       el.classList.toggle('active', el.dataset.val === val);
     });
-    if(field === 'avatarBorder'){
-      refreshCustOptions();   // ★ بدلاً من render()
-    }
+if(field === 'avatarBorder' || field === 'avatarShape'){
+  refreshCustOptions();
+}
   }
   return;
 }
@@ -8569,104 +9753,136 @@ if(t.dataset.action === 'show-plans'){
     return;
   }
   if(t.dataset.adminDismiss){ await adminDismissReport(t.dataset.adminDismiss); return; }
+  /* ============================================================
+     48) ★★★ خيارات المنشورات (جديد)
+     ============================================================ */
+  if(t.dataset.postMenu){ openPostActionsModal(t.dataset.postMenu); return; }
+  if(t.dataset.reblog){ await toggleReblog(t.dataset.reblog); closeModal(); return; }
+  if(t.dataset.editPost){ editPostModal(t.dataset.editPost); return; }
+  if(t.dataset.pinPost){ await togglePinPost(t.dataset.pinPost); return; }
+  if(t.dataset.setVisibility){ openVisibilityPicker(t.dataset.setVisibility); return; }
+  if(t.dataset.saveVisibility){ await savePostVisibility(t.dataset.postId, t.dataset.saveVisibility); return; }
+  if(t.dataset.adminHidePost){ await adminHidePost(t.dataset.adminHidePost); return; }
 
-});
+  /* حفظ تعديل المنشور */
+  if(t.id === 'savePostEditBtn'){ await savePostEdit(t.dataset.postId); return; }
+
+  /* ============================================================
+     49) ★★★ الثقة والتحذيرات (جديد)
+     ============================================================ */
+  if(t.dataset.toggleTrust){ await toggleTrust(t.dataset.toggleTrust); closeModal(); return; }
+  if(t.dataset.warnUser){ openAdminWarnModal(t.dataset.warnUser); return; }
+  if(t.dataset.warnConfirm){
+    const reason = document.getElementById('warnReason')?.value.trim();
+    await adminWarnUser(t.dataset.warnConfirm, reason);
+    closeModal();
+    return;
+  }
+
+});  // ← الإغلاق النهائي
 
 /* Input events */
 document.addEventListener('input', async (e)=>{
-  /* البحث */
+
+  /* ===== البحث (يبقى كما هو) ===== */
   if(e.target.id === 'searchInput'){
     state.searchQ = e.target.value;
     clearTimeout(window._searchTimer);
     window._searchTimer = setTimeout(renderSearchResults, 200);
-    /* 🎨 منتقي لون الاسم */
-if(e.target.id === 'nameColorPicker'){
-  if(!canCustomizeNameColor(state.profile)) return;
-  await saveCustomField('nameColor', e.target.value);
-  const box = document.getElementById('custPreviewBox');
-  if(box) box.innerHTML = renderCustomizationPreview();
-  return;
-}
-/* سمـاكة حدود الأفاتار */
-if(e.target.id === 'avatarBorderWidthSlider'){
-  await saveCustomField('avatarBorderWidth', parseInt(e.target.value));
-  const previewBox = document.getElementById('custPreviewBox');
-  if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
-  const valEl = document.getElementById('borderWidthVal');
-  if(valEl) valEl.textContent = e.target.value + 'px';
-  return;
-}
-/* دوران الأفاتار */
-if(e.target.id === 'avatarRotationSlider'){
-  await saveCustomField('avatarRotation', parseInt(e.target.value));
-  const b = document.getElementById('custPreviewBox');
-  if(b) b.innerHTML = renderCustomizationPreview();
-  const v = document.getElementById('rotationVal');
-  if(v) v.textContent = e.target.value + '°';
-  return;
-}
-/* حجم الأفاتار */
-if(e.target.id === 'avatarScaleSlider'){
-  await saveCustomField('avatarScale', parseFloat(e.target.value));
-  const b = document.getElementById('custPreviewBox');
-  if(b) b.innerHTML = renderCustomizationPreview();
-  const v = document.getElementById('scaleVal');
-  if(v) v.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
-  return;
-}
-/* ضبابية الغلاف */
-if(e.target.id === 'coverBlurSlider'){
-  await saveCustomField('coverBlur', parseInt(e.target.value));
-  const b = document.getElementById('custPreviewBox');
-  if(b) b.innerHTML = renderCustomizationPreview();
-  const v = document.getElementById('blurVal');
-  if(v) v.textContent = e.target.value + 'px';
-  return;
-}
-/* تعتيم الغلاف */
-if(e.target.id === 'coverOverlaySlider'){
-  await saveCustomField('coverOverlay', parseInt(e.target.value));
-  const b = document.getElementById('custPreviewBox');
-  if(b) b.innerHTML = renderCustomizationPreview();
-  const v = document.getElementById('overlayVal');
-  if(v) v.textContent = e.target.value + '%';
-  return;
-}
-if(e.target.id === 'usernameColorPicker'){
-  if(!canCustomizeUsernameColor(state.profile)) return;
-  await saveCustomField('usernameColor', e.target.value);
-  const box = document.getElementById('custPreviewBox');
-  if(box) box.innerHTML = renderCustomizationPreview();
-  return;
-}
-if(e.target.id === 'titleColorPicker'){
-  if(!canCustomizeTitleColor(state.profile)) return;
-  await saveCustomField('titleColor', e.target.value);
-  const box = document.getElementById('custPreviewBox');
-  if(box) box.innerHTML = renderCustomizationPreview();
-  return;
-}
     return;
   }
 
-  /* 🎨 منتقي لون حدود الصورة */
+  /* ===== منتقي لون الاسم ===== */
+  if(e.target.id === 'nameColorPicker'){
+    if(!canCustomizeNameColor(state.profile)) return;
+    await saveCustomField('nameColor', e.target.value);
+    const box = document.getElementById('custPreviewBox');
+    if(box) box.innerHTML = renderCustomizationPreview();
+    return;
+  }
+
+  /* ===== سماكة حدود الأفاتار ===== */
+  if(e.target.id === 'avatarBorderWidthSlider'){
+    await saveCustomField('avatarBorderWidth', parseInt(e.target.value));
+    const previewBox = document.getElementById('custPreviewBox');
+    if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+    const valEl = document.getElementById('borderWidthVal');
+    if(valEl) valEl.textContent = e.target.value + 'px';
+    return;
+  }
+
+  /* ===== دوران الأفاتار ===== */
+  if(e.target.id === 'avatarRotationSlider'){
+    await saveCustomField('avatarRotation', parseInt(e.target.value));
+    const b = document.getElementById('custPreviewBox');
+    if(b) b.innerHTML = renderCustomizationPreview();
+    const v = document.getElementById('rotationVal');
+    if(v) v.textContent = e.target.value + '°';
+    return;
+  }
+
+  /* ===== حجم الأفاتار ===== */
+  if(e.target.id === 'avatarScaleSlider'){
+    await saveCustomField('avatarScale', parseFloat(e.target.value));
+    const b = document.getElementById('custPreviewBox');
+    if(b) b.innerHTML = renderCustomizationPreview();
+    const v = document.getElementById('scaleVal');
+    if(v) v.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
+    return;
+  }
+
+  /* ===== ضبابية الغلاف ===== */
+  if(e.target.id === 'coverBlurSlider'){
+    await saveCustomField('coverBlur', parseInt(e.target.value));
+    const b = document.getElementById('custPreviewBox');
+    if(b) b.innerHTML = renderCustomizationPreview();
+    const v = document.getElementById('blurVal');
+    if(v) v.textContent = e.target.value + 'px';
+    return;
+  }
+
+  /* ===== تعتيم الغلاف ===== */
+  if(e.target.id === 'coverOverlaySlider'){
+    await saveCustomField('coverOverlay', parseInt(e.target.value));
+    const b = document.getElementById('custPreviewBox');
+    if(b) b.innerHTML = renderCustomizationPreview();
+    const v = document.getElementById('overlayVal');
+    if(v) v.textContent = e.target.value + '%';
+    return;
+  }
+
+  /* ===== ألوان إضافية ===== */
+  if(e.target.id === 'usernameColorPicker'){
+    if(!canCustomizeUsernameColor(state.profile)) return;
+    await saveCustomField('usernameColor', e.target.value);
+    const box = document.getElementById('custPreviewBox');
+    if(box) box.innerHTML = renderCustomizationPreview();
+    return;
+  }
+
+  if(e.target.id === 'titleColorPicker'){
+    if(!canCustomizeTitleColor(state.profile)) return;
+    await saveCustomField('titleColor', e.target.value);
+    const box = document.getElementById('custPreviewBox');
+    if(box) box.innerHTML = renderCustomizationPreview();
+    return;
+  }
+
   if(e.target.id === 'avatarBorderColorPicker'){
-    const color = e.target.value;
-    await saveCustomField('avatarBorderColor', color);
+    await saveCustomField('avatarBorderColor', e.target.value);
     const previewBox = document.getElementById('custPreviewBox');
     if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
     return;
   }
 
-  /* 🎨 منتقي اللون المميز */
   if(e.target.id === 'accentColorPicker'){
-    const color = e.target.value;
-    await saveCustomField('accentColor', color);
+    await saveCustomField('accentColor', e.target.value);
     const previewBox = document.getElementById('custPreviewBox');
     if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
     return;
   }
-});
+
+});  // ← لا تحذف هذا الإغلاق
 
 /* Enter to send */
 document.addEventListener('keydown', (e)=>{
