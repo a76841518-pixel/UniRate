@@ -199,6 +199,22 @@
       </div>
     </div>
   </header>
+  <!-- ★★★ شريط رأس الصفحة الفرعية ★★★ -->
+  <div id="pageHeader" class="page-header hidden">
+    <button type="button"
+            class="page-back-btn"
+            id="backBtn"
+            data-action="go-back"
+            aria-label="رجوع">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+    </button>
+    <h1 class="page-header-title" id="pageHeaderTitle"></h1>
+    <div class="page-header-actions" id="pageHeaderActions"></div>
+  </div>
+
   <main class="app" id="app" tabindex="-1"></main>
   <nav class="bottombar" id="bottombar" aria-label="التنقل الرئيسي"></nav>
 </div>
