@@ -4905,3 +4905,306 @@ body.no-bars{ padding-bottom: 20px; }
     font-size: 9.5px;
   }
 }
+
+/* ============================================================
+   🎨 شريط التخصيصات الفردية (المستوى الثالث)
+   ============================================================ */
+.cust-field-nav{
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(0,0,0,.15);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.2) transparent;
+  -webkit-overflow-scrolling: touch;
+  animation: fieldNavFade .3s ease both;
+}
+@keyframes fieldNavFade{
+  from{ opacity:0; transform: translateY(-6px); }
+  to  { opacity:1; transform: translateY(0); }
+}
+.cust-field-nav::-webkit-scrollbar{ height: 4px; }
+.cust-field-nav::-webkit-scrollbar-track{ background: transparent; }
+.cust-field-nav::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.2);
+  border-radius: 9px;
+}
+
+.cust-field-tab{
+  flex: 0 0 auto;
+  padding: 7px 13px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.04);
+  border: 1.5px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .2s;
+  font-family: inherit;
+  white-space: nowrap;
+  position: relative;
+}
+.cust-field-tab:hover{
+  background: var(--card-2);
+  border-color: rgba(0,210,255,.4);
+  color: var(--txt);
+}
+.cust-field-tab.active{
+  background: linear-gradient(135deg, rgba(0,210,255,.2), rgba(108,92,231,.12));
+  border-color: #00d2ff;
+  color: #5fe3ff;
+  box-shadow: 0 0 12px rgba(0,210,255,.3);
+}
+.cust-field-tab.active::before{
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  left: 25%; right: 25%;
+  height: 2px;
+  border-radius: 2px;
+  background: #00d2ff;
+  box-shadow: 0 0 8px #00d2ff;
+}
+
+/* ★ تجميل عرض التخصيص الفردي */
+.cust-zone-body .cust-field{
+  animation: fieldFadeIn .3s ease both;
+}
+@keyframes fieldFadeIn{
+  from{ opacity:0; transform: translateX(-8px); }
+  to  { opacity:1; transform: translateX(0); }
+}
+
+/* ============================================================
+   ✨ تأثيرات الغلاف المتحركة الجديدة
+   ============================================================ */
+.cover-anim-pan{
+  animation: coverPan 15s ease-in-out infinite alternate;
+}
+@keyframes coverPan{
+  0%   { transform: scale(1.05) translateX(0); }
+  100% { transform: scale(1.05) translateX(-8%); }
+}
+.cover-anim-zoom{
+  animation: coverZoom 8s ease-in-out infinite alternate;
+}
+@keyframes coverZoom{
+  0%   { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+.cover-anim-pulse{
+  animation: coverPulse 4s ease-in-out infinite;
+}
+@keyframes coverPulse{
+  0%,100%{ transform: scale(1); }
+  50%    { transform: scale(1.05); }
+}
+.cover-anim-sway{
+  animation: coverSway 6s ease-in-out infinite;
+}
+@keyframes coverSway{
+  0%,100% { transform: translateX(-2%) rotate(-1deg); }
+  50%     { transform: translateX(2%) rotate(1deg); }
+}
+
+/* ============================================================
+   🏅 أحجام شارة المستوى
+   ============================================================ */
+.pc-level-num.size-sm{ font-size:9px; padding:3px 8px; }
+.pc-level-num.size-md{ font-size:11px; padding:4px 11px; }
+.pc-level-num.size-lg{ font-size:13px; padding:6px 14px; }
+.pc-level-num.size-xl{ font-size:15px; padding:7px 16px; }
+
+/* موضع الشارة */
+.pc-level.badge-right{ flex-direction: row-reverse; }
+
+/* ============================================================
+   ✨ تطبيق تباعد الحروف على النصوص
+   ============================================================ */
+.pc-body-section .pc-bio,
+.pc-body-section .pc-meta-row,
+.pc-body-section .pc-joined{
+  letter-spacing: var(--text-letter-spacing, 0);
+}
+
+/* ============================================================
+   🎨 وضع الدمج للبطاقة
+   ============================================================ */
+.player-card[data-blend="multiply"]{ isolation: isolate; }
+
+/* ============================================================
+   🖼️ أحجام الأفاتار
+   ============================================================ */
+.avatar-sig-wrapper .pc-avatar[data-size="60"]{ width:60px;height:60px; }
+.avatar-sig-wrapper .pc-avatar[data-size="140"]{ width:140px;height:140px; }
+
+/* ============================================================
+   ✍️ معاينة التواقيع في الاستوديو
+   ============================================================ */
+.sig-preview-list{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sig-preview-row{
+  animation: sigRowFade 0.5s ease both;
+}
+@keyframes sigRowFade{
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   ✨ حركات التوقيع
+   ============================================================ */
+@keyframes sigAnim_fade{
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+@keyframes sigAnim_slide{
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(6px); }
+}
+@keyframes sigAnim_typewriter{
+  0%   { clip-path: inset(0 100% 0 0); }
+  50%  { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+@keyframes sigAnim_glow{
+  0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
+  50%      { filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 20px currentColor); }
+}
+@keyframes sigAnim_pulse{
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+@keyframes sigAnim_float{
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@keyframes sigAnim_bounce{
+  0%, 100% { transform: translateY(0); }
+  30%      { transform: translateY(-6px); }
+  50%      { transform: translateY(0); }
+  70%      { transform: translateY(-3px); }
+}
+
+/* ============================================================
+   ✨ حركات إضافية للأسماء
+   ============================================================ */
+.anim-name-typewriter{
+  overflow: hidden;
+  white-space: nowrap;
+  border-inline-end: 2px solid currentColor;
+  animation: nameTypewriter 3s steps(30) infinite, nameBlink .7s step-end infinite;
+}
+@keyframes nameTypewriter{
+  0%   { max-width: 0; }
+  50%  { max-width: 100%; }
+  100% { max-width: 100%; }
+}
+@keyframes nameBlink{
+  50% { border-color: transparent; }
+}
+.anim-name-blink{ animation: nameBlink 1s steps(2) infinite; }
+.anim-name-wave{ animation: nameWave 2s ease-in-out infinite; }
+@keyframes nameWave{
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25%      { transform: translateY(-2px) rotate(-1deg); }
+  75%      { transform: translateY(2px) rotate(1deg); }
+}
+.anim-name-glitch{
+  animation: nameGlitch 0.3s infinite;
+  text-shadow: 2px 0 #ff3d71, -2px 0 #00d2ff;
+}
+@keyframes nameGlitch{
+  0%, 100% { transform: translate(0); }
+  25%      { transform: translate(-1px, 1px); }
+  50%      { transform: translate(1px, -1px); }
+  75%      { transform: translate(-1px, -1px); }
+}
+
+/* ============================================================
+   ⚡ حركات إضافية للأفاتار
+   ============================================================ */
+.av-frame-layer.frame-rainbow-ring{
+  background: conic-gradient(from 0deg, #ff0000, #ff7f00, #ffff00, #00ff00,
+              #0000ff, #4b0082, #9400d3, #ff0000) !important;
+  animation: frameRainbow 3s linear infinite;
+}
+.av-frame-layer.frame-star-glow{
+  background: radial-gradient(circle, #fff 0%, #f5b301 30%, transparent 70%) !important;
+  box-shadow: 0 0 24px 6px rgba(255,215,0,.7);
+  animation: sparklePulse 1.5s infinite;
+}
+.av-frame-layer.frame-wings{
+  background: linear-gradient(135deg, #a78bfa, #ec4899) !important;
+  box-shadow: 0 0 20px 4px rgba(167,139,250,.6),
+              -8px -8px 20px 4px rgba(236,72,153,.3),
+              8px -8px 20px 4px rgba(236,72,153,.3);
+}
+.av-frame-layer.frame-lightning{
+  background: linear-gradient(135deg, #ffff00, #f5b301) !important;
+  box-shadow: 0 0 20px 4px rgba(255,255,0,.6);
+  animation: fireFlicker 0.8s infinite;
+}
+.av-frame-layer.frame-snowflake{
+  background: linear-gradient(135deg, #e0f2fe, #7dd3fc) !important;
+  box-shadow: 0 0 22px 4px rgba(125,211,252,.55);
+}
+.av-frame-layer.frame-shamrock{
+  background: linear-gradient(135deg, #22c55e, #15803d) !important;
+  box-shadow: 0 0 22px 4px rgba(34,197,94,.55);
+}
+.av-frame-layer.frame-skull{
+  background: linear-gradient(135deg, #1f2937, #000000) !important;
+  box-shadow: 0 0 18px 4px rgba(255,255,255,.35);
+}
+.av-frame-layer.frame-music-note{
+  background: linear-gradient(135deg, #ec4899, #a78bfa, #00d2ff) !important;
+  background-size: 300% 300% !important;
+  animation: gradientMove 3s linear infinite;
+  box-shadow: 0 0 22px 4px rgba(236,72,153,.5);
+}
+
+/* ============================================================
+   🎨 معاينة المنشورات في الاستوديو
+   ============================================================ */
+.zone-preview-inner .post{
+  pointer-events: none;
+  margin: 0;
+}
+
+/* ============================================================
+   🎨 تحسينات إضافية للتوقيعات في الصفحة الحقيقية
+   ============================================================ */
+.signatures-box .sig-item{
+  transition: transform .2s, border-color .2s;
+}
+.signatures-box .sig-item:hover{
+  transform: translateX(-2px);
+  border-color: rgba(108,92,231,.35);
+}
+
+/* دعم حركات التواقيع في القائمة الحقيقية */
+.sig-item.sig-anim-fade{ animation: sigAnim_fade 2s ease-in-out infinite; }
+.sig-item.sig-anim-slide{ animation: sigAnim_slide 2.5s ease-in-out infinite; }
+.sig-item.sig-anim-glow{ animation: sigAnim_glow 2s ease-in-out infinite; }
+.sig-item.sig-anim-pulse{ animation: sigAnim_pulse 2s ease-in-out infinite; }
+.sig-item.sig-anim-float{ animation: sigAnim_float 3s ease-in-out infinite; }
+.sig-item.sig-anim-bounce{ animation: sigAnim_bounce 2s ease-in-out infinite; }
+.sig-item.sig-anim-typewriter{
+  animation: sigAnim_typewriter 4s steps(30) infinite;
+  overflow: hidden;
+}
+
+/* ============================================================
+   📱 استجابة للشاشات الصغيرة
+   ============================================================ */
+@media (max-width: 420px){
+  .sig-preview-list{ gap: 8px; }
+  .sig-preview-row > div{ font-size: 11px !important; }
+}
