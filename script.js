@@ -9,7 +9,7 @@ import {
   setPersistence, browserLocalPersistence, updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc,
+  getFirestore, doc, getDoc, setDoc, updateDoc, collection, collectionGroup, addDoc,
   query, where, orderBy, limit, onSnapshot, serverTimestamp, getDocs,
   deleteDoc, increment, runTransaction, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -1012,11 +1012,57 @@ const AVATAR_GRADS = [
 ];
 function pickGrad(seed=''){ let h=0; for(const c of seed) h=(h*31+c.charCodeAt(0))>>>0; return AVATAR_GRADS[h % AVATAR_GRADS.length]; }
 
+/* ============================================================
+   🎯 ثوابت الملحّن
+   ============================================================ */
+const COMPOSE_MAX_IMAGES = 4;
+const COMPOSE_MAX_CHARS = 1000;
+
+const COMPOSE_EMOJIS = [
+  '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇',
+  '🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚',
+  '😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥳',
+  '😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖',
+  '😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯',
+  '😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔',
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💯',
+  '👍','👎','👏','🙌','🤝','👊','✊','🤛','🤜','💪',
+  '🔥','✨','⭐','🌟','💫','⚡','💥','🎉','🎊','🎁',
+  '🏆','🥇','🥈','🥉','🎯','🎮','🎲','🎨','🎬','🎵',
+  '💎','👑','🚀','🌙','☀️','🌈','☄️','🌊','🍕','🍔',
+];
+
+const COMPOSE_HASHTAGS = [
+  '#نكسوس', '#ألعاب', '#تحدي', '#فوز', '#بطولة',
+  '#مجتمع', '#لاعب', '#QuizClash', '#NexusGame', '#تحديث',
+];
+
 /* ============ State ============ */
 const state = {
   user:null, profile:null,
-  page:'home', homeTab:'explore', profileTab:'posts',
+page:'home', homeTab:'explore', profileTab:'posts',
+showSuggestions: false,
+  /* ★ نظام المشاهدة */
+  seenPosts: new Set(),
+  postsObserver: null,
+  composeVisibility: 'public',
+    /* ★★ حقلّات الملحّن المتقدّم ★★ */
+  composeImages: [],
+  composeTab: 'write',
+  composeLocation: '',
+  composeEmojiOpen: false,
+  composeLocationOpen: false,
+  composeHashtagsOpen: false,
+    /* ★★ تعديل المنشور ★★ */
+  editPostId: null,
+  editImages: [],
+  editTab: 'write',
+  editVisibility: 'public',
+  editLocation: '',
+    activeHashtag: '',
   searchQ:'', searchCat:'all', lbTab:'fame',
+  searchTab: 'all',
+  searchRecent: [],
   activeGame:null, chatWith:null, viewingUid:null,
   viewingTeamId:null,
   liked:{}, saved:{}, profileLiked:{}, followed:new Set(),
@@ -1075,6 +1121,17 @@ const state = {
   navStack: [],   // ★ جديد: مكدس التنقل للرجوع الذكي
   /* ===== إعادة هيكلة التبويبات ===== */
 custFieldTab: null,   // ★ جديد: التبويب الثالث (التخصيص الفردي)
+  /* ★★ نظام التعليقات المتطوّر ★★ */
+  commentsUnsub: null,
+  commentsSort: 'newest',
+  replyingTo: null,
+  currentPostId: null,
+  collapsedThreads: new Set(),
+  editingCommentId: null,
+  commentEmojiOpen: false,
+    commentsLoading: false,
+    returnToComments: null,
+    _commentsInitialCollapseDone: false,
 };
 
 /* ============ نظام المستويات ============ */
@@ -1235,7 +1292,12 @@ async function notify(uid, type, text, link = '') {
 
 /* ============ Navigation ============ */
 function go(page, opt={}, skipHistory=false){
-  /* ★ أضف الصفحة الحالية للمكدس (لتمكين الرجوع الذكي) */
+  /* ★ امسح returnToComments إذا غادرنا صفحات الملف الشخصي */
+  if(page !== 'userprofile' && page !== 'profile'){
+    state.returnToComments = null;
+  }
+
+  /* ★ أضف الصفحة الحالية للمكدس */
   if(!skipHistory && state.page && state.page !== page) {
     state.navStack.push(state.page);
     if(state.navStack.length > 20) state.navStack.shift();
@@ -1266,7 +1328,57 @@ function go(page, opt={}, skipHistory=false){
 
 /* ★★ دالة الرجوع الذكية (تدعم الصفحات الفرعية) ★★ */
 function goBack(){
-  /* حالات خاصة: تفاصيل بطولة أو حرب */
+  /* ════════════════════════════════════════════════
+     ★★ الحالة 1: العودة من ملف فُتح من التعليقات ★★
+     ════════════════════════════════════════════════ */
+  if(state.returnToComments && ['userprofile', 'profile'].includes(state.page)){
+    const data = state.returnToComments;
+    state.returnToComments = null;
+
+    /* ارجع للصفحة الأصلية */
+    const prev = state.navStack.pop();
+    const targetPage = prev || data.fromPage || 'home';
+
+    go(targetPage, {}, true);
+
+    /* أعد فتح التعليقات بعد اكتمال الرسم */
+    setTimeout(() => {
+      openCommentsModal(data.postId);
+
+      /* استعادة حالة الطي والرد — قبل وصول snapshot */
+      if(data.collapsedThreads && data.collapsedThreads.size){
+        data.collapsedThreads.forEach(id => state.collapsedThreads.add(id));
+      }
+// تأكد من وجود هذه في goBack — قسم العودة
+if(data.replyingTo){
+  state.replyingTo = data.replyingTo;
+  renderReplyContext();
+}
+
+      /* استعادة موضع التمرير — بعد تحميل التعليقات فعلياً */
+      let tries = 0;
+      const restoreScroll = () => {
+        const body = document.querySelector('.comments-body');
+        if(!body || tries > 20) return;
+        const hasContent = body.children.length > 0 && !body.querySelector('.comments-loading');
+        if(hasContent){
+          if(data.scrollTop) body.scrollTop = data.scrollTop;
+          return;
+        }
+        tries++;
+        setTimeout(restoreScroll, 100);
+      };
+      setTimeout(restoreScroll, 300);
+
+      toast('🔄 عودة إلى التعليقات');
+    }, 250);
+
+    return;
+  }
+
+  /* ════════════════════════════════════════════════
+     ★★ الحالة 2: السلوك الطبيعي ★★
+     ════════════════════════════════════════════════ */
   if(state.page === 'tournaments' && state.viewingTournamentId){
     state.viewingTournamentId = null;
     render();
@@ -1278,7 +1390,6 @@ function goBack(){
     return;
   }
 
-  /* الرجوع العادي عبر المكدس */
   const prev = state.navStack.pop();
   if(prev && prev !== state.page){
     go(prev, {}, true);
@@ -1328,20 +1439,45 @@ function getPageHeaderConfig(){
       `;
       break;
 
-    case 'userprofile': {
-      const on = state.followed.has(state.viewingUid);
-      const name = state.users[state.viewingUid]?.name || 'الملف الشخصي';
-      cfg.title = name;
-      cfg.actions = `
-        <button class="page-hbtn ${on?'on':'primary'}" data-follow="${state.viewingUid}">
-          ${on ? '✓ متابَع' : '+ متابعة'}
-        </button>
-        <button class="page-hbtn" data-action="profile-actions" data-uid="${state.viewingUid}" title="خيارات">
-          ${ic('dots','xs')}
-        </button>
-      `;
-      break;
-    }
+case 'userprofile': {
+  const on = state.followed.has(state.viewingUid);
+  const name = state.users[state.viewingUid]?.name || 'الملف الشخصي';
+  cfg.title = name;
+  cfg.actions = `
+    ${state.returnToComments ? `
+      <button class="page-hbtn primary" data-action="go-back" title="العودة إلى التعليقات">
+        ${ic('comment','xs')}<span>التعليقات</span>
+      </button>
+    ` : ''}
+    <button class="page-hbtn ${on?'on':'primary'}" data-follow="${state.viewingUid}">
+      ${on ? '✓ متابَع' : '+ متابعة'}
+    </button>
+    <button class="page-hbtn" data-action="profile-actions" data-uid="${state.viewingUid}" title="خيارات">
+      ${ic('dots','xs')}
+    </button>
+  `;
+  break;
+}
+
+case 'profile':
+  cfg.title = 'ملفي الشخصي';
+  cfg.actions = `
+    ${state.returnToComments ? `
+      <button class="page-hbtn primary" data-action="go-back" title="العودة إلى التعليقات">
+        ${ic('comment','xs')}<span>التعليقات</span>
+      </button>
+    ` : ''}
+    <button class="page-hbtn" data-action="edit-profile" title="تعديل">
+      ${ic('edit','xs')}<span>تعديل</span>
+    </button>
+    <button class="page-hbtn" data-nav="customization" title="تخصيص">
+      ${ic('image','xs')}<span>تخصيص</span>
+    </button>
+    <button class="page-hbtn" data-action="preview-profile" title="معاينة">
+      ${ic('eye','xs')}<span>معاينة</span>
+    </button>
+  `;
+  break;
 
     case 'customization':
       cfg.title = '🎨 استوديو التخصيص';
@@ -1456,9 +1592,9 @@ function closeDrawer(){
 }
 
 /* ============ Modal ============ */
-function openModal(html){
+function openModal(html, className = ''){
   const root = document.getElementById('modalRoot');
-  root.innerHTML = `<div class="modal-wrap"><div class="modal">${html}</div></div>`;
+  root.innerHTML = `<div class="modal-wrap"><div class="modal ${className}">${html}</div></div>`;
   root.querySelector('.modal-wrap').addEventListener('click', e=>{
     if(e.target.classList.contains('modal-wrap')) closeModal();
   });
@@ -1716,6 +1852,18 @@ function detachListeners(){
 
 function closeModal(){
   const root = document.getElementById('modalRoot');
+
+  /* ★ تنظيف مستمع التعليقات */
+  if(state.commentsUnsub){
+    try { state.commentsUnsub(); } catch(e){}
+    state.commentsUnsub = null;
+  }
+  state.currentPostId = null;
+  state.replyingTo = null;
+  state.editingCommentId = null;
+  state.commentEmojiOpen = false;
+  state.collapsedThreads.clear();
+
   // نظّف المستمع إن وُجد
   if(state.mmUnsub){ try{state.mmUnsub();}catch(e){} state.mmUnsub = null; }
   if(state.mmInterval){
@@ -1729,6 +1877,22 @@ function closeModal(){
 
 function attachListeners(){
   detachListeners();
+
+state.unsubs.push(onSnapshot(
+  query(collection(db, 'commentLikes'), where('uid', '==', state.user.uid)),
+  snap => {
+    state.profileLiked = state.profileLiked || {};
+    /* امسح القديم */
+    Object.keys(state.profileLiked).forEach(k => {
+      if(k.startsWith('c_')) delete state.profileLiked[k];
+    });
+    snap.docs.forEach(d => {
+      state.profileLiked[`c_${d.data().commentId}`] = true;
+    });
+    if(state.currentPostId) renderCommentsList();
+  },
+  err => console.warn('commentLikes snapshot:', err)
+));
 
 state.unsubs.push(onSnapshot(
   doc(db, 'users', state.user.uid),
@@ -1755,15 +1919,27 @@ if (['profile','stats','settings','userprofile','customization'].includes(state.
   }
 ));
 
+/* posts — render فقط عند تغيّر الهيكل */
 state.unsubs.push(onSnapshot(
   query(collection(db,'posts'), orderBy('createdAt','desc'), limit(50)),
   snap => {
-    state.posts = snap.docs
+    const newPosts = snap.docs
       .map(d => ({id: d.id, ...d.data()}))
-      .filter(p => !p.reblogOf);   /* ★ إخفاء إعادة النشر القديمة */
-    if (['home','profile','userprofile'].includes(state.page)) render();
+      .filter(p => !p.reblogOf);
+
+    const oldIds = state.posts.map(p => p.id).join('|');
+    const newIds = newPosts.map(p => p.id).join('|');
+
+    state.posts = newPosts;
+
+    /* ✅ render فقط إذا تغيّر ترتيب/عدد المنشورات (ليس مجرد إعجاب) */
+    if(oldIds !== newIds && ['home','profile','userprofile'].includes(state.page)){
+      const scrollY = window.scrollY;
+      render();
+      requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    }
   },
-  err => console.error('Posts snapshot error:', err)
+  err => console.error('posts snapshot:', err)
 ));
 
 state.unsubs.push(onSnapshot(
@@ -1786,14 +1962,16 @@ state.unsubs.push(onSnapshot(
     }
   ));
 
-  state.unsubs.push(onSnapshot(
-    query(collection(db,'postLikes'), where('uid','==',state.user.uid)),
-    snap=>{
-      state.liked = {};
-      snap.docs.forEach(d=>{ state.liked[d.data().postId] = true; });
-      if(state.page==='home') render();
-    }
-  ));
+/* postLikes — بدون render */
+state.unsubs.push(onSnapshot(
+  query(collection(db,'postLikes'), where('uid','==',state.user.uid)),
+  snap=>{
+    state.liked = {};
+    snap.docs.forEach(d=>{ state.liked[d.data().postId] = true; });
+    /* ❌ لا render — الإعجاب يُحدَّث فورياً في toggleLike */
+  },
+  err => console.warn('postLikes:', err)
+));
 
   state.unsubs.push(onSnapshot(
     query(collection(db,'profileLikes'), where('from','==',state.user.uid)),
@@ -1846,12 +2024,24 @@ state.unsubs.push(onSnapshot(
 
 /* ============ Likes / Follow / Save ============ */
 async function toggleLike(postId){
-  const ref = doc(db,'posts',postId);
-  const likeRef = doc(db,'postLikes',`${state.user.uid}_${postId}`);
+  const wasLiked = !!state.liked[postId];
+  const post = state.posts.find(p => p.id === postId);
+  const oldCount = post?.likes || 0;
+
+  /* ✅ تحسين فوري */
+  state.liked[postId] = !wasLiked;
+  if(post) post.likes = wasLiked ? Math.max(0, oldCount - 1) : oldCount + 1;
+  updatePostLikeUI(postId);
+
   try {
-    const postSnap = await getDoc(ref);
-    const authorId = postSnap.exists() ? postSnap.data().authorId : null;
-    await runTransaction(db, async tx=>{
+    const ref = doc(db, 'posts', postId);
+    const likeRef = doc(db, 'postLikes', `${state.user.uid}_${postId}`);
+    let authorId = null;
+
+    await runTransaction(db, async tx => {
+      const postSnap = await tx.get(ref);
+      if(postSnap.exists()) authorId = postSnap.data().authorId;
+
       const s = await tx.get(likeRef);
       if(s.exists()){
         tx.delete(likeRef);
@@ -1861,10 +2051,25 @@ async function toggleLike(postId){
         tx.update(ref, { likes: increment(1) });
       }
     });
-    if(!state.liked[postId] && authorId){
+
+    if(!wasLiked && authorId && authorId !== state.user.uid){
       await notify(authorId, 'like', `<b>${esc(state.profile.name)}</b> أعجبه منشورك`);
     }
-  } catch(e){ toast('تعذّر تحديث الإعجاب'); }
+  } catch(e){
+    state.liked[postId] = wasLiked;
+    if(post) post.likes = oldCount;
+    updatePostLikeUI(postId);
+    toast('تعذّر تحديث الإعجاب');
+  }
+}
+
+function updatePostLikeUI(postId){
+  const btn = document.querySelector(`[data-like="${postId}"]`);
+  if(!btn) return;
+  const post = state.posts.find(p => p.id === postId);
+  const liked = state.liked[postId];
+  btn.classList.toggle('liked', liked);
+  btn.innerHTML = `${ic('heart','sm')} ${nf(post?.likes || 0)}`;
 }
 
 async function toggleSave(postId){
@@ -1997,21 +2202,621 @@ await updateDoc(doc(db,'users',targetUid), {
   } catch(e){ toast('فشل الدعم'); }
 }
 
-/* ============ Comments ============ */
-async function loadComments(postId){
-  try {
-    const q = query(collection(db,'posts',postId,'comments'), orderBy('createdAt','asc'), limit(100));
-    const snap = await getDocs(q);
-    state.comments[postId] = snap.docs.map(d=>({id:d.id, ...d.data()}));
-  } catch(e){ state.comments[postId] = []; }
+/* ============================================================
+   💬 مستمع التعليقات الحي
+   ============================================================ */
+function subscribeToComments(postId){
+  if(state.commentsUnsub){
+    try { state.commentsUnsub(); } catch(e){}
+    state.commentsUnsub = null;
+  }
+
+  const q = query(
+    collection(db, 'posts', postId, 'comments'),
+    orderBy('createdAt', 'asc'),
+    limit(200)
+  );
+
+  const applySnap = (snap) => {
+    state.comments[postId] = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+    state.commentsLoading = false;
+
+    /* الطي التلقائي عند أول تحميل */
+    if(!state._commentsInitialCollapseDone && state.comments[postId].length > 0){
+      state._commentsInitialCollapseDone = true;
+      const topLevel = state.comments[postId].filter(c => !c.parentId);
+      topLevel.forEach(c => state.collapsedThreads.add(c.id));
+    }
+
+    renderCommentsList();
+  };
+
+  /* ★ 1) getDocs أولاً — سريع وموثوق */
+  (async () => {
+    try {
+      const snap = await getDocs(q);
+      if(state.currentPostId === postId){
+        applySnap(snap);
+      }
+    } catch(e){
+      console.error('comments getDocs:', e);
+      if(state.currentPostId === postId){
+        state.commentsLoading = false;
+        renderCommentsList();
+      }
+    }
+
+    /* ★ 2) onSnapshot بعدها — حي */
+    try {
+      state.commentsUnsub = onSnapshot(q,
+        (snap) => {
+          if(state.currentPostId === postId) applySnap(snap);
+        },
+        (err) => {
+          console.error('comments onSnapshot:', err);
+          /* fallback — اعرض ما تم تحميله */
+          if(state.currentPostId === postId){
+            state.commentsLoading = false;
+            renderCommentsList();
+          }
+        }
+      );
+    } catch(e){
+      console.error('onSnapshot setup:', e);
+      state.commentsLoading = false;
+      renderCommentsList();
+    }
+  })();
 }
 
-async function addComment(postId, text){
-  if(!text.trim()) return;
+/* ============================================================
+   🌳 إيجاد الجذر العلوي
+   ============================================================ */
+function findTopLevelAncestor(commentId, commentsMap){
+  let current = commentsMap.get(commentId);
+  const visited = new Set();
+  while(current && current.parentId && !visited.has(current.id)){
+    visited.add(current.id);
+    const parent = commentsMap.get(current.parentId);
+    if(!parent) break;
+    current = parent;
+  }
+  return current;
+}
+
+/* ============================================================
+   🎨 عرض القائمة — ردود مسطّحة
+   ============================================================ */
+function renderCommentsList(){
+  const body = document.getElementById('commentsListBody');
+  if(!body) return;
+
+  const postId = state.currentPostId;
+  const all = state.comments[postId] || [];
+  const active = all.filter(c => !c.deleted || all.some(x => x.parentId === c.id));
+
+  const badge = document.getElementById('commentsCountBadge');
+  if(badge) badge.textContent = active.length;
+
+  if(!active.length){
+    body.innerHTML = `
+      <div class="comments-empty">
+        ${ic('comment')}
+        <div class="comments-empty-title">لا تعليقات بعد</div>
+        <div class="comments-empty-sub">كن الأول وشارك رأيك</div>
+      </div>`;
+    return;
+  }
+
+  const commentsMap = new Map(active.map(c => [c.id, c]));
+  const topLevel = active.filter(c => !c.parentId);
+  const sortedTop = sortComments(topLevel, state.commentsSort);
+
+  /* ★★ تجميع كل الردود تحت الجذر العلوي (مسطّحة) ★★ */
+  const repliesByRoot = new Map();
+  sortedTop.forEach(c => repliesByRoot.set(c.id, []));
+
+  active.forEach(c => {
+    if(!c.parentId) return;
+    const root = findTopLevelAncestor(c.id, commentsMap);
+    if(root && repliesByRoot.has(root.id)){
+      repliesByRoot.get(root.id).push(c);
+    }
+  });
+
+  const post = state.posts.find(p => p.id === postId);
+  const postAuthorId = post?.authorId;
+
+  body.innerHTML = sortedTop.map(c => {
+    const replies = repliesByRoot.get(c.id) || [];
+    return renderTopLevelComment(c, replies, postAuthorId, commentsMap);
+  }).join('');
+}
+
+/* ============================================================
+   🧵 تعليق علوي + ردوده المسطّحة
+   ============================================================ */
+function renderTopLevelComment(comment, replies, postAuthorId, commentsMap){
+  const isCollapsed = state.collapsedThreads.has(comment.id);
+  const sortedReplies = sortComments(replies, 'oldest');
+
+  return `
+    <div class="comment-thread" data-comment-id="${comment.id}">
+      ${renderSingleComment(comment, postAuthorId, false)}
+
+      ${replies.length ? `
+        <button type="button" class="show-replies-btn" data-toggle-thread="${comment.id}">
+          ${ic(isCollapsed ? 'plus' : 'minus','xs')}
+          ${isCollapsed ? `عرض ${replies.length} رد` : `إخفاء ${replies.length} رد`}
+        </button>
+        ${!isCollapsed ? `
+          <div class="comment-replies-flat">
+            ${sortedReplies.map(r => renderSingleComment(r, postAuthorId, true)).join('')}
+          </div>
+        ` : ''}
+      ` : ''}
+    </div>
+  `;
+}
+
+/* ============================================================
+   💬 تعليق واحد (بسيط أو رد)
+   ============================================================ */
+function renderSingleComment(comment, postAuthorId, isReply){
+  const postId = state.currentPostId;
+  const isDeleted = comment.deleted;
+  const isLiked = state.profileLiked?.[`c_${comment.id}`] || false;
+  const isEditing = state.editingCommentId === comment.id;
+  const isPostAuthor = comment.authorId === postAuthorId;
+  const isMine = comment.authorId === state.user.uid;
+
+/* ★ قراءة حيّة من state.users — تتحدّث تلقائياً */
+const liveUser = state.users?.[comment.authorId];
+const author = liveUser
+  ? {
+      name: liveUser.name || comment.author?.name || 'مستخدم',
+      username: liveUser.username || comment.author?.username || '',
+      avatarUrl: liveUser.avatarUrl ?? comment.author?.avatarUrl ?? '',
+      grad: liveUser.grad || comment.author?.grad || pickGrad(comment.authorId),
+    }
+  : (comment.author || { name: 'مستخدم', username: '' });
+  const displayTime = comment.createdAt ? timeAgo(comment.createdAt) : 'الآن';
+
+  const replyIndicator = isReply && comment.replyTo
+    ? `<span class="comment-reply-context">${ic('back','xs')} يرد على @${esc(comment.replyTo.username || '')}</span>`
+    : '';
+
+  return `
+    <div class="comment-item ${isDeleted ? 'deleted' : ''} ${isReply ? 'is-reply' : ''}"
+         id="comment_${comment.id}">
+      <div class="comment-avatar" data-view-profile="${comment.authorId || ''}">
+        ${isDeleted
+          ? `<div class="av" style="--s:${isReply ? 32 : 36}px;background:rgba(255,255,255,.08)">${ic('close','xs')}</div>`
+          : avatar(author, isReply ? 32 : 36)}
+      </div>
+      <div class="comment-content">
+        <div class="comment-head">
+          ${isDeleted ? `
+            <span class="comment-name" style="color:var(--muted)">[محذوف]</span>
+          ` : `
+            <span class="comment-name" data-view-profile="${comment.authorId || ''}">${esc(author.name || '')}</span>
+            <span class="comment-username">@${esc(author.username || '')}</span>
+            ${isPostAuthor ? `<span class="comment-author-badge">${ic('crown','xs')} الناشر</span>` : ''}
+          `}
+          <span class="comment-time">
+            ${displayTime}
+            ${comment.edited ? '<span class="comment-edited-badge">معدّل</span>' : ''}
+          </span>
+        </div>
+        ${replyIndicator}
+
+        ${isEditing ? `
+          <div class="comment-edit-form">
+            <textarea id="editCommentInput_${comment.id}"
+                      maxlength="500"
+                      rows="2">${esc(comment.text || '')}</textarea>
+            <div class="comment-edit-actions">
+              <button type="button" class="comment-edit-cancel" data-cancel-edit-comment="${comment.id}">إلغاء</button>
+              <button type="button" class="comment-edit-save" data-save-edit-comment="${comment.id}">حفظ</button>
+            </div>
+          </div>
+        ` : `
+          <div class="comment-text">${
+            isDeleted
+              ? '<i>تم حذف هذا التعليق</i>'
+              : formatPostText(comment.text || '', { interactive: true })
+          }</div>
+        `}
+
+        ${!isDeleted && !isEditing ? `
+          <div class="comment-actions">
+            <button type="button" class="comment-action-btn ${isLiked ? 'liked' : ''}"
+                    data-like-comment="${comment.id}">
+              ${ic('heart','xs')} ${comment.likes || 0}
+            </button>
+            <button type="button" class="comment-action-btn reply-btn"
+                    data-reply-to="${comment.id}">
+              ${ic('comment','xs')} رد
+            </button>
+            ${isMine ? `
+              <button type="button" class="comment-action-btn" data-edit-comment="${comment.id}">
+                ${ic('edit','xs')} تعديل
+              </button>
+              <button type="button" class="comment-action-btn delete-btn" data-delete-comment-new="${comment.id}">
+                ${ic('trash','xs')} حذف
+              </button>
+            ` : `
+              <button type="button" class="comment-action-btn"
+                      data-report-target="${postId}::${comment.id}"
+                      data-report-type="comment">
+                ${ic('shield','xs')} إبلاغ
+              </button>
+            `}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function sortComments(list, sort){
+  const sorted = [...list];
+  if(sort === 'newest'){
+    return sorted.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }
+  if(sort === 'oldest'){
+    return sorted.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  }
+  if(sort === 'top'){
+    return sorted.sort((a,b) => {
+      const likeDiff = (b.likes || 0) - (a.likes || 0);
+      if(likeDiff !== 0) return likeDiff;
+      return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+    });
+  }
+  return sorted;
+}
+
+/* ============================================================
+   ✍️ إدخال التعليق
+   ============================================================ */
+function onCommentInputChange(){
+  const input = document.getElementById('commentInput');
+  const counter = document.getElementById('commentCharCounter');
+  const sendBtn = document.getElementById('sendCommentBtn');
+  if(!input) return;
+
+  /* auto-resize */
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+
+  const len = input.value.length;
+
+  /* عدّاد — يظهر فقط عند الاقتراب من الحد */
+  if(counter){
+    counter.textContent = `${len}/500`;
+    counter.classList.toggle('visible', len > 350);
+    counter.classList.toggle('warning', len > 400 && len <= 450);
+    counter.classList.toggle('danger', len > 450);
+  }
+
+  /* زر الإرسال */
+  if(sendBtn){
+    sendBtn.disabled = !input.value.trim() && !state.replyingTo;
+  }
+}
+
+async function submitComment(){
+  const postId = state.currentPostId;
+  if(!postId) return;
+  const input = document.getElementById('commentInput');
+  const text = input?.value.trim() || '';
+  if(!text && !state.replyingTo) return;
+
+  const btn = document.getElementById('sendCommentBtn');
+  if(btn){ btn.disabled = true; btn.classList.add('loading'); }
+
   try {
-    const postSnap = await getDoc(doc(db,'posts',postId));
-    const postData = postSnap.exists() ? postSnap.data() : null;
-    await addDoc(collection(db,'posts',postId,'comments'), {
+    const commentData = {
+      authorId: state.user.uid,
+      author: {
+        name: state.profile.name,
+        username: state.profile.username,
+        avatarUrl: state.profile.avatarUrl || '',
+        grad: state.profile.grad || pickGrad(state.user.uid),
+      },
+      text,
+      parentId: state.replyingTo?.commentId || null,
+      replyTo: state.replyingTo
+        ? { name: state.replyingTo.name, username: state.replyingTo.username }
+        : null,
+      likes: 0,
+      deleted: false,
+      edited: false,
+      createdAt: serverTimestamp(),
+    };
+
+    await addDoc(collection(db, 'posts', postId, 'comments'), commentData);
+    await updateDoc(doc(db, 'posts', postId), { comments: increment(1) });
+
+    /* إشعار */
+    try {
+      const post = state.posts.find(p => p.id === postId);
+      const targetAuthor = state.replyingTo?.authorId
+        ? state.replyingTo.authorId
+        : post?.authorId;
+
+      if(targetAuthor && targetAuthor !== state.user.uid){
+        const isReply = !!state.replyingTo;
+        await notify(targetAuthor, isReply ? 'reply' : 'comment',
+          `<b>${esc(state.profile.name)}</b> ${isReply ? 'ردّ على تعليقك' : 'علّق على منشورك'}`);
+      }
+    } catch(e){}
+
+    /* مسح */
+    if(input) input.value = '';
+    state.replyingTo = null;
+    renderReplyContext();
+    onCommentInputChange();
+    state.commentEmojiOpen = false;
+    document.getElementById('commentEmojiPicker')?.classList.remove('active');
+
+    if(btn) btn.classList.remove('loading');
+    if(input) input.focus();
+  } catch(e){
+    console.error(e);
+    toast('فشل نشر التعليق');
+    if(btn){ btn.disabled = false; btn.classList.remove('loading'); }
+  }
+}
+
+/* ============================================================
+   💬 سياق الرد
+   ============================================================ */
+function renderReplyContext(){
+  const wrap = document.getElementById('replyContextWrap');
+  if(!wrap) return;
+
+  if(!state.replyingTo){
+    wrap.innerHTML = '';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="reply-context">
+      <span style="color:var(--brand-2);font-weight:900;font-size:14px">↳</span>
+      <span class="reply-context-text">
+        ترد على <b>@${esc(state.replyingTo.username)}</b>
+      </span>
+      <button type="button" class="reply-context-close" data-action="cancel-reply" aria-label="إلغاء">
+        ${ic('close','xs')}
+      </button>
+    </div>
+  `;
+  document.getElementById('commentInput')?.focus();
+}
+
+function startReply(commentId){
+  const postId = state.currentPostId;
+  const comments = state.comments[postId] || [];
+  const comment = comments.find(c => c.id === commentId);
+  if(!comment || comment.deleted) return;
+
+  state.replyingTo = {
+    commentId: comment.id,
+    authorId: comment.authorId,
+    name: comment.author?.name || '',
+    username: comment.author?.username || '',
+  };
+
+  renderReplyContext();
+  onCommentInputChange();
+}
+
+function cancelReply(){
+  state.replyingTo = null;
+  renderReplyContext();
+  onCommentInputChange();
+}
+
+/* ============================================================
+   ❤️ إعجاب التعليق
+   ============================================================ */
+async function toggleCommentLike(commentId){
+  const postId = state.currentPostId;
+  if(!postId) return;
+
+  const likeId = `${state.user.uid}_${commentId}`;
+  const likeRef = doc(db, 'commentLikes', likeId);
+  const commentRef = doc(db, 'posts', postId, 'comments', commentId);
+
+  const comments = state.comments[postId] || [];
+  const comment = comments.find(c => c.id === commentId);
+  if(!comment) return;
+
+  const wasLiked = !!state.profileLiked?.[`c_${commentId}`];
+  const oldCount = comment.likes || 0;
+
+  /* ✅ تحسين فوري (Optimistic) */
+  state.profileLiked = state.profileLiked || {};
+  state.profileLiked[`c_${commentId}`] = !wasLiked;
+  comment.likes = wasLiked ? Math.max(0, oldCount - 1) : oldCount + 1;
+  updateCommentLikeUI(commentId);
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const likeSnap = await tx.get(likeRef);
+      if(likeSnap.exists()){
+        tx.delete(likeRef);
+        tx.update(commentRef, { likes: increment(-1) });
+      } else {
+        tx.set(likeRef, {
+          uid: state.user.uid,
+          commentId,
+          postId,
+          createdAt: serverTimestamp(),
+        });
+        tx.update(commentRef, { likes: increment(1) });
+      }
+    });
+
+    /* إشعار */
+    if(!wasLiked && comment.authorId !== state.user.uid){
+      await notify(comment.authorId, 'comment_like',
+        `<b>${esc(state.profile.name)}</b> أعجبه تعليقك`);
+    }
+  } catch(e){
+    console.error('toggleCommentLike:', e);
+    /* تراجع */
+    state.profileLiked[`c_${commentId}`] = wasLiked;
+    comment.likes = oldCount;
+    updateCommentLikeUI(commentId);
+    toast('فشل');
+  }
+}
+
+/* تحديث DOM بدون إعادة رسم */
+function updateCommentLikeUI(commentId){
+  const btn = document.querySelector(`[data-like-comment="${commentId}"]`);
+  if(!btn) return;
+  const postId = state.currentPostId;
+  const comments = state.comments[postId] || [];
+  const comment = comments.find(c => c.id === commentId);
+  if(!comment) return;
+
+  const isLiked = !!state.profileLiked?.[`c_${commentId}`];
+  btn.classList.toggle('liked', isLiked);
+  btn.innerHTML = `${ic('heart','xs')} ${comment.likes || 0}`;
+}
+
+/* ============================================================
+   ✏️ تعديل التعليق
+   ============================================================ */
+function startEditComment(commentId){
+  state.editingCommentId = commentId;
+  renderCommentsList();
+  setTimeout(() => {
+    const ta = document.getElementById(`editCommentInput_${commentId}`);
+    if(ta){
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = ta.value.length;
+    }
+  }, 50);
+}
+
+async function saveEditComment(commentId){
+  const ta = document.getElementById(`editCommentInput_${commentId}`);
+  const text = ta?.value.trim() || '';
+  if(!text) return toast('لا يمكن أن يكون فارغاً');
+
+  const postId = state.currentPostId;
+  try {
+    await updateDoc(doc(db, 'posts', postId, 'comments', commentId), {
+      text,
+      edited: true,
+      editedAt: serverTimestamp(),
+    });
+    state.editingCommentId = null;
+    renderCommentsList();
+    toast('تم التعديل ✓');
+  } catch(e){
+    console.error(e);
+    toast('فشل التعديل');
+  }
+}
+
+function cancelEditComment(){
+  state.editingCommentId = null;
+  renderCommentsList();
+}
+
+/* ============================================================
+   🗑️ حذف التعليق
+   ============================================================ */
+async function deleteCommentAdvanced(commentId){
+  const postId = state.currentPostId;
+  if(!postId) return;
+  if(!confirm('حذف هذا التعليق؟')) return;
+
+  const comments = state.comments[postId] || [];
+  const hasReplies = comments.some(c => c.parentId === commentId);
+
+  try {
+    if(hasReplies){
+      /* soft delete — يبقي الشجرة */
+      await updateDoc(doc(db, 'posts', postId, 'comments', commentId), {
+        deleted: true,
+        text: '',
+        likes: 0,
+        deletedAt: serverTimestamp(),
+      });
+    } else {
+      /* hard delete */
+      await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
+    }
+
+    await updateDoc(doc(db, 'posts', postId), { comments: increment(-1) });
+    toast('تم الحذف');
+  } catch(e){
+    console.error(e);
+    toast('فشل الحذف');
+  }
+}
+
+/* ============================================================
+   🔀 تغيير الترتيب
+   ============================================================ */
+function setCommentsSort(sort){
+  state.commentsSort = sort;
+  document.querySelectorAll('[data-comment-sort]').forEach(b => {
+    b.classList.toggle('active', b.dataset.commentSort === sort);
+  });
+  renderCommentsList();
+}
+
+/* ============================================================
+   🎛️ تبديل الاقتراحات (طي/فتح)
+   ============================================================ */
+function toggleThread(commentId){
+  if(state.collapsedThreads.has(commentId)){
+    state.collapsedThreads.delete(commentId);
+  } else {
+    state.collapsedThreads.add(commentId);
+  }
+  renderCommentsList();
+}
+
+/* ============ Create Post ============ */
+async function createPost(data){
+  const btn = document.getElementById('composeSubmit');
+  if(btn){ btn.disabled = true; btn.classList.add('loading'); }
+
+  try {
+    const images = state.composeImages || [];
+    const mediaUrls = [];
+    const mediaAlts = [];
+
+    /* رفع الصور واحدة تلو الأخرى */
+    for(let i = 0; i < images.length; i++){
+      try {
+        const url = await imageToBase64(images[i].file, 'post');
+        mediaUrls.push(url);
+        mediaAlts.push(images[i].alt || '');
+      } catch(e){
+        console.error('فشل رفع صورة:', e);
+      }
+    }
+
+    if(images.length && !mediaUrls.length){
+      toast('فشل رفع جميع الصور');
+      if(btn){ btn.disabled = false; btn.classList.remove('loading'); }
+      return;
+    }
+
+    const docRef = await addDoc(collection(db,'posts'), {
       authorId: state.user.uid,
       author: {
         name: state.profile.name,
@@ -2019,111 +2824,40 @@ async function addComment(postId, text){
         avatarUrl: state.profile.avatarUrl || '',
         grad: state.profile.grad || pickGrad(state.user.uid)
       },
-      text, createdAt: serverTimestamp()
+      text: data.text || '',
+      media: mediaUrls[0] || '',
+      mediaUrls: mediaUrls,
+      mediaAlts: mediaAlts,
+      place: state.composeLocation || '',
+      likes: 0, comments: 0, reblogs: 0,
+      rebloggedBy: [],
+      visibility: state.composeVisibility || 'public',
+      pinned: false,
+      createdAt: serverTimestamp()
     });
-    await updateDoc(doc(db,'posts',postId), { comments: increment(1) });
-    if(postData && postData.authorId !== state.user.uid){
-      await notify(postData.authorId, 'comment', `<b>${esc(state.profile.name)}</b> علّق على منشورك`);
-    }
-    await loadComments(postId);
-  } catch(e){ toast('فشل إضافة التعليق'); }
-}
 
-async function deleteComment(postId, commentId){
-  if(!confirm('حذف هذا التعليق؟')) return;
-  try {
-    await deleteDoc(doc(db,'posts',postId,'comments',commentId));
-    await updateDoc(doc(db,'posts',postId), { comments: increment(-1) });
-    await loadComments(postId);
-    render();
-  } catch(e){ toast('فشل الحذف'); }
-}
+    /* مسح المسودة + تنظيف الحالة */
+    try { localStorage.removeItem('nexus_post_draft'); } catch(e){}
 
-async function openCommentsModal(postId){
-  await loadComments(postId);
-  const post = state.posts.find(p=>p.id===postId);
-  const comments = state.comments[postId] || [];
-  openModal(`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <h3 style="margin:0">التعليقات (${comments.length})</h3>
-      <button class="icon-btn" data-action="modal-close">${ic('close','sm')}</button>
-    </div>
-    <div style="max-height:55vh;overflow-y:auto;padding-inline-end:4px" id="commentsList">
-      ${comments.length ? comments.map(c=>`
-        <div class="comment-item">
-          ${avatar(c.author, 36)}
-          <div class="comment-body">
-            <div class="comment-name">${esc(c.author?.name||'')} <span class="comment-time">${timeAgo(c.createdAt)}</span></div>
-            <div class="comment-text">${esc(c.text)}</div>
-          </div>
+    /* المنشور الجديد يجب أن يكون مرئياً */
+    state.seenPosts.delete(docRef.id);
 
-          <!-- ★ زر الحذف (لصاحب التعليق) -->
-          ${c.authorId === state.user.uid
-            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)" data-delete-comment="${c.id}" data-post-id="${postId}">${ic('trash','xs')}</button>`
-            : ''}
+    /* تنظيف الصور */
+    state.composeImages.forEach(img => {
+      try { URL.revokeObjectURL(img.preview); } catch(e){}
+    });
+    state.composeImages = [];
+    state.composeLocation = '';
 
-          <!-- ★ زر الإبلاغ (لغير صاحب التعليق) -->
-          ${c.authorId !== state.user.uid
-            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)"
-                       data-report-target="${postId}::${c.id}"
-                       data-report-type="comment"
-                       title="إبلاغ">
-                 ${ic('dots','xs')}
-               </button>`
-            : ''}
-        </div>`).join('') : `<div class="empty" style="padding:30px 0">${ic('comment')}<div>لا تعليقات بعد — كن الأول</div></div>`}
-    </div>
-    <div class="comment-input-wrap">
-      ${avatar(state.profile, 36)}
-      <input class="input" id="commentInput" placeholder="أضف تعليقاً…" style="flex:1" autocomplete="off">
-      <button class="btn btn-primary" style="padding:10px 14px" id="sendCommentBtn" data-post-id="${postId}">${ic('send','sm')}</button>
-    </div>`);
-}
-
-/* ============ Create Post ============ */
-async function createPost(data){
-  const btn = document.getElementById('submitPost');
-  if(btn) btn.disabled = true;
-  try {
-    let mediaUrl = '';
-    if(state.pendingImages.post){
-      const prog = document.getElementById('postUploadProgress');
-      if(prog) prog.classList.add('active');
-      try {
-        mediaUrl = await imageToBase64(state.pendingImages.post, 'post', p => {
-          const bar = prog?.querySelector('span');
-          if(bar) bar.style.width = p + '%';
-        });
-      } catch(e) {
-        toast(e.message || 'فشل رفع الصورة');
-        if(btn) btn.disabled = false;
-        return;
-      }
-    }
-    setTimeout(checkAchievements, 500);
-await addDoc(collection(db,'posts'), {
-  authorId: state.user.uid,
-      author: {
-        name: state.profile.name,
-        username: state.profile.username,
-        avatarUrl: state.profile.avatarUrl || '',
-        grad: state.profile.grad || pickGrad(state.user.uid)
-      },
-  text: data.text,
-  media: mediaUrl,
-  place: data.place || '',
-  likes: 0, comments: 0, reblogs: 0,
-  rebloggedBy: [],       /* ★ جديد */
-  visibility: 'public',
-  pinned: false,
-  createdAt: serverTimestamp()
-});
     closeModal();
-    toast('تم النشر ✓');
+    toast('✓ تم النشر بنجاح');
+
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 120);
+    setTimeout(checkAchievements, 500);
   } catch(e){
     console.error(e);
     toast('فشل النشر: ' + (e.message || ''));
-    if(btn) btn.disabled = false;
+    if(btn){ btn.disabled = false; btn.classList.remove('loading'); }
   }
 }
 
@@ -2133,6 +2867,107 @@ async function deletePost(postId){
     await deleteDoc(doc(db,'posts',postId));
     toast('تم الحذف');
   } catch(e){ toast('فشل الحذف'); }
+}
+
+async function openCommentsModal(postId){
+  state.currentPostId = postId;
+  state.commentsSort = 'newest';
+  state.replyingTo = null;
+  state.editingCommentId = null;
+  state.commentEmojiOpen = false;
+  state.collapsedThreads.clear();
+  state._commentsInitialCollapseDone = false;
+  state.commentsLoading = true;
+
+  /* لا تصفّر البيانات القديمة — تعرض فوراً */
+  if(!state.comments[postId]){
+    state.comments[postId] = [];
+  }
+
+  openModal(`
+    <div class="comments-modal-inner">
+      <div class="comments-header">
+        <h3>
+          ${ic('comment','sm')} التعليقات
+          <span class="comments-count-badge" id="commentsCountBadge">0</span>
+        </h3>
+        <button type="button" class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+          ${ic('close','sm')}
+        </button>
+      </div>
+
+      <div class="comments-sort-tabs">
+        <button type="button" class="comments-sort-tab active" data-comment-sort="newest">
+          ${ic('clock','xs')} الأحدث
+        </button>
+        <button type="button" class="comments-sort-tab" data-comment-sort="top">
+          ${ic('heart','xs')} الأفضل
+        </button>
+        <button type="button" class="comments-sort-tab" data-comment-sort="oldest">
+          ${ic('back','xs')} الأقدم
+        </button>
+      </div>
+
+      <div class="comments-body" id="commentsListBody">
+        <div class="comments-loading">
+          <div class="spinner"></div>
+          <span>جاري تحميل التعليقات…</span>
+        </div>
+      </div>
+
+      <div class="comments-input-area">
+        <div id="replyContextWrap"></div>
+        <div class="comment-input-row">
+          <div class="comment-input-avatar">
+            ${avatar(state.profile, 34)}
+          </div>
+          <div class="comment-input-wrap">
+            <textarea id="commentInput"
+                      placeholder="اكتب تعليقاً…"
+                      maxlength="500"
+                      rows="1"
+                      autocomplete="off"></textarea>
+          </div>
+          <button type="button" class="comment-send-btn" id="sendCommentBtn" data-post-id="${postId}" disabled>
+            ${ic('send','sm')}
+          </button>
+        </div>
+        <div class="comment-input-footer" id="commentInputFooter">
+          <span class="comment-char-counter" id="commentCharCounter">0/500</span>
+          <span class="comment-hint">Ctrl + Enter للنشر</span>
+        </div>
+      </div>
+    </div>
+  `, 'comments-modal');   // ← ★ أضف الفاصلة والكلاس
+
+  /* التهيئة */
+  const input = document.getElementById('commentInput');
+  if(input){
+    input.addEventListener('input', onCommentInputChange);
+    input.addEventListener('keydown', (e) => {
+      if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+        e.preventDefault();
+        submitComment();
+      }
+    });
+    setTimeout(() => input.focus(), 100);
+  }
+
+  /* ★ 1) عرض فوري (بيانات قديمة أو "جاري التحميل…") */
+  renderCommentsList();
+
+  /* ★ 2) جلب + اشتراك */
+  subscribeToComments(postId);
+
+  /* ★ 3) timeout احتياطي */
+  const guardPost = postId;
+  setTimeout(() => {
+    if(state.currentPostId === guardPost && state.commentsLoading){
+      console.warn('comments load timeout — forcing render');
+      state.commentsLoading = false;
+      renderCommentsList();
+    }
+  }, 8000);
 }
 
 /* ============ Chat ============ */
@@ -3579,45 +4414,200 @@ function renderTrendingInfoCard(){
   `;
 }
 
+/* ============================================================
+   👁️ نظام تتبّع المنشورات المشاهَدة
+   ============================================================ */
+function initSeenPosts(){
+  if(state.postsObserver) return;
+
+  /* استعادة من الجلسة */
+  try {
+    const saved = sessionStorage.getItem('nexus_seen_posts');
+    if(saved){
+      JSON.parse(saved).forEach(id => state.seenPosts.add(id));
+    }
+  } catch(e){}
+
+  /* Observer */
+  if('IntersectionObserver' in window){
+    state.postsObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const el = entry.target;
+        const postId = el.dataset.postId;
+        if(!postId) return;
+
+        if(entry.isIntersecting){
+          if(!el._seenTimer){
+            el._seenTimer = setTimeout(() => {
+              if(!state.seenPosts.has(postId)){
+                state.seenPosts.add(postId);
+                persistSeenPosts();
+              }
+              el._seenTimer = null;
+            }, 2000);
+          }
+        } else {
+          if(el._seenTimer){
+            clearTimeout(el._seenTimer);
+            el._seenTimer = null;
+          }
+        }
+      });
+    }, { threshold: 0.3 });
+  }
+}
+
+function observePostElements(){
+  if(!state.postsObserver) return;
+  state.postsObserver.disconnect();
+  document.querySelectorAll('.post[data-post-id]').forEach(el => {
+    state.postsObserver.observe(el);
+  });
+}
+
+function persistSeenPosts(){
+  try {
+    sessionStorage.setItem('nexus_seen_posts', JSON.stringify([...state.seenPosts]));
+  } catch(e){}
+}
+
+/* فلترة المنشورات المشاهَدة */
+/* فلترة المنشورات المشاهَدة — نهائي، لا رجعة */
+function filterSeenPosts(posts){
+  if(!state.seenPosts.size) return posts;
+  return posts.filter(p => !state.seenPosts.has(p.id));
+}
+
+/* مؤشر عدد المشاهدات — للعرض فقط */
+function renderSeenIndicator(){
+  if(!state.seenPosts.size) return '';
+  return `
+  `;
+}
+
+/* حالة "كل المنشورات مشاهدَة" */
+/* حالة "كل المنشورات مشاهدَة" — بدون خيار استعادة */
+function renderFeedEmptySeenState(kind = 'explore'){
+  const messages = {
+    explore: {
+      title: 'شاهدت كل المنشورات',
+      sub: 'لا توجد منشورات جديدة الآن — عد لاحقاً لمحتوى طازج',
+      icon: 'eye',
+    },
+    follow: {
+      title: 'أنت مُحدَّث',
+      sub: 'شاهدت كل منشورات من تتابعهم — تابع المزيد من الحسابات',
+      icon: 'eye',
+    },
+    trend: {
+      title: 'لا رواج جديد',
+      sub: 'شاهدت كل المنشورات الدارجة — عد لاحقاً لمحتوى طازج',
+      icon: 'fire',
+    },
+  };
+  const m = messages[kind] || messages.explore;
+  return `
+    <div class="feed-empty-action">
+      <div class="fe-icon">${ic(m.icon)}</div>
+      <div class="fe-title">${m.title}</div>
+      <div class="fe-sub">${m.sub}</div>
+    </div>
+  `;
+}
+
+/* هل توجد مسودة محفوظة؟ */
+function hasDraft(){
+  try {
+    const d = JSON.parse(localStorage.getItem('nexus_post_draft') || '{}');
+    return !!(d.text && d.text.trim());
+  } catch(e){ return false; }
+}
+
 function pageHome(){
+  initSeenPosts();
+
   const tabs = `
-    <div class="tabs">
+    <div class="tabs home-tabs">
       <button class="tab ${state.homeTab==='explore'?'active':''}" data-tab="explore">${ic('globe','sm')} استكشف</button>
       <button class="tab ${state.homeTab==='follow'?'active':''}" data-tab="follow">${ic('users','sm')} متابعة</button>
       <button class="tab ${state.homeTab==='trend'?'active':''}" data-tab="trend">${ic('fire','sm')} دارج</button>
     </div>`;
+
   let body = '';
+
+  /* ═══════ استكشف ═══════ */
   if(state.homeTab === 'explore'){
-    const suggestions = Object.values(state.users).filter(u=>u.uid !== state.user.uid).slice(0,8);
-    const posts = [...state.posts].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    const suggestions = Object.values(state.users).filter(u => u.uid !== state.user.uid).slice(0, 8);
+    const hasSuggestions = suggestions.length > 0;
+    const allPosts = [...state.posts]
+      .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    const visiblePosts = filterSeenPosts(allPosts);
+
     body = `
-      <button class="btn btn-primary" style="width:100%;margin-bottom:14px" data-action="compose">${ic('plus','sm')} منشور جديد</button>
-      ${suggestions.length ? `<div class="section-title">${ic('users','sm')} حسابات قد تعجبك</div>
-      <div class="hscroll">${suggestions.map(suggestCard).join('')}</div>` : ''}
+      <div class="home-action-row">
+        <button class="btn btn-primary" style="flex:1;position:relative" data-action="compose">
+          ${ic('plus','sm')} منشور جديد
+          ${hasDraft() ? '<span class="draft-dot" title="لديك مسودة"></span>' : ''}
+        </button>
+        ${hasSuggestions ? `
+          <button class="btn btn-ghost ${state.showSuggestions?'suggestions-btn-active':''}" data-action="toggle-suggestions">
+            ${ic('users','sm')} <span class="suggestions-btn-label">حسابات</span>
+          </button>
+        ` : ''}
+      </div>
+      ${state.showSuggestions && hasSuggestions ? `
+        <div class="suggestions-dropdown">
+          <div class="suggestions-header">
+            <span>${ic('users','xs')} حسابات قد تعجبك</span>
+            <button type="button" class="close-suggestions" data-action="toggle-suggestions" aria-label="إغلاق">
+              ${ic('close','xs')}
+            </button>
+          </div>
+          <div class="suggestions-body">
+            ${suggestions.map(suggestRow).join('')}
+          </div>
+        </div>
+      ` : ''}
+      ${renderSeenIndicator()}
       <div class="section-title">${ic('grid','sm')} آخر المنشورات</div>
-      ${posts.length ? posts.map(p=>postCard(p)).join('') : emptyState('لا توجد منشورات بعد — كن أول من ينشر!')}`;
-  } else if(state.homeTab === 'follow'){
-    const posts = state.posts.filter(p=>state.followed.has(p.authorId));
-    body = posts.length ? posts.map(p=>postCard(p)).join('') : emptyState('تابع المزيد لتظهر منشوراتهم','users');
-} else {
-    /* 🔥 الخوارزمية العميقة */
+      ${visiblePosts.length
+        ? visiblePosts.map(p => postCard(p)).join('')
+        : allPosts.length === 0
+          ? emptyState('لا توجد منشورات بعد — كن أول من ينشر!')
+          : renderFeedEmptySeenState('explore')}`;
+  }
+
+  /* ═══════ متابعة ═══════ */
+  else if(state.homeTab === 'follow'){
+    const allFollowPosts = state.posts.filter(p => state.followed.has(p.authorId));
+    const visiblePosts = filterSeenPosts(allFollowPosts);
+
+    body = `
+      ${renderSeenIndicator()}
+      ${visiblePosts.length
+        ? visiblePosts.map(p => postCard(p)).join('')
+        : allFollowPosts.length === 0
+          ? emptyState('تابع المزيد لتظهر منشوراتهم','users')
+          : renderFeedEmptySeenState('follow')}`;
+  }
+
+  /* ═══════ دارج — بدون فلترة المشاهدات (دائماً يظهر) ═══════ */
+  else {
+    /* احسب النقاط */
     const scored = state.posts
-      .filter(p => !p.hidden && !p.reblogOf)   // استبعاد المخفي والنسخ القديمة
-      .map(p => ({
-        post: p,
-        score: calculateTrendingScore(p),
-      }))
+      .filter(p => !p.hidden && !p.reblogOf)
+      .map(p => ({ post: p, score: calculateTrendingScore(p) }))
       .filter(x => x.score > 0)
       .sort((a, b) => b.score - a.score);
 
     /* تنويع: 2 كحد أقصى لكل ناشر */
-    const seen = new Map();
+    const seenAuthors = new Map();
     const diversified = [];
     for(const x of scored){
-      const count = seen.get(x.post.authorId) || 0;
+      const count = seenAuthors.get(x.post.authorId) || 0;
       if(count < TRENDING_CONFIG.MAX_PER_AUTHOR){
         diversified.push(x);
-        seen.set(x.post.authorId, count + 1);
+        seenAuthors.set(x.post.authorId, count + 1);
       }
       if(diversified.length >= TRENDING_CONFIG.MAX_TRENDING) break;
     }
@@ -3627,7 +4617,26 @@ function pageHome(){
         ? diversified.map(x => postCard(x.post, true, x.score)).join('')
         : emptyState('لا توجد منشورات دارجة بعد — كن أول من ينشر!', 'fire'));
   }
-  return `<h1 class="page-title">الرئيسية</h1>${tabs}${body}`;
+
+  return `
+    <div class="home-top">
+      <h1 class="page-title">الرئيسية</h1>
+      ${tabs}
+    </div>
+    ${body}`;
+}
+
+function suggestRow(u){
+  const on = state.followed.has(u.uid);
+  return `<div class="suggest-row">
+    <div data-view-profile="${u.uid}" style="cursor:pointer">${avatar(u, 40)}</div>
+    <div class="suggest-row-info" data-view-profile="${u.uid}" style="cursor:pointer">
+      <div class="suggest-row-name">${esc(u.name)}</div>
+    </div>
+    <button type="button" class="suggest-follow-btn ${on?'on':''}" data-follow="${u.uid}" title="${on?'إلغاء المتابعة':'متابعة'}" aria-label="${on?'إلغاء المتابعة':'متابعة'}">
+      ${on ? ic('check','xs') : ic('plus','xs')}
+    </button>
+  </div>`;
 }
 
 function suggestCard(u){
@@ -3668,7 +4677,7 @@ function postCard(p, trendMode=false, trendingScore=null){
   const avatarRadius = POST_AVATAR_SHAPES[authorCust.postAvatarShape]?.radius || '50%';
   const avatarSize = authorCust.postAvatarSize || 44;
 
-  return `<article class="post ${authorCust.postCardStyle !== 'minimal' ? 'card' : ''} ${p.pinned?'pinned':''} ${p.hidden?'hidden-post':''}" style="${postStyle}">
+  return `<article class="post ${authorCust.postCardStyle !== 'minimal' ? 'card' : ''} ${p.pinned?'pinned':''} ${p.hidden?'hidden-post':''}" data-post-id="${p.id}" style="${postStyle}">
     ${p.pinned ? '<div class="pinned-badge">📌 مثبّت</div>' : ''}
     <header class="post-h">
       <div data-view-profile="${p.authorId}" style="cursor:pointer">
@@ -3702,8 +4711,8 @@ function postCard(p, trendMode=false, trendingScore=null){
       })() : ''}
       <button class="post-menu-btn" data-post-menu="${p.id}" title="خيارات">${ic('dots','sm')}</button>
     </header>
-    <p class="post-text" style="${textColorStyle}">${esc(p.text||'').replace(/\n/g,'<br>')}</p>
-    ${p.media ? `<div class="post-media"><img src="${esc(p.media)}" alt="" onerror="this.style.display='none'"></div>` : ''}
+    <p class="post-text" style="${textColorStyle}">${formatPostText(p.text||'')}</p>
+    ${renderPostMedia(p)}
     ${authorCust.postShowActions !== false ? `
     <div class="post-actions">
       <button class="pact ${liked?'liked':''}" data-like="${p.id}">${ic('heart','sm')} ${nf(p.likes)}</button>
@@ -3726,10 +4735,11 @@ function renderReblogCard(p, trendMode){
   const oAuthor  = snap?.author  || original?.author  || null;
   const oText    = snap?.text    ?? original?.text    ?? '';
   const oMedia   = snap?.media   ?? original?.media   ?? '';
+  const oMediaUrls = snap?.mediaUrls || original?.mediaUrls || (oMedia ? [oMedia] : []);
   const oTime    = snap?.createdAt || original?.createdAt || null;
   const isDeleted = !snap && !original;
 
-  return `<article class="post card reblog-card">
+  return `<article class="post card reblog-card" data-post-id="${esc(p.id||'')}">
     <header class="post-h">
       <div data-view-profile="${esc(p.authorId||'')}" style="cursor:pointer">${avatar(p.author||{}, 44)}</div>
       <div style="flex:1;min-width:0">
@@ -3757,8 +4767,21 @@ function renderReblogCard(p, trendMode){
             </div>
           </div>
         </header>
-        <p class="post-text" style="font-size:13px">${esc(oText||'').replace(/\n/g,'<br>')}</p>
-        ${oMedia ? `<div class="post-media" style="height:150px"><img src="${esc(oMedia)}" alt="" onerror="this.style.display='none'"></div>` : ''}
+        <p class="post-text" style="font-size:13px">${formatPostText(oText||'')}</p>
+        ${oMediaUrls.length ? `
+          <div class="post-media-grid count-${Math.min(oMediaUrls.length, 4)}"
+               data-action="open-media-gallery" data-post-id="${esc(p.id||'')}">
+            ${oMediaUrls.slice(0, 4).map((url, i) => `
+              <div class="post-media-cell" data-media-index="${i}">
+                <div class="post-media-skeleton"></div>
+                <img src="${esc(url)}" alt="${esc((snap?.mediaAlts || original?.mediaAlts || [])[i] || '')}"
+                     loading="lazy"
+                     onload="this.parentElement.classList.add('loaded')"
+                     onerror="this.parentElement.style.display='none'">
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
       </div>
     `}
 
@@ -3866,41 +4889,602 @@ ${(()=>{
   `);
 }
 
+/* ============================================================
+   ✏️ دوال مساعدة لتعديل المنشور
+   ============================================================ */
+function refreshEditGallery(){
+  const wrap = document.getElementById('editGalleryWrap');
+  if(!wrap) return;
+  const imgs = state.editImages;
+  const count = imgs.length;
+
+  if(count === 0){
+    wrap.innerHTML = '';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="compose-gallery ${count === 1 ? 'single' : ''}">
+      ${imgs.map((img, i) => {
+        const src = img.type === 'existing' ? img.url : img.preview;
+        return `
+          <div class="compose-gallery-item ${img.type === 'existing' ? 'existing' : ''}">
+            <img src="${src}" alt="">
+            <button type="button" class="compose-remove-img" data-remove-edit-image="${i}" title="إزالة">
+              ${ic('close','xs')}
+            </button>
+            ${i === 0 ? '<span class="compose-cover-badge">الغلاف</span>' : ''}
+            ${img.type === 'new' ? `
+              <button type="button" class="compose-alt-btn ${img.alt ? 'has-alt' : ''}"
+                      data-alt-edit-image="${i}">
+                ${ic('info','xs') || 'ALT'}
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+      ${count < COMPOSE_MAX_IMAGES ? `
+        <button type="button" class="compose-add-img" data-add-edit-image>
+          ${ic('plus')}
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
+function addEditImages(files){
+  const current = state.editImages.length;
+  const available = COMPOSE_MAX_IMAGES - current;
+  if(available <= 0){
+    toast(`الحد الأقصى ${COMPOSE_MAX_IMAGES} صور`);
+    return;
+  }
+
+  const toAdd = files.slice(0, available);
+  let added = 0, skipped = 0;
+
+  for(const file of toAdd){
+    if(!file.type.startsWith('image/')){ skipped++; continue; }
+    if(file.size > 8 * 1024 * 1024){ skipped++; continue; }
+    state.editImages.push({
+      type: 'new',
+      file,
+      preview: URL.createObjectURL(file),
+      alt: '',
+    });
+    added++;
+  }
+
+  if(added > 0) toast(`تمت إضافة ${added} صورة`);
+  if(skipped > 0) toast(`تم تجاهل ${skipped} ملف`);
+  refreshEditGallery();
+}
+
+function removeEditImage(index){
+  const img = state.editImages[index];
+  if(img?.type === 'new' && img.preview){
+    try { URL.revokeObjectURL(img.preview); } catch(e){}
+  }
+  state.editImages.splice(index, 1);
+  refreshEditGallery();
+  const badge = document.getElementById('editImgCount');
+  if(badge){
+    badge.textContent = state.editImages.length;
+    badge.style.display = state.editImages.length ? '' : 'none';
+  }
+}
+
+function setEditImageAlt(index){
+  const img = state.editImages[index];
+  if(!img || img.type !== 'new') return;
+  const alt = prompt('النص البديل للصورة:', img.alt || '');
+  if(alt === null) return;
+  img.alt = alt.trim().slice(0, 200);
+  refreshEditGallery();
+}
+
+function pickEditImages(){
+  const input = document.getElementById('globalFileInput');
+  input.value = '';
+  input.multiple = true;
+  input.accept = 'image/*';
+  input.onchange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if(files.length) addEditImages(files);
+    input.multiple = false;
+  };
+  input.click();
+}
+
+function insertEditEmoji(emoji){
+  const textarea = document.getElementById('editPostText');
+  if(!textarea) return;
+  const start = textarea.selectionStart || 0;
+  const end = textarea.selectionEnd || 0;
+  const val = textarea.value;
+  textarea.value = val.slice(0, start) + emoji + val.slice(end);
+  textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+  textarea.focus();
+  onEditTextChange();
+}
+
+function insertEditHashtag(hashtag){
+  const textarea = document.getElementById('editPostText');
+  if(!textarea) return;
+  const val = textarea.value;
+  const needsSpace = val.length && !val.endsWith(' ') && !val.endsWith('\n');
+  textarea.value = val + (needsSpace ? ' ' : '') + hashtag + ' ';
+  textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+  textarea.focus();
+  onEditTextChange();
+}
+
+function onEditTextChange(){
+  const textarea = document.getElementById('editPostText');
+  if(!textarea) return;
+
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 320) + 'px';
+
+  updateEditCounter(textarea.value.length);
+  detectEditAutocomplete();
+
+  if(state.editTab === 'preview') refreshEditPreview();
+}
+
+function updateEditCounter(len){
+  const wrap = document.getElementById('editCounter');
+  const text = document.getElementById('editCounterText');
+  const bar = document.getElementById('editCounterBar');
+  if(!wrap || !text || !bar) return;
+
+  const pct = Math.min(100, (len / COMPOSE_MAX_CHARS) * 100);
+  const circumference = 2 * Math.PI * 18;
+  bar.style.strokeDasharray = circumference;
+  bar.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+
+  let color = '#00d2ff';
+  wrap.classList.remove('warning', 'danger');
+  if(len > 900){ color = '#ff3d71'; wrap.classList.add('danger'); }
+  else if(len > 750){ color = '#f5b301'; wrap.classList.add('warning'); }
+  bar.style.stroke = color;
+
+  text.textContent = len > 900 ? (COMPOSE_MAX_CHARS - len) : len;
+}
+
+function refreshEditPreview(){
+  const wrap = document.getElementById('editPreviewContent');
+  if(!wrap) return;
+
+  const text = document.getElementById('editPostText')?.value.trim() || '';
+  const location = state.editLocation;
+  const vis = state.editVisibility;
+  const imgs = state.editImages;
+
+  if(!text && !imgs.length){
+    wrap.innerHTML = `
+      <div class="compose-empty-preview">
+        ${ic('edit')}
+        <div>لا يوجد محتوى بعد</div>
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <article class="post card compose-preview-post">
+      <header class="post-h">
+        ${avatar(state.profile, 44)}
+        <div style="flex:1;min-width:0">
+          <div class="post-name">${esc(state.profile.name)}</div>
+          <div class="post-sub">
+            <span>@${esc(state.profile.username)}</span>·
+            <span>الآن</span>·
+            <span class="visibility-badge">${
+              vis === 'followers' ? ic('users','xs') + ' متابعون' :
+              vis === 'private' ? ic('lock','xs') + ' خاص' :
+              ic('globe','xs') + ' عام'
+            }</span>
+            ${location ? `· <span>${ic('location','xs')} ${esc(location)}</span>` : ''}
+          </div>
+        </div>
+      </header>
+      ${text ? `<p class="post-text">${formatPostText(text, { interactive: false })}</p>` : ''}
+      ${imgs.length ? `
+        <div class="post-media-grid count-${Math.min(imgs.length, 4)}">
+          ${imgs.slice(0, 4).map(img => `
+            <div class="post-media-cell loaded">
+              <img src="${img.type === 'existing' ? img.url : img.preview}" alt="">
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </article>
+    <div class="compose-preview-hint">👁️ معاينة التعديل</div>
+  `;
+}
+
+/* اقتراحات التعديل */
+function detectEditAutocomplete(){
+  const textarea = document.getElementById('editPostText');
+  if(!textarea) return hideEditAutocomplete();
+
+  const val = textarea.value;
+  const pos = textarea.selectionStart || 0;
+  const before = val.slice(0, pos);
+
+  const lastAt = before.lastIndexOf('@');
+  const lastHash = before.lastIndexOf('#');
+  const trigger = Math.max(lastAt, lastHash);
+
+  if(trigger < 0 || pos - trigger > 30) return hideEditAutocomplete();
+
+  const char = before[trigger];
+  const query = before.slice(trigger + 1, pos);
+  if(/[\s\n]/.test(query)) return hideEditAutocomplete();
+  if(trigger > 0 && !/[\s\(\[\{]/.test(before[trigger-1])) return hideEditAutocomplete();
+
+  showEditAutocomplete(char, query, trigger);
+}
+
+function showEditAutocomplete(kind, query, trigger){
+  const box = document.getElementById('editAutocomplete');
+  if(!box) return;
+
+  const q = query.toLowerCase();
+  let items = [];
+
+  if(kind === '@'){
+    items = Object.values(state.users || {})
+      .filter(u => u.uid !== state.user.uid)
+      .filter(u =>
+        (u.username || '').toLowerCase().includes(q) ||
+        (u.name || '').toLowerCase().includes(q)
+      )
+      .slice(0, 5)
+      .map(u => ({
+        kind: 'user',
+        label: '@' + (u.username || ''),
+        sub: u.name || '',
+        value: '@' + (u.username || ''),
+        grad: u.grad || pickGrad(u.uid),
+        avatarUrl: u.avatarUrl || '',
+        initial: (u.name || '?').charAt(0).toUpperCase(),
+      }));
+  } else {
+    const games = GAMES
+      .filter(g => g.name.toLowerCase().replace(/\s+/g,'').includes(q) || g.cat.includes(query))
+      .slice(0, 3)
+      .map(g => ({
+        kind: 'game',
+        label: '#' + g.name.replace(/\s+/g, ''),
+        sub: '🎮 ' + g.name + ' · ' + g.cat,
+        value: '#' + g.name.replace(/\s+/g, ''),
+        grad: g.grad,
+        initial: '🎮',
+      }));
+
+    const allTags = new Set((COMPOSE_HASHTAGS || []).map(h => h.replace('#','')));
+    (state.posts || []).forEach(p => {
+      if(!p.text) return;
+      (p.text.match(/#[\u0600-\u06FF\w_]+/g) || []).forEach(m => allTags.add(m.slice(1)));
+    });
+
+    const hashtags = [...allTags]
+      .filter(t => t.toLowerCase().includes(q))
+      .filter(t => !GAMES.some(g => g.name.replace(/\s+/g,'').toLowerCase() === t.toLowerCase()))
+      .slice(0, 5)
+      .map(t => ({
+        kind: 'hashtag',
+        label: '#' + t,
+        sub: 'وسم',
+        value: '#' + t,
+        grad: 'linear-gradient(135deg,#00d2ff,#6c5ce7)',
+        initial: '#',
+      }));
+
+    items = [...games, ...hashtags];
+  }
+
+  _acState = { trigger, kind, query, selectedIdx: 0, items };
+
+  if(!items.length){
+    box.innerHTML = `<div class="ac-empty">لا اقتراحات</div>`;
+  } else {
+    box.innerHTML = items.map((item, i) => `
+      <div class="ac-item ${i === 0 ? 'selected' : ''}" data-edit-ac-idx="${i}">
+        <div class="ac-icon" style="background:${item.grad || 'var(--grad)'}">
+          ${item.avatarUrl ? `<img src="${esc(item.avatarUrl)}" alt="">` : item.initial}
+        </div>
+        <div class="ac-info">
+          <div class="ac-title">${esc(item.label)}</div>
+          <div class="ac-sub">${esc(item.sub)}</div>
+        </div>
+      </div>
+    `).join('') + `
+      <div class="ac-hint"><kbd>↑</kbd><kbd>↓</kbd> تنقل · <kbd>Enter</kbd> اختيار · <kbd>Esc</kbd> إلغاء</div>`;
+  }
+  box.style.display = 'block';
+}
+
+function hideEditAutocomplete(){
+  const box = document.getElementById('editAutocomplete');
+  if(box) box.style.display = 'none';
+  _acState = { trigger: -1, kind: '', query: '', selectedIdx: 0, items: [] };
+}
+
 /* ============ ✏️ تعديل المنشور ============ */
 function editPostModal(postId){
   const p = state.posts.find(x => x.id === postId);
   if(!p) return toast('المنشور غير موجود');
+  if(p.authorId !== state.user.uid && state.profile?.role !== 'admin'){
+    return toast('لا يمكنك تعديل هذا المنشور');
+  }
+  if(p.reblogOf) return toast('لا يمكن تعديل إعادة النشر');
+
+  /* إعادة تعيين الحالة */
+  state.editPostId = postId;
+  state.editTab = 'write';
+  state.editVisibility = p.visibility || 'public';
+  state.editLocation = p.place || '';
+
+  /* بناء الصور الموجودة */
+  const existingUrls = (p.mediaUrls && p.mediaUrls.length)
+    ? p.mediaUrls
+    : (p.media ? [p.media] : []);
+  const existingAlts = p.mediaAlts || [];
+
+  state.editImages = existingUrls.map((url, i) => ({
+    type: 'existing',
+    url,
+    alt: existingAlts[i] || '',
+  }));
 
   openModal(`
-    <h3>✏️ تعديل المنشور</h3>
-    <div class="field">
-      <label>النص</label>
-      <textarea class="input" id="editPostText" rows="4"
-        style="resize:vertical;max-height:200px">${esc(p.text||'')}</textarea>
-      <div class="char-counter" id="editPostCounter">${(p.text||'').length} / 1000</div>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
-      <button class="btn btn-primary" style="flex:1" id="savePostEditBtn" data-post-id="${postId}">حفظ</button>
+    <div class="compose-modal-inner">
+      <div class="compose-header">
+        <h3>${ic('edit','sm')} تعديل المنشور
+          <span class="edit-post-badge">تعديل</span>
+        </h3>
+        <button type="button" class="icon-btn" data-action="modal-close" aria-label="إغلاق">
+          ${ic('close','sm')}
+        </button>
+      </div>
+
+      <div class="compose-tabs">
+        <button type="button" class="compose-tab active" data-edit-tab="write">
+          ${ic('edit','xs')} كتابة
+        </button>
+        <button type="button" class="compose-tab" data-edit-tab="preview">
+          ${ic('eye','xs')} معاينة
+        </button>
+      </div>
+
+      <div class="compose-body">
+        <div class="compose-panel" data-edit-panel="write">
+
+          <div class="compose-author">
+            ${avatar(state.profile, 44)}
+            <div class="compose-author-info">
+              <div class="compose-author-name">${esc(state.profile.name)}</div>
+              <button type="button" class="compose-author-vis" data-action="edit-visibility">
+                <span id="editVisIcon">${
+                  state.editVisibility === 'followers' ? ic('users','xs') :
+                  state.editVisibility === 'private' ? ic('lock','xs') :
+                  ic('globe','xs')
+                }</span>
+                <span id="editVisLabel">${
+                  state.editVisibility === 'followers' ? 'المتابعون فقط' :
+                  state.editVisibility === 'private' ? 'خاص' : 'عام'
+                }</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="compose-textarea-wrap">
+            <textarea
+              id="editPostText"
+              class="compose-textarea"
+              placeholder="ماذا تريد أن تعدّل؟"
+              maxlength="${COMPOSE_MAX_CHARS}"
+              autocomplete="off"
+            >${esc(p.text||'')}</textarea>
+            <div id="editAutocomplete" class="compose-autocomplete" style="display:none"></div>
+          </div>
+
+          <div id="editGalleryWrap"></div>
+
+          <div id="editLocationWrap" style="${state.editLocation ? '' : 'display:none'}">
+            <div class="compose-location">
+              ${ic('location','xs')}
+              <input type="text" id="editLocationInput"
+                     placeholder="أين أنت؟ (اختياري)"
+                     maxlength="60"
+                     value="${esc(state.editLocation)}">
+              <button type="button" class="compose-location-close" data-action="edit-remove-location" aria-label="إزالة الموقع">
+                ${ic('close','xs')}
+              </button>
+            </div>
+          </div>
+
+          <div id="editEmojiPickerWrap" style="display:none">
+            <div class="compose-emoji-picker" id="editEmojiPicker"></div>
+          </div>
+
+          <div id="editHashtagWrap" style="display:none">
+            <div class="compose-hashtags" id="editHashtagChips"></div>
+          </div>
+
+          <div class="compose-toolbar">
+            <button type="button" class="compose-tool-btn" data-action="edit-add-image" title="إضافة صور">
+              ${ic('image')}
+              <span class="compose-tool-badge" id="editImgCount" style="${state.editImages.length ? '' : 'display:none'}">${state.editImages.length}</span>
+            </button>
+            <button type="button" class="compose-tool-btn" data-action="edit-toggle-emoji" title="إيموجي">😊</button>
+            <button type="button" class="compose-tool-btn" data-action="edit-toggle-hashtag" title="وسوم">#</button>
+            <button type="button" class="compose-tool-btn" data-action="edit-toggle-location" title="الموقع">
+              ${ic('location')}
+            </button>
+            <div class="compose-toolbar-sep"></div>
+            <button type="button" class="compose-tool-btn" data-action="edit-visibility" title="الخصوصية">
+              ${ic('shield')}
+            </button>
+          </div>
+        </div>
+
+        <div class="compose-panel hidden" data-edit-panel="preview">
+          <div id="editPreviewContent"></div>
+        </div>
+      </div>
+
+      <div class="compose-footer">
+        <div class="compose-counter" id="editCounter">
+          <svg class="compose-counter-svg" viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="18" class="compose-counter-bg"/>
+            <circle cx="22" cy="22" r="18" class="compose-counter-bar" id="editCounterBar"/>
+          </svg>
+          <div class="compose-counter-text" id="editCounterText">0</div>
+        </div>
+        <button type="button" class="compose-submit" id="savePostEditBtn" data-post-id="${postId}">
+          ${ic('check','sm')} حفظ التعديل
+        </button>
+      </div>
     </div>
   `);
-  const el = document.getElementById('editPostText');
-  const counter = document.getElementById('editPostCounter');
-  el?.addEventListener('input', () => {
-    counter.textContent = `${el.value.length} / 1000`;
-    if(el.value.length > 1000) el.value = el.value.slice(0,1000);
-  });
+
+  /* ═══════ التهيئة ═══════ */
+  refreshEditGallery();
+
+  const textarea = document.getElementById('editPostText');
+  if(textarea){
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+
+    textarea.addEventListener('input', onEditTextChange);
+
+    textarea.addEventListener('keydown', (e) => {
+      /* اقتراحات */
+      if(_acState.items.length > 0){
+        if(e.key === 'ArrowDown'){
+          e.preventDefault();
+          _acState.selectedIdx = Math.min(_acState.selectedIdx + 1, _acState.items.length - 1);
+          updateAcSelection();
+          return;
+        }
+        if(e.key === 'ArrowUp'){
+          e.preventDefault();
+          _acState.selectedIdx = Math.max(_acState.selectedIdx - 1, 0);
+          updateAcSelection();
+          return;
+        }
+        if(e.key === 'Enter' || e.key === 'Tab'){
+          e.preventDefault();
+          selectAutocompleteItem(_acState.selectedIdx, 'editPostText', 'editAutocomplete');
+          return;
+        }
+        if(e.key === 'Escape'){
+          e.preventDefault();
+          hideEditAutocomplete();
+          return;
+        }
+      }
+      /* حفظ بـ Ctrl+Enter */
+      if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+        e.preventDefault();
+        savePostEdit(postId);
+      }
+    });
+
+    textarea.addEventListener('click', detectEditAutocomplete);
+    textarea.addEventListener('keyup', (e) => {
+      if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) detectEditAutocomplete();
+    });
+  }
+
+  const locInput = document.getElementById('editLocationInput');
+  if(locInput){
+    locInput.addEventListener('input', () => {
+      state.editLocation = locInput.value.trim();
+    });
+  }
+
+  const emojiPicker = document.getElementById('editEmojiPicker');
+  if(emojiPicker){
+    emojiPicker.innerHTML = COMPOSE_EMOJIS.map(em =>
+      `<button type="button" data-insert-edit-emoji="${em}">${em}</button>`
+    ).join('');
+  }
+
+  const hashtagChips = document.getElementById('editHashtagChips');
+  if(hashtagChips){
+    hashtagChips.innerHTML = COMPOSE_HASHTAGS.map(h =>
+      `<button type="button" class="compose-hashtag-chip" data-insert-edit-hashtag="${h}">${h}</button>`
+    ).join('');
+  }
+
+  updateEditCounter((p.text || '').length);
 }
 
 async function savePostEdit(postId){
-  const text = document.getElementById('editPostText')?.value.trim() || '';
+  const btn = document.getElementById('savePostEditBtn');
+  if(btn){ btn.disabled = true; btn.classList.add('loading'); }
+
   try {
+    const text = document.getElementById('editPostText')?.value.trim() || '';
+    const images = state.editImages || [];
+
+    if(!text && !images.length){
+      toast('لا يمكن حفظ منشور فارغ');
+      if(btn){ btn.disabled = false; btn.classList.remove('loading'); }
+      return;
+    }
+
+    /* تجهيز الصور: existing + رفع الجديدة */
+    const finalUrls = [];
+    const finalAlts = [];
+
+    for(const img of images){
+      if(img.type === 'existing'){
+        finalUrls.push(img.url);
+        finalAlts.push(img.alt || '');
+      } else {
+        try {
+          const url = await imageToBase64(img.file, 'post');
+          finalUrls.push(url);
+          finalAlts.push(img.alt || '');
+        } catch(e){
+          console.error('فشل رفع صورة في التعديل:', e);
+        }
+      }
+    }
+
     await updateDoc(doc(db,'posts',postId), {
-      text, edited: true, editedAt: serverTimestamp(),
+      text,
+      media: finalUrls[0] || '',
+      mediaUrls: finalUrls,
+      mediaAlts: finalAlts,
+      place: state.editLocation || '',
+      visibility: state.editVisibility || 'public',
+      edited: true,
+      editedAt: serverTimestamp(),
     });
+
+    /* تنظيف */
+    state.editImages.forEach(img => {
+      if(img.type === 'new' && img.preview){
+        try { URL.revokeObjectURL(img.preview); } catch(e){}
+      }
+    });
+    state.editImages = [];
+    state.editPostId = null;
+    state.editLocation = '';
+
     closeModal();
-    toast('تم الحفظ ✓');
-  } catch(e){ toast('فشل'); }
+    toast('✓ تم حفظ التعديل');
+  } catch(e){
+    console.error(e);
+    toast('فشل الحفظ: ' + (e.message || ''));
+    if(btn){ btn.disabled = false; btn.classList.remove('loading'); }
+  }
 }
 
 /* ============ 📌 تثبيت المنشور ============ */
@@ -4665,6 +6249,9 @@ async function changeProfileImage(type){
         await Promise.all(snap.docs.map(d => updateDoc(d.ref, { 'author.avatarUrl': base64 })));
       } catch(e){}
 
+      /* ★ مزامنة التعليقات أيضاً */
+await syncUserComments({ avatarUrl: base64 });
+
       closeModal();
       toast('تم التحديث ✓');
     } catch(e){
@@ -4678,6 +6265,12 @@ async function deleteProfileImage(type){
   const field = type === 'avatar' ? 'avatarUrl' : 'coverUrl';
   try {
     await updateDoc(doc(db, 'users', state.user.uid), { [field]: '' });
+
+    /* ★ مزامنة التعليقات عند حذف الأفاتار */
+    if(type === 'avatar'){
+      await syncUserComments({ avatarUrl: '' });
+    }
+
     closeModal();
     toast('تم الحذف');
   } catch(e){ toast('فشل'); }
@@ -6559,6 +8152,28 @@ function buildSignatureStyle(cust){
   return s;
 }
 
+function renderPostMedia(p){
+  if(!p) return '';
+  const urls = (p.mediaUrls && p.mediaUrls.length) ? p.mediaUrls
+             : (p.media ? [p.media] : []);
+  if(!urls.length) return '';
+  const count = Math.min(urls.length, 4);
+
+  return `
+    <div class="post-media-grid count-${count}" data-action="open-media-gallery" data-post-id="${esc(p.id)}">
+      ${urls.slice(0, 4).map((url, i) => `
+        <div class="post-media-cell" data-media-index="${i}">
+          <div class="post-media-skeleton"></div>
+          <img src="${esc(url)}" alt="${esc((p.mediaAlts||[])[i] || '')}"
+               loading="lazy"
+               onload="this.parentElement.classList.add('loaded')"
+               onerror="this.parentElement.style.display='none'">
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 /* ============================================================
    📰 بناء نمط بطاقة المنشور
    ============================================================ */
@@ -7753,57 +9368,427 @@ async function shareProfilePreview(){
   }
 }
 
+/* ============================================================
+   📄 صفحة الهاشتاق
+   ============================================================ */
+function pageHashtag(){
+  const rawTag = state.activeHashtag || '';
+  const tag = rawTag.replace(/^#/, '');
+  if(!tag) return emptyState('لا يوجد وسم محدد','grid');
+
+  const tagLower = tag.toLowerCase();
+
+  /* منشورات تحوي الوسم */
+  const matchingPosts = (state.posts || []).filter(p => {
+    if(!p.text) return false;
+    const tags = (p.text.match(/#[\u0600-\u06FF\w_]+/g) || [])
+      .map(t => t.slice(1).toLowerCase());
+    return tags.includes(tagLower);
+  }).sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+  /* لعبة مطابقة؟ */
+  const gameMatch = GAMES.find(g =>
+    g.name.replace(/\s+/g, '').toLowerCase() === tagLower
+  );
+
+  return `
+    <div class="hashtag-hero">
+      <div class="hashtag-hero-tag">#${esc(tag)}</div>
+      <div class="hashtag-hero-meta">
+        ${matchingPosts.length
+          ? `${matchingPosts.length} منشور`
+          : 'لا منشورات بهذا الوسم بعد'}
+      </div>
+      ${gameMatch ? `
+        <div class="hashtag-game-card" data-game-open="${gameMatch.id}">
+          <div class="hashtag-game-icon" style="background:${gameMatch.grad}">
+            ${ic(gameMatch.icon,'sm')}
+          </div>
+          <div style="flex:1;text-align:right">
+            <div class="hashtag-game-name">${esc(gameMatch.name)}</div>
+            <div class="hashtag-game-cat">${esc(gameMatch.cat)} · ${gameMatch.online} لاعب</div>
+          </div>
+          <button class="btn btn-primary btn-sm" type="button">
+            ${ic('play','xs')} العب
+          </button>
+        </div>
+      ` : ''}
+    </div>
+    ${matchingPosts.length
+      ? matchingPosts.map(p => postCard(p)).join('')
+      : emptyState('كن أول من ينشر بهذا الوسم!','grid')}
+  `;
+}
+
+/* ============================================================
+   🔍 دوال البحث المساعدة
+   ============================================================ */
+function loadSearchRecent(){
+  try {
+    const saved = localStorage.getItem('nexus_search_recent');
+    if(saved) state.searchRecent = JSON.parse(saved) || [];
+  } catch(e){ state.searchRecent = []; }
+}
+function saveSearchRecent(query){
+  if(!query || query.length < 2) return;
+  state.searchRecent = [
+    query,
+    ...state.searchRecent.filter(q => q !== query)
+  ].slice(0, 8);
+  try { localStorage.setItem('nexus_search_recent', JSON.stringify(state.searchRecent)); } catch(e){}
+}
+function removeSearchRecent(query){
+  state.searchRecent = state.searchRecent.filter(q => q !== query);
+  try { localStorage.setItem('nexus_search_recent', JSON.stringify(state.searchRecent)); } catch(e){}
+}
+function clearSearchRecent(){
+  state.searchRecent = [];
+  try { localStorage.removeItem('nexus_search_recent'); } catch(e){}
+}
+
+/* استخراج كل الهاشتاقات */
+function extractAllHashtags(){
+  const map = new Map();
+  (state.posts || []).forEach(p => {
+    if(!p.text || p.hidden) return;
+    const matches = p.text.match(/#[\u0600-\u06FF\w_]+/g) || [];
+    matches.forEach(m => {
+      const raw = m.slice(1);
+      const key = raw.toLowerCase();
+      if(!map.has(key)){
+        map.set(key, { tag: raw, count: 0, lastAt: 0 });
+      }
+      const item = map.get(key);
+      item.count++;
+      const ts = p.createdAt?.seconds || 0;
+      if(ts > item.lastAt) item.lastAt = ts;
+    });
+  });
+  return [...map.values()].sort((a,b) => b.count - a.count);
+}
+
+/* تمييز كلمة البحث */
+function highlightMatch(text, query){
+  if(!query) return esc(text);
+  const safe = esc(text);
+  const q = esc(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if(!q) return safe;
+  return safe.replace(new RegExp(`(${q})`, 'gi'), '<mark>$1</mark>');
+}
+
+/* هل النص يطابق الاستعلام؟ */
+function matchText(text, query){
+  if(!query) return true;
+  return (text || '').toLowerCase().includes(query.toLowerCase());
+}
+
 function pageSearch(){
+  loadSearchRecent();
+  const q = (state.searchQ || '').trim();
+
+  const tabs = [
+    { k: 'all', label: 'الكل', icon: 'search' },
+    { k: 'users', label: 'مستخدمون', icon: 'user' },
+    { k: 'posts', label: 'منشورات', icon: 'grid' },
+    { k: 'hashtags', label: 'وسوم', icon: 'image' },
+    { k: 'games', label: 'ألعاب', icon: 'gamepad' },
+    { k: 'teams', label: 'فرق', icon: 'users' },
+  ];
+
   return `
     <div class="search-bar">${ic('search','sm')}
-      <input id="searchInput" placeholder="ابحث عن مستخدم، لعبة، فريق…" value="${esc(state.searchQ)}" autocomplete="off">
+      <input id="searchInput"
+             placeholder="ابحث عن مستخدم، لعبة، فريق، وسم، منشور…"
+             value="${esc(state.searchQ)}"
+             autocomplete="off">
+      ${q ? `<button type="button" class="icon-btn" style="width:32px;height:32px;background:transparent;border:0" data-action="search-clear">${ic('close','xs')}</button>` : ''}
     </div>
-    <div class="chips">
-      ${[['all','الكل'],['users','مستخدمون'],['games','ألعاب'],['teams','فرق']].map(([k,l])=>
-        `<button class="chip ${state.searchCat===k?'active':''}" data-scat="${k}">${l}</button>`).join('')}
+
+    <div class="search-tabs">
+      ${tabs.map(t => `
+        <button type="button" class="search-tab ${state.searchTab === t.k ? 'active' : ''}" data-search-tab="${t.k}">
+          ${ic(t.icon,'xs')} ${t.label}
+          <span class="search-tab-count" data-count-for="${t.k}" style="display:none">0</span>
+        </button>
+      `).join('')}
     </div>
-    <div id="searchResults"></div>`;
+
+    <div id="searchResults"></div>
+  `;
 }
 
 function renderSearchResults(){
   const box = document.getElementById('searchResults');
   if(!box) return;
-  const term = (state.searchQ||'').trim().toLowerCase();
-  if(!term){ box.innerHTML = `<div class="empty">${ic('search')}<div>اكتب شيئاً للبحث</div></div>`; return; }
+
+  const term = (state.searchQ || '').trim().toLowerCase();
+  const tab = state.searchTab || 'all';
+
+  /* ═══════ عندما لا يوجد نص بحث ═══════ */
+  if(!term){
+    box.innerHTML = renderSearchSuggestions();
+    return;
+  }
+
+  /* ═══════ تنفيذ البحث ═══════ */
+  const results = {
+    users: [],
+    posts: [],
+    hashtags: [],
+    games: [],
+    teams: [],
+  };
+
+  /* مستخدمون */
+  if(tab === 'all' || tab === 'users'){
+    results.users = Object.values(state.users || {})
+      .filter(u =>
+        matchText(u.name, term) ||
+        matchText(u.username, term) ||
+        matchText(u.bio, term)
+      )
+      .slice(0, 20);
+  }
+
+  /* منشورات */
+  if(tab === 'all' || tab === 'posts'){
+    results.posts = (state.posts || [])
+      .filter(p => !p.hidden && matchText(p.text, term))
+      .slice(0, 15);
+  }
+
+  /* هاشتاقات */
+  if(tab === 'all' || tab === 'hashtags'){
+    const allTags = extractAllHashtags();
+    results.hashtags = allTags
+      .filter(t => matchText(t.tag, term))
+      .slice(0, 20);
+  }
+
+  /* ألعاب */
+  if(tab === 'all' || tab === 'games'){
+    results.games = GAMES.filter(g =>
+      matchText(g.name, term) ||
+      matchText(g.cat, term)
+    );
+  }
+
+  /* فرق */
+  if(tab === 'all' || tab === 'teams'){
+    results.teams = (state.teams || []).filter(t =>
+      matchText(t.name, term)
+    ).slice(0, 10);
+  }
+
+  /* ═══════ تحديث العدادات ═══════ */
+  document.querySelectorAll('[data-count-for]').forEach(el => {
+    const key = el.dataset.countFor;
+    const count = key === 'all'
+      ? Object.values(results).reduce((s, arr) => s + arr.length, 0)
+      : (results[key]?.length || 0);
+    el.textContent = count > 99 ? '99+' : count;
+    el.style.display = count > 0 ? '' : 'none';
+  });
+
+  /* ═══════ بناء الصفحة ═══════ */
   let html = '';
-  const cat = state.searchCat;
-  if(cat==='all' || cat==='users'){
-    const us = Object.values(state.users).filter(u=>
-      (u.name||'').toLowerCase().includes(term) || (u.username||'').toLowerCase().includes(term));
-    if(us.length) html += `<div class="section-title">${ic('users','sm')} مستخدمون</div>` +
-      us.map(u=>`<div class="card" style="margin-bottom:8px;padding:11px"><div class="row">${avatar(u,44)}
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.name)}</div>
-        <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div></div>
-        <button class="btn btn-ghost btn-sm" data-view-profile="${u.uid}">عرض</button>
-        <button class="btn btn-primary btn-sm" data-open-chat="${u.uid}">رسالة</button>
-        </div></div>`).join('');
+
+  /* مستخدمون */
+  if(results.users.length){
+    html += `<div class="search-section-header">
+      <span>👤 مستخدمون</span>
+      <span class="count">${results.users.length}</span>
+    </div>`;
+    html += results.users.slice(0, tab === 'all' ? 4 : 20).map(u => `
+      <div class="search-result-card" data-view-profile="${u.uid}">
+        <div class="search-result-icon" style="background:${u.grad || pickGrad(u.uid)}">
+          ${u.avatarUrl ? `<img src="${esc(u.avatarUrl)}" alt="">`
+            : (u.name || '?').charAt(0).toUpperCase()}
+        </div>
+        <div class="search-result-mid">
+          <div class="search-result-title">${highlightMatch(u.name || '', term)}</div>
+          <div class="search-result-sub">@${highlightMatch(u.username || '', term)}</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-view-profile="${u.uid}">فتح</button>
+      </div>
+    `).join('');
+    if(tab === 'all' && results.users.length > 4){
+      html += `<button type="button" class="search-more-btn" data-search-tab="users">عرض كل المستخدمين (${results.users.length})</button>`;
+    }
   }
-  if(cat==='all' || cat==='games'){
-    const gs = GAMES.filter(g=>g.name.toLowerCase().includes(term) || g.cat.includes(term));
-    if(gs.length) html += `<div class="section-title">${ic('gamepad','sm')} ألعاب</div>` +
-      gs.map(g=>`<div class="card" style="margin-bottom:8px;padding:11px"><div class="row">
-        <div class="team-emblem" style="width:42px;height:42px;background:${g.grad};border:0">${ic(g.icon,'sm')}</div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:800">${g.name}</div>
-        <div class="muted" style="font-size:10.5px">${g.cat}</div></div>
-        <button class="btn btn-primary btn-sm" data-game-open="${g.id}">لعب</button>
-        </div></div>`).join('');
+
+  /* هاشتاقات */
+  if(results.hashtags.length){
+    html += `<div class="search-section-header">
+      <span>#️⃣ وسوم</span>
+      <span class="count">${results.hashtags.length}</span>
+    </div>`;
+    html += results.hashtags.slice(0, tab === 'all' ? 4 : 20).map(t => `
+      <div class="trending-tag-row" data-action="open-hashtag" data-tag="${esc(t.tag)}">
+        <div class="trending-tag-icon">#</div>
+        <div class="trending-tag-info">
+          <div class="trending-tag-name">${highlightMatch('#' + t.tag, term)}</div>
+          <div class="trending-tag-count">${t.count} منشور</div>
+        </div>
+        ${ic('back','xs')}
+      </div>
+    `).join('');
+    if(tab === 'all' && results.hashtags.length > 4){
+      html += `<button type="button" class="search-more-btn" data-search-tab="hashtags">عرض كل الوسوم (${results.hashtags.length})</button>`;
+    }
   }
-  if(cat==='all' || cat==='teams'){
-    const ts = state.teams.filter(t=>t.name.toLowerCase().includes(term));
-    if(ts.length) html += `<div class="section-title">${ic('users','sm')} فرق</div>` +
-      ts.map(t=>`<div class="card" style="margin-bottom:8px;padding:11px"><div class="row">
-        <div class="team-emblem" style="width:42px;height:42px;font-size:19px">${t.emblem||'🛡️'}</div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:800">${esc(t.name)}</div>
-        <div class="muted" style="font-size:10.5px">${(t.members||[]).length} عضو</div></div>
-        <button class="btn btn-primary btn-sm" data-open-team="${t.id}">فتح</button>
-        </div></div>`).join('');
+
+  /* منشورات */
+  if(results.posts.length){
+    html += `<div class="search-section-header">
+      <span>📝 منشورات</span>
+      <span class="count">${results.posts.length}</span>
+    </div>`;
+    html += results.posts.slice(0, tab === 'all' ? 3 : 15).map(p => `
+      <div class="search-post-mini" data-view-post="${p.id}">
+        <div class="search-post-mini-header">
+          ${avatar(p.author || {}, 28)}
+          <span class="search-post-mini-name">${esc(p.author?.name || '')}</span>
+          <span class="search-post-mini-time">${timeAgo(p.createdAt)}</span>
+        </div>
+        <div class="search-post-mini-text">${highlightMatch(p.text || '', term)}</div>
+      </div>
+    `).join('');
+    if(tab === 'all' && results.posts.length > 3){
+      html += `<button type="button" class="search-more-btn" data-search-tab="posts">عرض كل المنشورات (${results.posts.length})</button>`;
+    }
   }
-  box.innerHTML = html || `<div class="empty">${ic('search')}<div>لا نتائج لـ «${esc(state.searchQ)}»</div></div>`;
+
+  /* ألعاب */
+  if(results.games.length){
+    html += `<div class="search-section-header">
+      <span>🎮 ألعاب</span>
+      <span class="count">${results.games.length}</span>
+    </div>`;
+    html += results.games.map(g => `
+      <div class="search-result-card" data-game-open="${g.id}">
+        <div class="search-result-icon" style="background:${g.grad}">
+          ${ic(g.icon,'sm')}
+        </div>
+        <div class="search-result-mid">
+          <div class="search-result-title">${highlightMatch(g.name, term)}</div>
+          <div class="search-result-sub">${highlightMatch(g.cat, term)} · ${g.online} لاعب</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-game-open="${g.id}">العب</button>
+      </div>
+    `).join('');
+  }
+
+  /* فرق */
+  if(results.teams.length){
+    html += `<div class="search-section-header">
+      <span>🛡️ فرق</span>
+      <span class="count">${results.teams.length}</span>
+    </div>`;
+    html += results.teams.map(t => `
+      <div class="search-result-card" data-open-team="${t.id}">
+        <div class="search-result-icon" style="background:linear-gradient(135deg,#6c5ce7,#00d2ff);font-size:22px">
+          ${t.emblem || '🛡️'}
+        </div>
+        <div class="search-result-mid">
+          <div class="search-result-title">${highlightMatch(t.name, term)}</div>
+          <div class="search-result-sub">${(t.members || []).length} عضو · ${nf(t.points || 0)} نقطة</div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-open-team="${t.id}">فتح</button>
+      </div>
+    `).join('');
+  }
+
+  /* ═══════ حالة فارغة ═══════ */
+  if(!html){
+    box.innerHTML = `
+      <div class="empty" style="padding:46px 18px">
+        ${ic('search')}
+        <div>لا نتائج لـ «${esc(state.searchQ)}»</div>
+        <div style="margin-top:14px;font-size:11px;color:var(--muted)">
+          جرّب كلمة أخرى، أو ابحث عن وسم مثل <b style="color:var(--brand-2)">#ألعاب</b>
+        </div>
+      </div>`;
+    return;
+  }
+
+  box.innerHTML = html;
+
+  /* حفظ البحث */
+  saveSearchRecent(state.searchQ.trim());
+}
+
+/* اقتراحات البحث عند عدم وجود نص */
+function renderSearchSuggestions(){
+  const trendingTags = extractAllHashtags().slice(0, 6);
+  const topGames = GAMES.slice(0, 4);
+  const recent = state.searchRecent || [];
+
+  let html = '<div class="search-suggestions">';
+
+  /* الأبحاث الأخيرة */
+  if(recent.length){
+    html += `
+      <div class="search-suggest-section">
+        <h4>
+          ${ic('clock','xs')} أبحاث أخيرة
+          <button type="button" data-action="clear-search-recent"
+                  style="margin-inline-start:auto;background:transparent;border:0;color:var(--muted);font-size:10px;font-weight:800;cursor:pointer;font-family:inherit">
+            مسح
+          </button>
+        </h4>
+        ${recent.map(q => `
+          <div class="search-recent-row" data-search-recent="${esc(q)}">
+            <div class="search-recent-icon">${ic('clock','xs')}</div>
+            <span class="search-recent-text">${esc(q)}</span>
+            <button type="button" class="search-recent-remove" data-remove-search-recent="${esc(q)}" aria-label="حذف">
+              ${ic('close','xs')}
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  /* الوسوم الرائجة */
+  if(trendingTags.length){
+    html += `
+      <div class="search-suggest-section">
+        <h4>${ic('fire','xs')} وسوم رائجة</h4>
+        <div class="trending-tags-grid">
+          ${trendingTags.map(t => `
+            <div class="trending-tag-row" data-action="open-hashtag" data-tag="${esc(t.tag)}">
+              <div class="trending-tag-icon">#</div>
+              <div class="trending-tag-info">
+                <div class="trending-tag-name">#${esc(t.tag)}</div>
+                <div class="trending-tag-count">${t.count} منشور</div>
+              </div>
+              ${ic('back','xs')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ألعاب مقترحة */
+  html += `
+    <div class="search-suggest-section">
+      <h4>${ic('gamepad','xs')} ألعاب</h4>
+      ${topGames.map(g => `
+        <div class="search-result-card" data-game-open="${g.id}">
+          <div class="search-result-icon" style="background:${g.grad}">${ic(g.icon,'sm')}</div>
+          <div class="search-result-mid">
+            <div class="search-result-title">${esc(g.name)}</div>
+            <div class="search-result-sub">${esc(g.cat)} · ${g.online} لاعب</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  html += '</div>';
+  return html;
 }
 
 function pageNotifs(){
@@ -8307,6 +10292,7 @@ const PAGES = {
 customization: pageCustomization,
 gifts: pageGifts,
 gamestats: pageGameStats,
+  hashtag: pageHashtag,
 };
 
 function render(){
@@ -8345,16 +10331,21 @@ function render(){
   const fn = PAGES[state.page] || pageHome;
   const result = fn();
 
-  const afterRender = () => {
-    if(state.page === 'search') renderSearchResults();
-    if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
-      setTimeout(renderTeamChat, 50);
-    }
-    if(state.page === 'customization' && state.custActiveZone){
-      tagSubtabsForZone(state.custActiveZone);
-    }
-    restoreTabsScroll();
-  };
+const afterRender = () => {
+  if(state.page === 'search') renderSearchResults();
+if(state.page === 'home'){
+  requestAnimationFrame(() => {
+    observePostElements();
+  });
+}
+  if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
+    setTimeout(renderTeamChat, 50);
+  }
+  if(state.page === 'customization' && state.custActiveZone){
+    tagSubtabsForZone(state.custActiveZone);
+  }
+  restoreTabsScroll();
+};
 
   if(result && typeof result.then === 'function'){
     result.then(html => {
@@ -8405,35 +10396,744 @@ function restoreTabsScroll(){
   });
 }
 
+/* ============================================================
+   🎯 دوال الملحّن المساعدة
+   ============================================================ */
+function pickPostImages(){
+  const input = document.getElementById('globalFileInput');
+  input.value = '';
+  input.multiple = true;
+  input.accept = 'image/*';
+
+  input.onchange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if(!files.length) return;
+    addPostImages(files);
+    input.multiple = false;
+  };
+  input.click();
+}
+
+function addPostImages(files){
+  const current = state.composeImages.length;
+  const available = COMPOSE_MAX_IMAGES - current;
+
+  if(available <= 0){
+    toast(`الحد الأقصى ${COMPOSE_MAX_IMAGES} صور`);
+    return;
+  }
+
+  const toAdd = files.slice(0, available);
+  let added = 0;
+  let skipped = 0;
+
+  for(const file of toAdd){
+    if(!file.type.startsWith('image/')){
+      skipped++;
+      continue;
+    }
+    if(file.size > 8 * 1024 * 1024){
+      skipped++;
+      continue;
+    }
+    state.composeImages.push({
+      file,
+      preview: URL.createObjectURL(file),
+      alt: '',
+    });
+    added++;
+  }
+
+  if(added > 0){
+    toast(`تمت إضافة ${added} صورة${files.length > available ? ' (حد أقصى ' + COMPOSE_MAX_IMAGES + ')' : ''}`);
+  }
+  if(skipped > 0){
+    toast(`تم تجاهل ${skipped} ملف (صيغة/حجم غير مدعوم)`);
+  }
+
+  refreshComposeGallery();
+  updateComposeSubmitState();
+}
+
+function removeComposeImage(index){
+  const img = state.composeImages[index];
+  if(img?.preview){
+    try { URL.revokeObjectURL(img.preview); } catch(e){}
+  }
+  state.composeImages.splice(index, 1);
+  refreshComposeGallery();
+  updateComposeSubmitState();
+}
+
+function refreshComposeGallery(){
+  const wrap = document.getElementById('composeGalleryWrap');
+  if(!wrap) return;
+  const imgs = state.composeImages;
+  const count = imgs.length;
+
+  if(count === 0){
+    wrap.innerHTML = '';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="compose-gallery ${count === 1 ? 'single' : ''}">
+      ${imgs.map((img, i) => `
+        <div class="compose-gallery-item">
+          <img src="${img.preview}" alt="">
+          <button type="button" class="compose-remove-img" data-remove-compose-image="${i}" title="إزالة">
+            ${ic('close','xs')}
+          </button>
+          ${i === 0 ? '<span class="compose-cover-badge">الغلاف</span>' : ''}
+          <button type="button" class="compose-alt-btn ${img.alt ? 'has-alt' : ''}"
+                  data-alt-compose-image="${i}" title="${img.alt ? 'تعديل النص البديل' : 'إضافة نص بديل (وصولية)'}">
+            ${ic('info','xs') || 'ALT'}
+          </button>
+        </div>
+      `).join('')}
+      ${count < COMPOSE_MAX_IMAGES ? `
+        <button type="button" class="compose-add-img" data-add-compose-image>
+          ${ic('plus')}
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
+function setComposeImageAlt(index){
+  const img = state.composeImages[index];
+  if(!img) return;
+  const current = img.alt || '';
+  const alt = prompt('النص البديل للصورة (وصولية — اتركه فارغاً لتجاهله):', current);
+  if(alt === null) return;
+  img.alt = alt.trim().slice(0, 200);
+  refreshComposeGallery();
+}
+
+function insertEmoji(emoji){
+  const textarea = document.getElementById('composeText');
+  if(!textarea) return;
+  const start = textarea.selectionStart || 0;
+  const end = textarea.selectionEnd || 0;
+  const val = textarea.value;
+  textarea.value = val.slice(0, start) + emoji + val.slice(end);
+  textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+  textarea.focus();
+  onComposeTextChange();
+}
+
+function insertHashtag(hashtag){
+  const textarea = document.getElementById('composeText');
+  if(!textarea) return;
+  const val = textarea.value;
+  const needsSpace = val.length && !val.endsWith(' ') && !val.endsWith('\n');
+  textarea.value = val + (needsSpace ? ' ' : '') + hashtag + ' ';
+  textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+  textarea.focus();
+  onComposeTextChange();
+}
+
+/* ============================================================
+   🔮 الاقتراحات التلقائية للـ @ و #
+   ============================================================ */
+let _acState = { trigger: -1, kind: '', query: '', selectedIdx: 0, items: [] };
+
+function detectComposeAutocomplete(){
+  const textarea = document.getElementById('composeText');
+  if(!textarea){ hideComposeAutocomplete(); return; }
+
+  const val = textarea.value;
+  const pos = textarea.selectionStart || 0;
+  const before = val.slice(0, pos);
+
+  const lastAt   = before.lastIndexOf('@');
+  const lastHash = before.lastIndexOf('#');
+  const trigger  = Math.max(lastAt, lastHash);
+
+  if(trigger < 0 || pos - trigger > 30){ hideComposeAutocomplete(); return; }
+
+  const char  = before[trigger];
+  const query = before.slice(trigger + 1, pos);
+
+  /* إذا كانت هناك مسافة داخل الاستعلام → توقف */
+  if(/[\s\n]/.test(query)){ hideComposeAutocomplete(); return; }
+
+  /* يجب أن يسبق @ أو # فراغ/بداية/قوس */
+  if(trigger > 0){
+    const beforeChar = before[trigger - 1];
+    if(!/[\s\(\[\{]/.test(beforeChar)){ hideComposeAutocomplete(); return; }
+  }
+
+  showComposeAutocomplete(char, query, trigger);
+}
+
+function showComposeAutocomplete(kind, query, trigger){
+  const box = document.getElementById('composeAutocomplete');
+  if(!box) return;
+
+  const q = query.toLowerCase();
+  let items = [];
+
+  if(kind === '@'){
+    items = Object.values(state.users || {})
+      .filter(u => u.uid !== state.user.uid)
+      .filter(u =>
+        (u.username || '').toLowerCase().includes(q) ||
+        (u.name || '').toLowerCase().includes(q)
+      )
+      .slice(0, 5)
+      .map(u => ({
+        kind: 'user',
+        label: '@' + (u.username || ''),
+        sub: u.name || '',
+        value: '@' + (u.username || ''),
+        grad: u.grad || pickGrad(u.uid),
+        avatarUrl: u.avatarUrl || '',
+        initial: (u.name || '?').charAt(0).toUpperCase(),
+        uid: u.uid,
+      }));
+  } else {
+    /* ألعاب مطابقة */
+    const games = GAMES
+      .filter(g => g.name.toLowerCase().replace(/\s+/g,'').includes(q) || g.cat.includes(query))
+      .slice(0, 3)
+      .map(g => ({
+        kind: 'game',
+        label: '#' + g.name.replace(/\s+/g, ''),
+        sub: '🎮 ' + g.name + ' · ' + g.cat,
+        value: '#' + g.name.replace(/\s+/g, ''),
+        grad: g.grad,
+        initial: '🎮',
+        gameId: g.id,
+      }));
+
+    /* وسوم موجودة */
+    const preset = (typeof COMPOSE_HASHTAGS !== 'undefined') ? COMPOSE_HASHTAGS : [];
+    const allTags = new Set(preset.map(h => h.replace('#','')));
+    (state.posts || []).forEach(p => {
+      if(!p.text) return;
+      (p.text.match(/#[\u0600-\u06FF\w_]+/g) || []).forEach(m => allTags.add(m.slice(1)));
+    });
+
+    const hashtags = [...allTags]
+      .filter(t => t.toLowerCase().includes(q))
+      .filter(t => !GAMES.some(g => g.name.replace(/\s+/g,'').toLowerCase() === t.toLowerCase()))
+      .slice(0, 5)
+      .map(t => ({
+        kind: 'hashtag',
+        label: '#' + t,
+        sub: 'وسم · اضغط للإدراج',
+        value: '#' + t,
+        grad: 'linear-gradient(135deg,#00d2ff,#6c5ce7)',
+        initial: '#',
+      }));
+
+    items = [...games, ...hashtags];
+  }
+
+  _acState = { trigger, kind, query, selectedIdx: 0, items };
+
+  if(items.length === 0){
+    box.innerHTML = `<div class="ac-empty">${ic('search','xs')} لا اقتراحات</div>`;
+  } else {
+    box.innerHTML = items.map((item, i) => `
+      <div class="ac-item ${i === 0 ? 'selected' : ''}" data-ac-idx="${i}">
+        <div class="ac-icon" style="background:${item.grad || 'var(--grad)'}">
+          ${item.avatarUrl
+            ? `<img src="${esc(item.avatarUrl)}" alt="">`
+            : item.initial}
+        </div>
+        <div class="ac-info">
+          <div class="ac-title">${esc(item.label)}</div>
+          <div class="ac-sub">${esc(item.sub)}</div>
+        </div>
+      </div>
+    `).join('') + `
+      <div class="ac-hint">
+        <kbd>↑</kbd><kbd>↓</kbd> للتنقل · <kbd>Enter</kbd> للاختيار · <kbd>Esc</kbd> للإلغاء
+      </div>`;
+  }
+
+  box.style.display = 'block';
+}
+
+function hideComposeAutocomplete(){
+  const box = document.getElementById('composeAutocomplete');
+  if(box) box.style.display = 'none';
+  _acState = { trigger: -1, kind: '', query: '', selectedIdx: 0, items: [] };
+}
+
+function updateAcSelection(){
+  document.querySelectorAll('.ac-item').forEach((el, i) => {
+    el.classList.toggle('selected', i === _acState.selectedIdx);
+  });
+  const selected = document.querySelectorAll('.ac-item')[_acState.selectedIdx];
+  if(selected) selected.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function selectAutocompleteItem(idx, textareaId, autocompleteId){
+  textareaId = textareaId || 'composeText';
+  autocompleteId = autocompleteId || 'composeAutocomplete';
+
+  const item = _acState.items[idx];
+  if(!item) return;
+
+  const textarea = document.getElementById(textareaId);
+  if(!textarea) return;
+
+  const val = textarea.value;
+  const cursorPos = textarea.selectionStart || 0;
+  const trigger = _acState.trigger;
+  if(trigger < 0 || trigger >= cursorPos) return hideAutocompleteById(autocompleteId);
+
+  const before = val.slice(0, trigger);
+  const after  = val.slice(cursorPos);
+  const inserted = item.value + ' ';
+
+  textarea.value = before + inserted + after;
+  textarea.selectionStart = textarea.selectionEnd = before.length + inserted.length;
+  textarea.focus();
+
+  hideAutocompleteById(autocompleteId);
+
+  if(textareaId === 'composeText') onComposeTextChange();
+  else if(textareaId === 'editPostText') onEditTextChange();
+}
+
+function hideAutocompleteById(id){
+  const box = document.getElementById(id);
+  if(box) box.style.display = 'none';
+  _acState = { trigger: -1, kind: '', query: '', selectedIdx: 0, items: [] };
+}
+
+function onComposeTextChange(){
+  const textarea = document.getElementById('composeText');
+  if(!textarea) return;
+
+  /* auto-resize */
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 320) + 'px';
+
+  /* عدّاد */
+  updateComposeCounter(textarea.value.length);
+
+  /* مسودة */
+  clearTimeout(window._composeDraftTimer);
+  window._composeDraftTimer = setTimeout(saveComposeDraft, 700);
+
+  /* زر النشر */
+  updateComposeSubmitState();
+
+  /* اقتراحات تلقائية */
+  detectComposeAutocomplete();
+
+  /* معاينة */
+  if(state.composeTab === 'preview') refreshComposePreview();
+}
+
+function updateComposeCounter(len){
+  const wrap = document.getElementById('composeCounter');
+  const text = document.getElementById('composeCounterText');
+  const bar = document.getElementById('composeCounterBar');
+  if(!wrap || !text || !bar) return;
+
+  const pct = Math.min(100, (len / COMPOSE_MAX_CHARS) * 100);
+  const circumference = 2 * Math.PI * 18; // r=18
+  bar.style.strokeDasharray = circumference;
+  bar.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+
+  let color = '#00d2ff';
+  wrap.classList.remove('warning', 'danger');
+  if(len > 900){ color = '#ff3d71'; wrap.classList.add('danger'); }
+  else if(len > 750){ color = '#f5b301'; wrap.classList.add('warning'); }
+  bar.style.stroke = color;
+
+  text.textContent = len > 900 ? (COMPOSE_MAX_CHARS - len) : len;
+  text.title = `${len} / ${COMPOSE_MAX_CHARS}`;
+}
+
+function updateComposeSubmitState(){
+  const btn = document.getElementById('composeSubmit');
+  if(!btn) return;
+  const text = document.getElementById('composeText')?.value.trim() || '';
+  const hasImages = state.composeImages.length > 0;
+  const hasContent = text.length > 0 || hasImages;
+  btn.disabled = !hasContent;
+}
+
+function saveComposeDraft(){
+  try {
+    const text = document.getElementById('composeText')?.value || '';
+    if(text.trim() || state.composeVisibility !== 'public' || state.composeLocation){
+      localStorage.setItem('nexus_post_draft', JSON.stringify({
+        text,
+        visibility: state.composeVisibility,
+        location: state.composeLocation || '',
+      }));
+    } else {
+      localStorage.removeItem('nexus_post_draft');
+    }
+  } catch(e){}
+}
+
+function refreshComposePreview(){
+  const wrap = document.getElementById('composePreviewContent');
+  if(!wrap) return;
+
+  const text = document.getElementById('composeText')?.value.trim() || '';
+  const images = state.composeImages;
+  const location = state.composeLocation;
+  const vis = state.composeVisibility;
+
+  if(!text && !images.length){
+    wrap.innerHTML = `
+      <div class="compose-empty-preview">
+        ${ic('edit')}
+        <div>لا يوجد محتوى بعد — ابدأ بالكتابة</div>
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <article class="post card compose-preview-post">
+      <header class="post-h">
+        ${avatar(state.profile, 44)}
+        <div style="flex:1;min-width:0">
+          <div class="post-name">${esc(state.profile.name)}</div>
+          <div class="post-sub">
+            <span>@${esc(state.profile.username)}</span>·
+            <span>الآن</span>·
+            <span class="visibility-badge">${
+              vis === 'followers' ? ic('users','xs') + ' متابعون' :
+              vis === 'private' ? ic('lock','xs') + ' خاص' :
+              ic('globe','xs') + ' عام'
+            }</span>
+            ${location ? `· <span>${ic('location','xs')} ${esc(location)}</span>` : ''}
+          </div>
+        </div>
+      </header>
+      ${text ? `<p class="post-text">${formatPostText(text, { interactive: false })}</p>` : ''}
+      ${images.length ? `
+        <div class="post-media-grid count-${Math.min(images.length, 4)}">
+          ${images.slice(0, 4).map(img => `
+            <div class="post-media-cell loaded">
+              <img src="${img.preview}" alt="${esc(img.alt || '')}">
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </article>
+    <div class="compose-preview-hint">
+      👁️ هذه معاينة لما سيراه الآخرون
+    </div>
+  `;
+}
+
+/* ============================================================
+   #️⃣ تنسيق نص المنشور — هاشتاقات + منشن + ألعاب
+   ============================================================ */
+function formatPostText(text, options){
+  if(!text) return '';
+  const interactive = !options || options.interactive !== false;
+
+  /* 1) هلّس أولاً (أمان XSS) */
+  let html = esc(text);
+
+  /* 2) خرائط اللعب والوسوم */
+  const gamesByName = {};
+  GAMES.forEach(g => {
+    const key = g.name.toLowerCase().replace(/[\s_]/g, '');
+    gamesByName[key] = g;
+  });
+
+  /* 3) استبدال # و @ */
+  html = html.replace(/(^|[\s\(\[\{،,\.;:!?])([#@][\u0600-\u06FF\w_]+)/g, (m, prefix, token) => {
+    const symbol = token[0];
+    const value  = token.slice(1);
+
+    if(symbol === '#'){
+      /* لعبة؟ */
+      const key = value.toLowerCase().replace(/[\s_]/g, '');
+      const game = gamesByName[key];
+      if(game){
+        if(!interactive) return `${prefix}<span class="game-mention">🎮 ${token}</span>`;
+        return `${prefix}<span class="game-mention" data-action="open-game-mention" data-game-id="${game.id}">🎮 ${token}</span>`;
+      }
+      /* هاشتاق عادي */
+      if(!interactive) return `${prefix}<span class="hashtag">${token}</span>`;
+      return `${prefix}<span class="hashtag" data-action="open-hashtag" data-tag="${value}">${token}</span>`;
+    }
+
+    if(symbol === '@'){
+      const user = Object.values(state.users || {}).find(u =>
+        (u.username || '').toLowerCase() === value.toLowerCase()
+      );
+      const exists = !!user;
+      const cls = exists ? 'mention' : 'mention mention-unknown';
+      if(!interactive) return `${prefix}<span class="${cls}">${token}</span>`;
+      return `${prefix}<span class="${cls}" data-action="open-mention" data-username="${value}" data-uid="${exists ? user.uid : ''}">${token}</span>`;
+    }
+
+    return m;
+  });
+
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
 /* ============ Modals with Image Upload ============ */
 function composeModal(){
-  state.pendingImages.post = null;
+  /* ===== استعادة المسودة ===== */
+  let draft = { text: '', visibility: 'public', location: '' };
+  try {
+    const saved = localStorage.getItem('nexus_post_draft');
+    if(saved) draft = { ...draft, ...JSON.parse(saved) };
+  } catch(e){}
+
+  /* ===== إعادة تعيين الحالة ===== */
+  state.composeImages = [];
+  state.composeTab = 'write';
+  state.composeVisibility = draft.visibility || 'public';
+  state.composeLocation = draft.location || '';
+  state.composeEmojiOpen = false;
+  state.composeLocationOpen = !!draft.location;
+  state.composeHashtagsOpen = false;
+
   openModal(`
-    <h3>منشور جديد</h3>
-    <div class="field">
-      <textarea class="input" id="composeText" rows="4" placeholder="بماذا تفكر؟" style="resize:vertical;max-height:200px"></textarea>
-      <div class="char-counter" id="composeCounter">0 / 1000</div>
-    </div>
-    <div class="img-field">
-      <label>صورة (اختياري)</label>
-      <div class="img-preview" id="postPreview" data-pick-image="post">
-        <div class="img-empty">${ic('camera')}<span>اضغط لاختيار صورة</span></div>
-        <span class="img-badge">تم الاختيار ✓</span>
+    <div class="compose-modal-inner">
+      <!-- Header -->
+      <div class="compose-header">
+        <h3>${ic('edit','sm')} إنشاء منشور</h3>
+        <button type="button" class="icon-btn" data-action="modal-close" aria-label="إغلاق">
+          ${ic('close','sm')}
+        </button>
       </div>
-      <div class="img-upload-progress" id="postUploadProgress"><span></span></div>
+
+      <!-- Tabs -->
+      <div class="compose-tabs">
+        <button type="button" class="compose-tab active" data-compose-tab="write">
+          ${ic('edit','xs')} كتابة
+        </button>
+        <button type="button" class="compose-tab" data-compose-tab="preview">
+          ${ic('eye','xs')} معاينة
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="compose-body">
+
+        <!-- ═══ WRITE PANEL ═══ -->
+        <div class="compose-panel" data-compose-panel="write">
+
+          <!-- Author -->
+          <div class="compose-author">
+            ${avatar(state.profile, 44)}
+            <div class="compose-author-info">
+              <div class="compose-author-name">${esc(state.profile.name)}</div>
+              <button type="button" class="compose-author-vis" data-action="compose-visibility">
+                <span id="composeVisIcon">${
+                  state.composeVisibility === 'followers' ? ic('users','xs') :
+                  state.composeVisibility === 'private' ? ic('lock','xs') :
+                  ic('globe','xs')
+                }</span>
+                <span id="composeVisLabel">${
+                  state.composeVisibility === 'followers' ? 'المتابعون فقط' :
+                  state.composeVisibility === 'private' ? 'خاص' : 'عام'
+                }</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Textarea -->
+<div class="compose-textarea-wrap">
+  <textarea
+    id="composeText"
+    class="compose-textarea"
+    placeholder="بماذا تفكر؟ استخدم # للوسوم و @ للإشارة…"
+    maxlength="${COMPOSE_MAX_CHARS}"
+    autocomplete="off"
+  >${esc(draft.text)}</textarea>
+  <div id="composeAutocomplete" class="compose-autocomplete" style="display:none"></div>
+</div>
+
+          <!-- Gallery -->
+          <div id="composeGalleryWrap"></div>
+
+          <!-- Location -->
+          <div id="composeLocationWrap" style="${state.composeLocationOpen ? '' : 'display:none'}">
+            <div class="compose-location">
+              ${ic('location','xs')}
+              <input type="text" id="composeLocationInput"
+                     placeholder="أين أنت؟ (اختياري)"
+                     maxlength="60"
+                     value="${esc(state.composeLocation)}">
+              <button type="button" class="compose-location-close" data-action="compose-remove-location" aria-label="إزالة الموقع">
+                ${ic('close','xs')}
+              </button>
+            </div>
+          </div>
+
+          <!-- Emoji picker (hidden) -->
+          <div id="composeEmojiPickerWrap" style="display:none">
+            <div class="compose-emoji-picker" id="composeEmojiPicker"></div>
+          </div>
+
+          <!-- Hashtag suggestions (hidden) -->
+          <div id="composeHashtagWrap" style="display:none">
+            <div class="compose-hashtags" id="composeHashtagChips"></div>
+          </div>
+
+          <!-- Toolbar -->
+          <div class="compose-toolbar">
+            <button type="button" class="compose-tool-btn" data-action="compose-add-image" title="إضافة صور">
+              ${ic('image')}
+              <span class="compose-tool-badge" id="composeImgCount" style="${state.composeImages.length ? '' : 'display:none'}">${state.composeImages.length}</span>
+            </button>
+            <button type="button" class="compose-tool-btn" data-action="compose-toggle-emoji" title="إيموجي">
+              😊
+            </button>
+            <button type="button" class="compose-tool-btn" data-action="compose-toggle-hashtag" title="وسوم">
+              #
+            </button>
+            <button type="button" class="compose-tool-btn" data-action="compose-toggle-location" title="الموقع">
+              ${ic('location')}
+            </button>
+            <div class="compose-toolbar-sep"></div>
+            <button type="button" class="compose-tool-btn" data-action="compose-visibility" title="الخصوصية">
+              ${ic('shield')}
+            </button>
+          </div>
+        </div>
+
+        <!-- ═══ PREVIEW PANEL ═══ -->
+        <div class="compose-panel hidden" data-compose-panel="preview">
+          <div id="composePreviewContent"></div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="compose-footer">
+        <div class="compose-counter" id="composeCounter">
+          <svg class="compose-counter-svg" viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="18" class="compose-counter-bg"/>
+            <circle cx="22" cy="22" r="18" class="compose-counter-bar" id="composeCounterBar"/>
+          </svg>
+          <div class="compose-counter-text" id="composeCounterText">0</div>
+        </div>
+        <button type="button" class="compose-submit" id="composeSubmit" disabled>
+          ${ic('send','sm')} نشر
+        </button>
+      </div>
     </div>
-    <div class="row" style="margin-top:14px">
-      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
-      <button class="btn btn-primary" style="flex:1" id="submitPost">نشر</button>
-    </div>`);
-  const textEl = document.getElementById('composeText');
-  const counter = document.getElementById('composeCounter');
-  textEl.addEventListener('input', ()=>{
-    const len = textEl.value.length;
-    counter.textContent = `${len} / 1000`;
-    counter.className = 'char-counter' + (len > 900 ? ' danger' : len > 750 ? ' warn' : '');
-    if(len > 1000) textEl.value = textEl.value.slice(0, 1000);
-  });
+  `);
+
+  /* ===== التهيئة بعد الرسم ===== */
+  const textarea = document.getElementById('composeText');
+  if(textarea){
+    textarea.focus();
+    textarea.addEventListener('input', onComposeTextChange);
+/* لوحة المفاتيح للاقتراحات */
+textarea.addEventListener('keydown', (e) => {
+  if(_acState.items.length > 0){
+    if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      _acState.selectedIdx = Math.min(_acState.selectedIdx + 1, _acState.items.length - 1);
+      updateAcSelection();
+      return;
+    }
+    if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      _acState.selectedIdx = Math.max(_acState.selectedIdx - 1, 0);
+      updateAcSelection();
+      return;
+    }
+    if(e.key === 'Enter' || e.key === 'Tab'){
+      e.preventDefault();
+      selectAutocompleteItem(_acState.selectedIdx);
+      return;
+    }
+    if(e.key === 'Escape'){
+      e.preventDefault();
+      hideComposeAutocomplete();
+      return;
+    }
+  }
+
+  /* النشر بـ Ctrl/Cmd + Enter */
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+    e.preventDefault();
+    const btn = document.getElementById('composeSubmit');
+    if(btn && !btn.disabled) btn.click();
+  }
+});
+
+/* إعادة الاقتراحات عند تحريك المؤشر */
+textarea.addEventListener('click', detectComposeAutocomplete);
+textarea.addEventListener('keyup', (e) => {
+  if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) detectComposeAutocomplete();
+});
+
+    /* drag & drop */
+    textarea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      textarea.classList.add('dragover');
+    });
+    textarea.addEventListener('dragleave', () => {
+      textarea.classList.remove('dragover');
+    });
+    textarea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      textarea.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files || []);
+      if(files.length) addPostImages(files);
+    });
+
+    /* Counter init */
+    updateComposeCounter(textarea.value.length);
+    updateComposeSubmitState();
+    onComposeTextChange();
+  }
+
+  /* Location input */
+  const locInput = document.getElementById('composeLocationInput');
+  if(locInput){
+    locInput.addEventListener('input', () => {
+      state.composeLocation = locInput.value.trim();
+      saveComposeDraft();
+    });
+  }
+
+  /* Fill emoji picker */
+  const emojiPicker = document.getElementById('composeEmojiPicker');
+  if(emojiPicker){
+    emojiPicker.innerHTML = COMPOSE_EMOJIS.map(e =>
+      `<button type="button" data-insert-emoji="${e}">${e}</button>`
+    ).join('');
+  }
+
+  /* Fill hashtag chips */
+  const hashtagChips = document.getElementById('composeHashtagChips');
+  if(hashtagChips){
+    hashtagChips.innerHTML = COMPOSE_HASHTAGS.map(h =>
+      `<button type="button" class="compose-hashtag-chip" data-insert-hashtag="${h}">${h}</button>`
+    ).join('');
+  }
+
+  /* Close observer — save draft on close */
+  const root = document.getElementById('modalRoot');
+  if(root){
+    const obs = new MutationObserver(() => {
+      if(!root.innerHTML.trim()){
+        saveComposeDraft();
+        state.composeImages.forEach(img => {
+          try { URL.revokeObjectURL(img.preview); } catch(e){}
+        });
+        state.composeImages = [];
+        obs.disconnect();
+      }
+    });
+    obs.observe(root, { childList: true });
+  }
 }
 
 function editProfileModal(){
@@ -8546,6 +11246,34 @@ function editProfileModal(){
   });
 }
 
+/* ============================================================
+   🔄 مزامنة التعليقات عند تحديث الملف
+   ============================================================ */
+async function syncUserComments(updates){
+  if(!state.user?.uid) return;
+  const keys = Object.keys(updates || {});
+  if(!keys.length) return;
+
+  try {
+    const cg = query(
+      collectionGroup(db, 'comments'),
+      where('authorId', '==', state.user.uid)
+    );
+    const snap = await getDocs(cg);
+    if(snap.empty) return;
+
+    const patch = {};
+    keys.forEach(k => { patch[`author.${k}`] = updates[k]; });
+
+    await Promise.all(
+      snap.docs.map(d => updateDoc(d.ref, patch).catch(() => {}))
+    );
+    console.log(`✅ synced ${snap.size} comments`);
+  } catch(e){
+    console.warn('syncUserComments failed:', e);
+  }
+}
+
 async function saveProfileData(){
   const btn = document.getElementById('saveProfileBtn');
   const name = document.getElementById('epName').value.trim();
@@ -8617,6 +11345,14 @@ async function saveProfileData(){
         }
       } catch(e){ console.warn('posts sync failed:', e); }
     }
+
+    /* ★ مزامنة التعليقات أيضاً */
+if(updates.name || updates.username){
+  const commentUpdates = {};
+  if(updates.name) commentUpdates.name = name;
+  if(updates.username) commentUpdates.username = username;
+  await syncUserComments(commentUpdates);
+}
 
     Object.assign(state.profile, updates);
     closeModal();
@@ -11654,6 +14390,67 @@ document.addEventListener('change', async (e) => {
   }
 });
 
+function openMediaGalleryModal(urls, startIndex = 0){
+  if(!urls || !urls.length) return;
+  let current = Math.max(0, Math.min(startIndex, urls.length - 1));
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0">${ic('image','sm')} الصور (${urls.length})</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+    <div style="position:relative;background:#000;border-radius:14px;overflow:hidden">
+      <img id="galleryImg" src="${esc(urls[current])}"
+           style="width:100%;display:block;max-height:70vh;object-fit:contain">
+      ${urls.length > 1 ? `
+        <button type="button" id="galleryPrev"
+                style="position:absolute;top:50%;inset-inline-start:8px;transform:translateY(-50%);
+                       width:36px;height:36px;border-radius:50%;background:rgba(7,10,17,.75);
+                       border:1px solid rgba(255,255,255,.2);color:#fff;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)">
+          ${ic('back','sm')}
+        </button>
+        <button type="button" id="galleryNext"
+                style="position:absolute;top:50%;inset-inline-end:8px;transform:translateY(-50%);
+                       width:36px;height:36px;border-radius:50%;background:rgba(7,10,17,.75);
+                       border:1px solid rgba(255,255,255,.2);color:#fff;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)">
+          ${ic('back','sm')}
+        </button>
+        <span id="galleryCounter"
+              style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+                     padding:4px 10px;border-radius:8px;background:rgba(7,10,17,.75);
+                     border:1px solid rgba(255,255,255,.15);color:#fff;font-size:11px;font-weight:800;backdrop-filter:blur(8px)">
+          ${current + 1} / ${urls.length}
+        </span>
+      ` : ''}
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-ghost" style="width:100%" data-action="modal-close">إغلاق</button>
+    </div>
+  `);
+
+  const imgEl = document.getElementById('galleryImg');
+  const counter = document.getElementById('galleryCounter');
+  const prevBtn = document.getElementById('galleryPrev');
+  const nextBtn = document.getElementById('galleryNext');
+  if(nextBtn) nextBtn.querySelector('svg').style.transform = 'scaleX(-1)';
+
+  const update = () => {
+    if(imgEl) imgEl.src = urls[current];
+    if(counter) counter.textContent = `${current + 1} / ${urls.length}`;
+  };
+
+  prevBtn?.addEventListener('click', () => {
+    current = (current - 1 + urls.length) % urls.length;
+    update();
+  });
+  nextBtn?.addEventListener('click', () => {
+    current = (current + 1) % urls.length;
+    update();
+  });
+}
+
 async function pageGameStats(){
   // احسب إحصائيات لكل لعبة
   try {
@@ -11759,29 +14556,39 @@ document.getElementById('forgotPassBtn')?.addEventListener('click', async () => 
 /* ============ Event Handlers ============ */
 document.addEventListener('click', async (e)=>{
 
-  /* ============================================================
-     1) معالجة اختيار الصور — قبل تعريف t
-     ============================================================ */
-  const imgEl = e.target.closest('[data-pick-image]');
-  if(imgEl){
-    const type = imgEl.dataset.pickImage;
-    pickImage(type, (previewUrl)=>{
-      const el = document.getElementById(
-        type === 'post' ? 'postPreview' :
-        type === 'avatar' ? 'avatarPreview' : 'coverPreview'
-      );
-      if(el){
-        el.style.backgroundImage = `url(${previewUrl})`;
-        el.classList.add('has-image');
-      }
-    });
-    return;
-  }
+  /* ════════ 0) تجاهل نقر ملف الإدخال (يمنع الحلقة) ════════ */
+  if(e.target && e.target.id === 'globalFileInput') return;
 
-  /* ============================================================
-     2) إيجاد العنصر المستهدف — ★ يجب أن يكون قبل أي استخدام لـ t
-     ============================================================ */
+/* 🔮 الاقتراحات — قبل أي شيء */
+const acItem = e.target.closest('[data-ac-idx]');
+if(acItem){
+  e.preventDefault();
+  e.stopPropagation();
+  selectAutocompleteItem(parseInt(acItem.dataset.acIdx));
+  return;
+}
+
+/* إغلاق الاقتراحات عند النقر خارجها */
+if(!e.target.closest('.compose-textarea-wrap') && !e.target.closest('.compose-autocomplete')){
+  hideComposeAutocomplete();
+}
+
+/* اقتراحات التعديل */
+const editAcItem = e.target.closest('[data-edit-ac-idx]');
+if(editAcItem){
+  e.preventDefault();
+  e.stopPropagation();
+  selectAutocompleteItem(parseInt(editAcItem.dataset.editAcIdx), 'editPostText', 'editAutocomplete');
+  return;
+}
+if(!e.target.closest('#editPostText') && !e.target.closest('#editAutocomplete')){
+  hideEditAutocomplete();
+}
+
+  /* ════════ 1) تحديد العنصر أولاً ════════ */
 const t = e.target.closest(
+  '[data-edit-tab],[data-remove-edit-image],[data-alt-edit-image],' +
+'[data-add-edit-image],[data-insert-edit-emoji],[data-insert-edit-hashtag],' +
   '[data-nav],[data-action],[data-tab],[data-ptab],[data-follow],' +
   '[data-like],[data-save],[data-chat],[data-open-chat],[data-game-open],' +
   '[data-join-room],[data-leave-room],[data-create-room],[data-scat],[data-lb],' +
@@ -11801,9 +14608,238 @@ const t = e.target.closest(
   '[data-notif-filter],[data-gift-id],[data-reason],[data-pick-image],' +
   '[data-post-menu],[data-reblog],[data-edit-post],[data-pin-post],' +
   '[data-set-visibility],[data-save-visibility],[data-admin-hide-post],' +
-  '[data-toggle-trust],[data-warn-user],[data-warn-confirm],' +   // ★ جديد
+  '[data-toggle-trust],[data-warn-user],[data-warn-confirm],' +
+  '[data-compose-tab],[data-compose-vis],[data-compose-panel],' +
+  '[data-search-tab],[data-search-recent],[data-remove-search-recent],' +
+'[data-view-post],' +
+  '[data-add-compose-image],[data-remove-compose-image],[data-alt-compose-image],' +
+  '[data-insert-emoji],[data-insert-hashtag],' +
+  '[data-comment-sort],[data-like-comment],[data-reply-to],' +
+'[data-edit-comment],[data-save-edit-comment],[data-cancel-edit-comment],' +
+'[data-delete-comment-new],[data-toggle-thread],[data-action="cancel-reply"],' +
+  '[data-action="open-hashtag"],[data-action="open-mention"],' +   // ← ✅ هنا
+  '[data-action="open-game-mention"],' +                            // ← ✅ هنا
   'button'
+  
 );
+
+  /* ════════ 2) معالج الصور — يعمل على e.target مباشرة ════════ */
+  const imgEl = e.target.closest('[data-pick-image]');
+  if(imgEl){
+    const type = imgEl.dataset.pickImage;
+    pickImage(type, (previewUrl)=>{
+      const el = document.getElementById(
+        type === 'post' ? 'postPreview' :
+        type === 'avatar' ? 'avatarPreview' : 'coverPreview'
+      );
+      if(el){
+        el.style.backgroundImage = `url(${previewUrl})`;
+        el.classList.add('has-image');
+        if(type === 'post'){
+          const removeBtn = document.getElementById('removePostImg');
+          if(removeBtn) removeBtn.classList.remove('hidden');
+        }
+      }
+    });
+    return;
+  }
+
+  /* ════════ 3) حماية null — قبل أي t.dataset ════════ */
+  if(!t) return;
+
+/* ══════════════════════════════════════════════
+   💬 معالجات التعليقات المتطوّرة
+   ══════════════════════════════════════════════ */
+
+if(t.dataset.commentSort){
+  setCommentsSort(t.dataset.commentSort);
+  return;
+}
+
+if(t.dataset.likeComment){
+  await toggleCommentLike(t.dataset.likeComment);
+  return;
+}
+
+if(t.dataset.replyTo){
+  startReply(t.dataset.replyTo);
+  return;
+}
+
+if(t.dataset.editComment){
+  startEditComment(t.dataset.editComment);
+  return;
+}
+
+if(t.dataset.saveEditComment){
+  await saveEditComment(t.dataset.saveEditComment);
+  return;
+}
+
+if(t.dataset.cancelEditComment){
+  cancelEditComment();
+  return;
+}
+
+if(t.dataset.deleteCommentNew){
+  await deleteCommentAdvanced(t.dataset.deleteCommentNew);
+  return;
+}
+
+if(t.dataset.toggleThread){
+  toggleThread(t.dataset.toggleThread);
+  return;
+}
+
+if(t.dataset.action === 'cancel-reply'){
+  cancelReply();
+  return;
+}
+
+if(t.dataset.insertCommentEmoji){
+  insertCommentEmoji(t.dataset.insertCommentEmoji);
+  return;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   📝 معالجات الملحّن المتقدّم
+   ═══════════════════════════════════════════════════════════ */
+
+/* التبويبات */
+if(t.dataset.composeTab){
+  state.composeTab = t.dataset.composeTab;
+  document.querySelectorAll('[data-compose-tab]').forEach(b => {
+    b.classList.toggle('active', b.dataset.composeTab === state.composeTab);
+  });
+  document.querySelectorAll('[data-compose-panel]').forEach(p => {
+    p.classList.toggle('hidden', p.dataset.composePanel !== state.composeTab);
+  });
+  if(state.composeTab === 'preview') refreshComposePreview();
+  return;
+}
+
+/* إضافة صور */
+if(t.dataset.action === 'compose-add-image'){ pickPostImages(); return; }
+
+/* إزالة صورة */
+if(t.dataset.removeComposeImage !== undefined){
+  removeComposeImage(parseInt(t.dataset.removeComposeImage));
+  const badge = document.getElementById('composeImgCount');
+  if(badge){
+    badge.textContent = state.composeImages.length;
+    badge.style.display = state.composeImages.length ? '' : 'none';
+  }
+  return;
+}
+
+/* نص بديل للصورة */
+if(t.dataset.altComposeImage !== undefined){
+  setComposeImageAlt(parseInt(t.dataset.altComposeImage));
+  return;
+}
+
+/* إدراج إيموجي */
+if(t.dataset.insertEmoji){ insertEmoji(t.dataset.insertEmoji); return; }
+
+/* إدراج هاشتاق */
+if(t.dataset.insertHashtag){ insertHashtag(t.dataset.insertHashtag); return; }
+
+/* فتح/إغلاق منتقي الإيموجي */
+if(t.dataset.action === 'compose-toggle-emoji'){
+  state.composeEmojiOpen = !state.composeEmojiOpen;
+  const wrap = document.getElementById('composeEmojiPickerWrap');
+  if(wrap) wrap.style.display = state.composeEmojiOpen ? '' : 'none';
+  t.classList.toggle('active', state.composeEmojiOpen);
+  return;
+}
+
+/* فتح/إغلاق اقتراحات الهاشتاق */
+if(t.dataset.action === 'compose-toggle-hashtag'){
+  state.composeHashtagsOpen = !state.composeHashtagsOpen;
+  const wrap = document.getElementById('composeHashtagWrap');
+  if(wrap) wrap.style.display = state.composeHashtagsOpen ? '' : 'none';
+  t.classList.toggle('active', state.composeHashtagsOpen);
+  return;
+}
+
+/* فتح/إغلاق حقل الموقع */
+if(t.dataset.action === 'compose-toggle-location'){
+  state.composeLocationOpen = !state.composeLocationOpen;
+  const wrap = document.getElementById('composeLocationWrap');
+  if(wrap){
+    wrap.style.display = state.composeLocationOpen ? '' : 'none';
+    if(state.composeLocationOpen){
+      document.getElementById('composeLocationInput')?.focus();
+    }
+  }
+  return;
+}
+
+/* إزالة الموقع */
+if(t.dataset.action === 'compose-remove-location'){
+  state.composeLocation = '';
+  state.composeLocationOpen = false;
+  const wrap = document.getElementById('composeLocationWrap');
+  const input = document.getElementById('composeLocationInput');
+  if(wrap) wrap.style.display = 'none';
+  if(input) input.value = '';
+  saveComposeDraft();
+  return;
+}
+
+/* مبدّل الخصوصية */
+if(t.dataset.action === 'compose-visibility'){
+  const current = state.composeVisibility;
+  const next = current === 'public' ? 'followers'
+             : current === 'followers' ? 'private'
+             : 'public';
+  state.composeVisibility = next;
+
+  const iconEl = document.getElementById('composeVisIcon');
+  const labelEl = document.getElementById('composeVisLabel');
+  if(iconEl) iconEl.innerHTML =
+    next === 'followers' ? ic('users','xs') :
+    next === 'private' ? ic('lock','xs') :
+    ic('globe','xs');
+  if(labelEl) labelEl.textContent =
+    next === 'followers' ? 'المتابعون فقط' :
+    next === 'private' ? 'خاص' : 'عام';
+
+  saveComposeDraft();
+  if(state.composeTab === 'preview') refreshComposePreview();
+  return;
+}
+
+/* نشر */
+if(t.id === 'composeSubmit'){
+  const text = document.getElementById('composeText')?.value.trim() || '';
+  if(!text && state.composeImages.length === 0){
+    toast('اكتب شيئاً أو أضف صورة');
+    return;
+  }
+  await createPost({ text });
+  return;
+}
+
+/* فتح معرض الصور للمنشور */
+if(t.dataset.action === 'open-media-gallery'){
+  const p = state.posts.find(x => x.id === t.dataset.postId);
+  if(!p) return;
+  const urls = (p.mediaUrls && p.mediaUrls.length) ? p.mediaUrls
+             : (p.media ? [p.media] : []);
+  if(!urls.length) return;
+
+  const cell = e.target.closest('[data-media-index]');
+  const startIdx = cell ? parseInt(cell.dataset.mediaIndex) : 0;
+  openMediaGalleryModal(urls, startIdx);
+  return;
+}
+
+/* عرض صورة واحدة */
+if(t.dataset.action === 'view-post-media'){
+  if(t.dataset.src) openImageViewerModal(t.dataset.src);
+  return;
+}
 
   /* 3) حماية null */
   if(!t) return;
@@ -12179,11 +15215,243 @@ updateZonePreview();
   if(t.dataset.action === 'close-drawer'){ closeDrawer(); return; }
   if(t.dataset.action === 'modal-close'){ closeModal(); return; }
   if(t.dataset.action === 'toast'){ toast(t.dataset.msg || ''); return; }
-  if(t.dataset.action === 'compose'){ composeModal(); return; }
+if(t.dataset.action === 'compose'){ composeModal(); return; }
+
+/* ═══════════════════════════════════════════════
+   #️⃣ فتح الهاشتاق
+   ═══════════════════════════════════════════════ */
+if(t.dataset.action === 'open-hashtag'){
+  closeModal();
+  const tag = (t.dataset.tag || '').replace(/^#/, '');
+  if(!tag) return;
+  go('hashtag', { activeHashtag: tag });
+  return;
+}
+
+/* ═══════════════════════════════════════════════
+   @ فتح منشن المستخدم
+   ═══════════════════════════════════════════════ */
+if(t.dataset.action === 'open-mention'){
+  closeModal();
+  const uid = t.dataset.uid;
+  const username = t.dataset.username || '';
+
+  /* مستخدم موجود */
+  if(uid){
+    if(uid === state.user.uid) go('profile');
+    else go('userprofile', { viewingUid: uid });
+    return;
+  }
+
+  /* بحث بالاسم */
+  const found = Object.values(state.users || {}).find(u =>
+    (u.username || '').toLowerCase() === username.toLowerCase()
+  );
+  if(found){
+    if(found.uid === state.user.uid) go('profile');
+    else go('userprofile', { viewingUid: found.uid });
+  } else {
+    toast(`@${username} غير موجود`);
+  }
+  return;
+}
+
+/* ═══════════════════════════════════════════════
+   🎮 فتح منشن اللعبة
+   ═══════════════════════════════════════════════ */
+if(t.dataset.action === 'open-game-mention'){
+  closeModal();
+  const gameId = t.dataset.gameId;
+  if(gameId) go('games', { activeGame: gameId });
+  return;
+}
+
+ /* ════════════════════════════════════════════════════════
+     👇 الكتلة الأولى: معالجات مودال التعديل 👇
+     ════════════════════════════════════════════════════════ */
+
+  if(t.dataset.editTab){
+    state.editTab = t.dataset.editTab;
+    document.querySelectorAll('[data-edit-tab]').forEach(b => {
+      b.classList.toggle('active', b.dataset.editTab === state.editTab);
+    });
+    document.querySelectorAll('[data-edit-panel]').forEach(p => {
+      p.classList.toggle('hidden', p.dataset.editPanel !== state.editTab);
+    });
+    if(state.editTab === 'preview') refreshEditPreview();
+    return;
+  }
+
+  if(t.dataset.action === 'edit-add-image'){ pickEditImages(); return; }
+
+  if(t.dataset.removeEditImage !== undefined){
+    removeEditImage(parseInt(t.dataset.removeEditImage));
+    return;
+  }
+
+  if(t.dataset.altEditImage !== undefined){
+    setEditImageAlt(parseInt(t.dataset.altEditImage));
+    return;
+  }
+
+  if(t.dataset.insertEditEmoji){ insertEditEmoji(t.dataset.insertEditEmoji); return; }
+  if(t.dataset.insertEditHashtag){ insertEditHashtag(t.dataset.insertEditHashtag); return; }
+
+  if(t.dataset.action === 'edit-toggle-emoji'){
+    const wrap = document.getElementById('editEmojiPickerWrap');
+    if(wrap) wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+    t.classList.toggle('active');
+    return;
+  }
+  if(t.dataset.action === 'edit-toggle-hashtag'){
+    const wrap = document.getElementById('editHashtagWrap');
+    if(wrap) wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+    t.classList.toggle('active');
+    return;
+  }
+  if(t.dataset.action === 'edit-toggle-location'){
+    const wrap = document.getElementById('editLocationWrap');
+    if(wrap){
+      wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+      if(wrap.style.display !== 'none'){
+        document.getElementById('editLocationInput')?.focus();
+      }
+    }
+    return;
+  }
+  if(t.dataset.action === 'edit-remove-location'){
+    state.editLocation = '';
+    const wrap = document.getElementById('editLocationWrap');
+    const input = document.getElementById('editLocationInput');
+    if(wrap) wrap.style.display = 'none';
+    if(input) input.value = '';
+    return;
+  }
+
+  if(t.dataset.action === 'edit-visibility'){
+    const current = state.editVisibility;
+    const next = current === 'public' ? 'followers'
+               : current === 'followers' ? 'private' : 'public';
+    state.editVisibility = next;
+
+    const iconEl = document.getElementById('editVisIcon');
+    const labelEl = document.getElementById('editVisLabel');
+    if(iconEl) iconEl.innerHTML =
+      next === 'followers' ? ic('users','xs') :
+      next === 'private' ? ic('lock','xs') : ic('globe','xs');
+    if(labelEl) labelEl.textContent =
+      next === 'followers' ? 'المتابعون فقط' :
+      next === 'private' ? 'خاص' : 'عام';
+
+    if(state.editTab === 'preview') refreshEditPreview();
+    return;
+  }
+
+  /* ════════════════════════════════════════════════════════
+     👆 نهاية معالجات التعديل 👆
+     ════════════════════════════════════════════════════════ */
+
+
+  /* ════════════════════════════════════════════════════════
+     👇 الكتلة الثانية: البحث المتطوّر 👇
+     ════════════════════════════════════════════════════════ */
+
+  if(t.dataset.searchTab){
+    state.searchTab = t.dataset.searchTab;
+    render();
+    return;
+  }
+
+  if(t.dataset.action === 'search-clear'){
+    state.searchQ = '';
+    render();
+    const input = document.getElementById('searchInput');
+    if(input) input.focus();
+    return;
+  }
+
+  if(t.dataset.searchRecent){
+    state.searchQ = t.dataset.searchRecent;
+    state.searchTab = 'all';
+    render();
+    return;
+  }
+
+  if(t.dataset.removeSearchRecent){
+    removeSearchRecent(t.dataset.removeSearchRecent);
+    render();
+    return;
+  }
+
+  if(t.dataset.action === 'clear-search-recent'){
+    clearSearchRecent();
+    render();
+    return;
+  }
+
+  if(t.dataset.viewPost){
+    const p = state.posts.find(x => x.id === t.dataset.viewPost);
+    if(!p) return;
+    state.viewingUid = p.authorId;
+    if(p.authorId === state.user.uid) go('profile');
+    else go('userprofile', { viewingUid: p.authorId });
+    return;
+  }
+
+  /* ════════════════════════════════════════════════════════
+     👆 نهاية البحث 👆
+     ════════════════════════════════════════════════════════ */
+
+/* ★ إزالة صورة المنشور */
+if(t.dataset.action === 'remove-post-image'){
+  state.pendingImages.post = null;
+  const preview = document.getElementById('postPreview');
+  const btn = document.getElementById('removePostImg');
+  if(preview){
+    preview.style.backgroundImage = '';
+    preview.classList.remove('has-image');
+    const empty = preview.querySelector('.img-empty');
+    if(empty) empty.style.display = '';
+  }
+  if(btn) btn.classList.add('hidden');
+  return;
+}
+
+/* ★ عرض الصورة بالحجم الكامل */
+if(t.dataset.action === 'view-post-media'){
+  if(t.dataset.src) openImageViewerModal(t.dataset.src);
+  return;
+}
   if(t.dataset.action === 'edit-profile'){ editProfileModal(); return; }
   if(t.dataset.action === 'create-team'){ createTeamModal(); return; }
   if(t.dataset.action === 'leave-team'){ await leaveTeam(); return; }
   if(t.dataset.action === 'back-to-teams'){ state.viewingTeamId = null; render(); return; }
+
+/* ★ فتح/إغلاق صندوق الحسابات المقترحة */
+if(t.dataset.action === 'toggle-suggestions'){
+  state.showSuggestions = !state.showSuggestions;
+  render();
+  return;
+}
+
+/* ★ إزالة صورة المنشور قبل النشر */
+if(t.dataset.action === 'remove-post-image'){
+  state.pendingImages.post = null;
+  const preview = document.getElementById('postPreview');
+  const btn = document.getElementById('removePostImg');
+  if(preview){
+    preview.style.backgroundImage = '';
+    preview.classList.remove('has-image');
+  }
+  if(btn) btn.classList.add('hidden');
+  return;
+}
+
+/* ★ عرض صورة المنشور بالحجم الكامل */
+if(t.dataset.action === 'view-post-media'){
+  if(t.dataset.src) openImageViewerModal(t.dataset.src);
+  return;
+}
 
   /* ============================================================
      19) إعادة محاولة تحميل الملف الشخصي (مفصولة الآن)
@@ -12308,36 +15576,39 @@ updateZonePreview();
   /* ============================================================
      29) عرض الملف الشخصي
      ============================================================ */
-  if(t.dataset.viewProfile){
-    state.profileTab = 'posts';
-    if(t.dataset.viewProfile === state.user.uid){ go('profile'); return; }
-    go('userprofile', { viewingUid: t.dataset.viewProfile });
-    return;
+if(t.dataset.viewProfile){
+  /* ★ هل نقر المستخدم على ملف من داخل مودال التعليقات؟ */
+  const inCommentsModal =
+    state.currentPostId &&
+    document.getElementById('commentsListBody') &&
+    document.querySelector('.comments-modal-inner');
+
+  if(inCommentsModal){
+    /* حفظ الحالة للعودة إليها */
+    const scrollBody = document.querySelector('.comments-body');
+    state.returnToComments = {
+      postId: state.currentPostId,
+      fromPage: state.page,
+      scrollTop: scrollBody ? scrollBody.scrollTop : 0,
+      replyingTo: state.replyingTo ? { ...state.replyingTo } : null,
+      collapsedThreads: new Set(state.collapsedThreads),
+    };
+    closeModal();
+  } else if(state.returnToComments){
+    /* الانتقال من ملف لملف آخر → إلغاء العودة للتعليقات */
+    state.returnToComments = null;
   }
+
+  state.profileTab = 'posts';
+  if(t.dataset.viewProfile === state.user.uid){ go('profile'); return; }
+  go('userprofile', { viewingUid: t.dataset.viewProfile });
+  return;
+}
 
   /* ============================================================
      30) التعليقات
      ============================================================ */
   if(t.dataset.openComments){ await openCommentsModal(t.dataset.openComments); return; }
-  if(t.dataset.deleteComment){
-    await deleteComment(t.dataset.postId, t.dataset.deleteComment);
-    const comments = state.comments[t.dataset.postId] || [];
-    const listEl = document.getElementById('commentsList');
-    if(listEl){
-      listEl.innerHTML = comments.length ? comments.map(c=>`
-        <div class="comment-item">
-          ${avatar(c.author, 36)}
-          <div class="comment-body">
-            <div class="comment-name">${esc(c.author?.name||'')} <span class="comment-time">${timeAgo(c.createdAt)}</span></div>
-            <div class="comment-text">${esc(c.text)}</div>
-          </div>
-          ${c.authorId === state.user.uid
-            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)" data-delete-comment="${c.id}" data-post-id="${t.dataset.postId}">${ic('trash','xs')}</button>`
-            : ''}
-        </div>`).join('') : `<div class="empty" style="padding:30px 0">${ic('comment')}<div>لا تعليقات بعد</div></div>`;
-    }
-    return;
-  }
   if(t.dataset.deletePost){ await deletePost(t.dataset.deletePost); return; }
 
   /* ============================================================
@@ -12384,30 +15655,10 @@ updateZonePreview();
   /* ============================================================
      36) إرسال تعليق
      ============================================================ */
-  if(t.id === 'sendCommentBtn'){
-    const inp = document.getElementById('commentInput');
-    const txt = inp?.value.trim();
-    if(!txt) return;
-    inp.value = '';
-    await addComment(t.dataset.postId, txt);
-    const comments = state.comments[t.dataset.postId] || [];
-    const listEl = document.getElementById('commentsList');
-    if(listEl){
-      listEl.innerHTML = comments.length ? comments.map(c=>`
-        <div class="comment-item">
-          ${avatar(c.author, 36)}
-          <div class="comment-body">
-            <div class="comment-name">${esc(c.author?.name||'')} <span class="comment-time">${timeAgo(c.createdAt)}</span></div>
-            <div class="comment-text">${esc(c.text)}</div>
-          </div>
-          ${c.authorId === state.user.uid
-            ? `<button class="icon-btn" style="width:28px;height:28px;background:transparent;border:0;color:var(--muted)" data-delete-comment="${c.id}" data-post-id="${t.dataset.postId}">${ic('trash','xs')}</button>`
-            : ''}
-        </div>`).join('') : `<div class="empty" style="padding:30px 0">${ic('comment')}<div>لا تعليقات بعد</div></div>`;
-      listEl.scrollTop = listEl.scrollHeight;
-    }
-    return;
-  }
+if(t.id === 'sendCommentBtn'){
+  await submitComment();
+  return;
+}
 
   /* ============================================================
      37) نشر منشور / حفظ الملف / إنشاء فريق
