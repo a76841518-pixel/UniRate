@@ -1063,6 +1063,8 @@ const state = {
   seasonInfo: null,
   myGifts: [],
   myGameStats: {},
+    matchStatsCache: {},
+      sigExpanded: false,
     /* ★ إصلاحات */
   invTab: 'all',
   giftTab: 'received',
@@ -1247,6 +1249,11 @@ function go(page, opt={}, skipHistory=false){
   if(state.page === 'messages' && page !== 'messages' && state.chatUnsub){
     try { state.chatUnsub(); } catch(e){}
     state.chatUnsub = null; state.chatWith = null;
+  }
+
+  /* ★ إعادة تعيين حالة طي التواقيع عند كل تنقل لملف مستخدم */
+  if(page === 'userprofile'){
+    state.sigExpanded = false;
   }
 
   state.lastViewedProfileUid = null;
@@ -5300,6 +5307,209 @@ function calculateReputationFromData(u){
   return Math.max(0, positive - negative);
 }
 
+/* ============================================================
+   📊 تحميل وعرض إحصائيات المباريات في البطاقة
+   ============================================================ */
+async function loadMatchStats(uid, elemId){
+  try {
+    const snap = await getDocs(collection(db, 'users', uid, 'matchHistory'));
+    const matches = snap.docs.map(d => d.data());
+    const stats = {
+      played: matches.length,
+      wins: matches.filter(m => m.result === 'win').length,
+    };
+    updateMatchStatsUI(elemId, stats);
+  } catch(e){
+    console.warn('match stats:', e);
+  }
+}
+
+function updateMatchStatsUI(elemId, stats){
+  const el = document.getElementById(elemId);
+  if(!el) return;
+  el.innerHTML = `
+    <div class="pms-item">
+      <span class="pms-icon">🎮</span>
+      <span class="pms-val">${nf(stats.played)}</span>
+      <span class="pms-lbl">مباراة</span>
+    </div>
+    <div class="pms-divider"></div>
+    <div class="pms-item">
+      <span class="pms-icon">🏆</span>
+      <span class="pms-val">${nf(stats.wins)}</span>
+      <span class="pms-lbl">فوز</span>
+    </div>
+  `;
+}
+
+/* ============================================================
+   📊 مودال معلومات الإحصائيات (الشهرة/القوة/الدعم/الهيبة)
+   ============================================================ */
+function openStatInfoModal(uid, type){
+  uid = uid || state.user.uid;
+  const p = (uid === state.user.uid) ? state.profile : state.users[uid];
+  if(!p) return;
+
+  const heba = calculateHeba(p);
+  const info = {
+    fame: {
+      icon:'⭐', title:'الشهرة', color:'#a78bfa', value: p.fame || 0,
+      desc:'الشهرة تعكس مدى انتشارك وسمعتك في مجتمع نكسوس.',
+      howTo: [
+        {i:'❤️', t:'<b>إعجاب الملف</b> — كل لاعب يعجب بملفك يضيف لك <b>10 شهرة</b> (مرة واحدة نهائية لكل لاعب).'},
+        {i:'📤', t:'<b>الدعم</b> — كل نقطة دعم تحصل عليها تضيف شهرة بنفس المقدار.'},
+        {i:'🎁', t:'<b>الهدايا</b> — كل <b>10 عملات</b> من قيمة الهدية المرسلة لك = <b>1 شهرة</b>.'},
+      ],
+    },
+    power: {
+      icon:'⚡', title:'القوة', color:'#00d2ff', value: p.power || 0,
+      desc:'القوة تعبر عن مهارتك في الألعاب ومستوى أدائك في المباريات.',
+      howTo: [
+        {i:'👍', t:'<b>إعجابات اللعب</b> — كل إعجاب على لعبك يضيف <b>2 قوة</b>.'},
+        {i:'⚔️', t:'<b>نسبة الفوز</b> — نسبة انتصاراتك إلى خسائرك (K/D) مضروبة في 100.'},
+        {i:'🏆', t:'<b>الفوز بالمباريات</b> — يحسن من نسبتك ويزيد قوتك تدريجياً.'},
+      ],
+    },
+    support: {
+      icon:'💎', title:'الدعم', color:'#34d399', value: p.support || 0,
+      desc:'الدعم يعبر عن تفاعلك مع الآخرين ومساندتك لهم.',
+      howTo: [
+        {i:'📤', t:'<b>دعم الآخرين</b> — عند دعمك لأي لاعب تحصل على <b>10 نقاط دعم</b>.'},
+        {i:'⏳', t:'<b>مرة واحدة يومياً</b> — يمكنك دعم كل لاعب مرة واحدة كل 24 ساعة.'},
+        {i:'🤝', t:'<b>الاستمرارية</b> — كلما زاد عدد اللاعبين الذين تدعمهم، زاد رصيد دعمك.'},
+      ],
+    },
+    heba: {
+      icon:'👑', title:'الهيبة', color:'#f5b301', value: heba,
+      desc:'الهيبة هي مجموع <b>الشهرة + القوة + السمعة</b> — تعبر عن مكانتك الكلية في المجتمع.',
+      howTo: [
+        {i:'⭐', t:'<b>الشهرة</b> — تُحسب كما هو موضح في بطاقة الشهرة.'},
+        {i:'⚡', t:'<b>القوة</b> — تُحسب كما هو موضح في بطاقة القوة.'},
+        {i:'🤝', t:'<b>السمعة</b> — تأتي من: الثقة (100)، المتابعون (15)، إعجابات الملف (5)، المشاهدون الفريدون (3). وتُخصم منها البلاغات (50) والحظر (30) والتحذيرات (100).'},
+        {i:'📊', t:'<b>المعادلة:</b> الهيبة = الشهرة + القوة + السمعة.'},
+      ],
+    },
+  }[type];
+  if(!info) return;
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="margin:0">${info.icon} ${info.title}</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">${ic('close','sm')}</button>
+    </div>
+    <div class="stat-info-value" style="background:${info.color}18;border-color:${info.color}55;color:${info.color}">
+      <div style="font-size:36px;font-weight:900">${nf(info.value)}</div>
+      <div style="font-size:11px;font-weight:700;opacity:.85;margin-top:2px">${info.title}</div>
+    </div>
+    <div class="stat-info-desc">${info.desc}</div>
+    <div class="stat-info-section">${ic('star','xs')} كيف تحصل عليها؟</div>
+    ${info.howTo.map(h => `
+      <div class="stat-info-row">
+        <span class="sir-icon">${h.i}</span>
+        <span class="sir-text">${h.t}</span>
+      </div>
+    `).join('')}
+  `);
+}
+
+/* ============================================================
+   🤝 مودال الثقات — تبويبان (وثقوا بك / وثقت بهم)
+   ============================================================ */
+async function openTrustsModal(uid, type = 'received'){
+  try {
+    const field   = type === 'received' ? 'to'   : 'from';
+    const idField = type === 'received' ? 'from' : 'to';
+
+    /* ★ جلب القائمتين معاً لعرض العدّاد الصحيح */
+    const [receivedSnap, givenSnap] = await Promise.all([
+      getDocs(query(collection(db, 'trusts'), where('to',   '==', uid))),
+      getDocs(query(collection(db, 'trusts'), where('from', '==', uid))),
+    ]);
+
+    const receivedItems = receivedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const givenItems    = givenSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const items   = type === 'received' ? receivedItems : givenItems;
+    const users   = items.map(t => state.users[t[idField]]).filter(Boolean);
+
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">🤝 الثقات</h3>
+        <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">${ic('close','sm')}</button>
+      </div>
+      <div class="inv-tabs" style="margin-bottom:14px">
+        <button class="inv-tab ${type==='received'?'active':''}" data-trust-tab="received" data-uid="${uid}">
+          وثقوا بك (${receivedItems.length})
+        </button>
+        <button class="inv-tab ${type==='given'?'active':''}" data-trust-tab="given" data-uid="${uid}">
+          وثقت بهم (${givenItems.length})
+        </button>
+      </div>
+      <div style="max-height:60vh;overflow-y:auto;padding-inline-end:4px">
+        ${users.length ? users.map(u => `
+          <div class="follow-list-item" data-view-profile="${u.uid}" data-close-modal="1">
+            ${avatar(u, 44)}
+            <div style="flex:1;min-width:0">
+              <div class="follow-name">${esc(u.name)} ${getAdminBadge(u)}</div>
+              <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+            </div>
+            ${u.uid !== state.user.uid
+              ? `<span class="pill ok" style="font-size:9.5px">🤝 ثقة</span>`
+              : '<span class="pill">أنت</span>'}
+          </div>
+        `).join('') : `<div class="empty" style="padding:30px">${ic('shield')}<div>لا يوجد أحد بعد</div></div>`}
+      </div>
+    `);
+  } catch(e){
+    console.error('trusts:', e);
+    toast('فشل تحميل الثقات');
+  }
+}
+
+/* ============================================================
+   ✍️ مودال جميع التواقيع
+   ============================================================ */
+async function openAllSignaturesModal(uid){
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'users', uid, 'signatures'),
+      orderBy('createdAt', 'desc'),
+      limit(200)
+    ));
+    const sigs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">✍️ جميع التواقيع (${sigs.length})</h3>
+        <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">${ic('close','sm')}</button>
+      </div>
+      <div style="max-height:65vh;overflow-y:auto;padding-inline-end:4px">
+        ${sigs.length ? sigs.map(s => {
+          const isMe    = s.fromId === state.user.uid;
+          const isOwner = s.fromId === uid;
+          return `
+            <div class="sig-item" style="margin-bottom:8px;padding:11px">
+              ${avatar({ name: s.fromName, avatarUrl: s.fromAvatar, grad: pickGrad(s.fromId) }, 36)}
+              <div class="sig-body">
+                <div class="sig-name" style="font-size:12px">
+                  ${esc(s.fromName || 'لاعب')}
+                  ${isMe    ? '<span class="pill" style="font-size:8px">أنت</span>' : ''}
+                  ${isOwner ? '<span class="pill gold" style="font-size:8px">صاحب الملف</span>' : ''}
+                </div>
+                <div class="sig-text" style="font-size:12.5px">${esc(s.text || '')}</div>
+                <div class="sig-time">${timeAgo(s.createdAt)}</div>
+              </div>
+            </div>
+          `;
+        }).join('') : `<div class="empty" style="padding:30px">✍️ لا توجد تواقيع بعد</div>`}
+      </div>
+    `);
+  } catch(e){
+    console.error('signatures:', e);
+    toast('فشل تحميل التواقيع');
+  }
+}
+
 /* الهيبة = الشهرة + القوة + السمعة */
 function calculateHeba(u){
   if(!u) return 0;
@@ -6640,6 +6850,12 @@ function renderCustomizationPreview(){
           </div>
         </div>
 
+        <div class="pc-match-stats" id="pcMatchStats_${p.uid}">
+          <div class="pms-item"><span class="pms-icon">🎮</span><span class="pms-val">…</span><span class="pms-lbl">مباراة</span></div>
+          <div class="pms-divider"></div>
+          <div class="pms-item"><span class="pms-icon">🏆</span><span class="pms-val">…</span><span class="pms-lbl">فوز</span></div>
+        </div>
+
         <!-- ★★★ صف المتابعين — قابل للتخصيص وقابل للنقر ★★★ -->
         <div class="pc-social-row cust-zone-target ${activeZone==='texts'?'active':''}"
              data-cust-zone="texts"
@@ -6822,50 +7038,10 @@ setTimeout(() => {
         }
       }).catch(e => console.warn('signatures:', e));
 
-/* ★ بطاقة السمعة */
-try {
-  const repBox = document.getElementById('reputationBox');
-  if(repBox){
-    const p = state.profile;
-    const rep = typeof p.reputation === 'number'
-      ? p.reputation
-      : calculateReputationFromData(p);
-    const heba = calculateHeba({ ...p, reputation: rep });
-    const rank = getHebaRank(heba);
 
-    repBox.innerHTML = `
-      <div class="rep-header">
-        <div class="rep-icon" style="background:${rank.color}22;color:${rank.color};border:1px solid ${rank.color}55">
-          ${rank.emoji}
-        </div>
-        <div style="flex:1">
-          <div class="rep-rank-label" style="color:${rank.color}">${rank.label}</div>
-          <div class="rep-heba-value">${nf(heba)} <span>هيبة</span></div>
-        </div>
-      </div>
 
-      <div class="rep-formula">
-        <span>شهرة ${nf(p.fame)}</span>
-        <span>+</span>
-        <span>قوة ${nf(p.power)}</span>
-        <span>+</span>
-        <span>سمعة ${nf(rep)}</span>
-      </div>
-
-      <div class="rep-breakdown">
-        <div class="rb-row"><span class="rb-lbl">🤝 ثقة</span><span class="rb-val pos">+${nf((p.trustReceived||0)*100)}</span></div>
-        <div class="rb-row"><span class="rb-lbl">👥 متابعون</span><span class="rb-val pos">+${nf((p.followers||0)*15)}</span></div>
-        <div class="rb-row"><span class="rb-lbl">❤️ إعجابات الملف</span><span class="rb-val pos">+${nf((p.likesProfile||0)*5)}</span></div>
-        <div class="rb-row"><span class="rb-lbl">👁️ مشاهدون فريدون</span><span class="rb-val pos">+${nf((p.uniqueViewers||0)*3)}</span></div>
-        ${(p.reportsReceived||0) > 0 ? `<div class="rb-row"><span class="rb-lbl">🚨 بلاغات</span><span class="rb-val neg">−${nf((p.reportsReceived||0)*50)}</span></div>` : ''}
-        ${(p.blocksReceived||0) > 0 ? `<div class="rb-row"><span class="rb-lbl">🚫 حظر</span><span class="rb-val neg">−${nf((p.blocksReceived||0)*30)}</span></div>` : ''}
-        ${(p.warningsReceived||0) > 0 ? `<div class="rb-row"><span class="rb-lbl">⚠️ تنبيهات</span><span class="rb-val neg">−${nf((p.warningsReceived||0)*100)}</span></div>` : ''}
-      </div>
-    `;
-  }
-} catch(e){
-  console.warn('rep card:', e);
-}
+    // ★ تحميل إحصائيات المباريات في البطاقة
+    loadMatchStats(state.user.uid, `pcMatchStats_${state.user.uid}`);
 
     // 2. محتوى التبويب — ★ مع حماية صارمة
     renderProfileTabBody()
@@ -6924,7 +7100,8 @@ try {
   <div class="pc-avatar" data-action="avatar-click" style="cursor:pointer">
     ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
   </div>
-            <div class="sig-slider-preview" id="mySigSlider">
+            <div class="sig-slider-preview" id="mySigSlider"
+                 data-action="show-all-signatures" data-uid="${p.uid}" style="cursor:pointer">
               <div class="sig-preview-item" style="animation:none; opacity:0.5;">جاري التحميل...</div>
             </div>
           </div>
@@ -6956,6 +7133,12 @@ ${(() => {
   </div>`;
 })()}
 
+        <div class="pc-match-stats" id="pcMatchStats_${p.uid}">
+          <div class="pms-item"><span class="pms-icon">🎮</span><span class="pms-val">…</span><span class="pms-lbl">مباراة</span></div>
+          <div class="pms-divider"></div>
+          <div class="pms-item"><span class="pms-icon">🏆</span><span class="pms-val">…</span><span class="pms-lbl">فوز</span></div>
+        </div>
+
   <!-- ★★★ صف المتابعين — مع تطبيق التخصيصات ★★★ -->
   <div class="pc-social-row"
        style="--btn-bg:${cust.followersBtnBg === 'transparent' ? 'rgba(0,0,0,.18)' : cust.followersBtnBg};
@@ -6975,13 +7158,18 @@ ${(() => {
     </div>
 
     <div class="pc-stats">
-      <div class="pc-stat f"><div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div></div>
-      <div class="pc-stat p"><div class="v">${nf(p.power)}</div><div class="l">القوة</div></div>
-      <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
-    </div>
-
-    <div class="reputation-card" id="reputationBox">
-      <div class="spinner" style="margin:20px auto;width:24px;height:24px"></div>
+      <div class="pc-stat f" data-action="show-stat-info" data-stat="fame" data-uid="${p.uid}">
+        <div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div>
+      </div>
+      <div class="pc-stat p" data-action="show-stat-info" data-stat="power" data-uid="${p.uid}">
+        <div class="v">${nf(p.power)}</div><div class="l">القوة</div>
+      </div>
+      <div class="pc-stat s" data-action="show-stat-info" data-stat="support" data-uid="${p.uid}">
+        <div class="v">${nf(p.support)}</div><div class="l">الدعم</div>
+      </div>
+      <div class="pc-stat h" data-action="show-stat-info" data-stat="heba" data-uid="${p.uid}">
+        <div class="v">${nf(calculateHeba(p))}</div><div class="l">الهيبة</div>
+      </div>
     </div>
 
     <div class="pc-interactions">
@@ -6994,22 +7182,9 @@ ${(() => {
       <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="gameLikes">
         ${ic('gamepad','xs')} <b>${nf(p.likesGames)}</b> لعب
       </button>
-    </div>
-
-    <div class="level-widget">
-      <div class="level-top">
-        <div class="level-badge" style="${levelStyle}">${prog.level}</div>
-        <div class="level-info">
-          <div class="ln">المستوى ${prog.level}</div>
-          <div class="lx">${prog.current} / ${prog.needed} XP حتى المستوى ${prog.level + 1}</div>
-        </div>
-        <div class="status-chip" data-action="edit-status">
-          <span class="status-dot" style="background:${PLAYER_STATUSES[p.status || 'available'].color}"></span>
-          ${PLAYER_STATUSES[p.status || 'available'].label}
-        </div>
-      </div>
-      <div class="level-bar"><span style="width:${prog.pct}%;${levelBarBg}"></span></div>
-      ${p.statusMsg ? `<div class="muted" style="font-size:11px;margin-top:8px;text-align:center">"${esc(p.statusMsg)}"</div>` : ''}
+      <button class="pci-chip" data-action="show-trusts" data-uid="${p.uid}">
+        ${ic('shield','xs')} <b>${nf(p.trustReceived||0)}</b> ثقة
+      </button>
     </div>
 
     <div class="tabs scrollable" id="profileTabs" style="margin-top:16px">
@@ -7054,111 +7229,117 @@ const tabs = [
 ];
   if(!tabs.find(t => t.id === state.profileTab)) state.profileTab = 'posts';
 
-  // ★ جلب البيانات في الخلفية لتجنب تجميد الواجهة
   setTimeout(async () => {
+
+    /* ═══════════ 1) التواقيع ═══════════ */
     try {
-      // 1. جلب كل التواقيع
       const sSnap = await getDocs(query(
         collection(db, 'users', state.viewingUid, 'signatures'),
         orderBy('createdAt', 'desc'), limit(50)
       ));
-      const signatures = sSnap.docs.map(d => ({id: d.id, ...d.data()}));
+      const signatures = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // 2. فحص شرط الـ 24 ساعة لتوقيعي الأخير
-      const mySignatures = signatures.filter(s => s.fromId === state.user.uid);
-      const lastMySigTime = mySignatures.length > 0 ? (mySignatures[0].createdAt?.toMillis?.() || 0) : 0;
+      const mySignatures     = signatures.filter(s => s.fromId === state.user.uid);
+      const lastMySigTime    = mySignatures.length > 0
+        ? (mySignatures[0].createdAt?.toMillis?.() || 0) : 0;
       const hasSignedRecently = (Date.now() - lastMySigTime) < (24 * 60 * 60 * 1000);
-      const isSubscribed = getSubscription(state.profile).active;
+      const isSubscribed      = getSubscription(state.profile).active;
+      const myCust            = getProfileCustomization(p);
 
-      // 3. تحديث التواقيع المتحركة تحت الصورة (Slider)
+      /* ---- السلايدر الصغير تحت الصورة ---- */
       const sigSlider = document.getElementById('userSigSlider');
       if (sigSlider) {
-        const myCust = getProfileCustomization(p);
-        const sigStyleInline = buildSignatureStyle({ ...myCust, sigPadding: 2, sigBg: '', sigBorderWidth: 0, sigShadow: 'none' });
         if (signatures.length > 0) {
+          const sigStyleInline = buildSignatureStyle({
+            ...myCust, sigPadding: 2, sigBg: '', sigBorderWidth: 0, sigShadow: 'none'
+          });
           const randomSigs = [...signatures].sort(() => 0.5 - Math.random()).slice(0, 3);
           sigSlider.innerHTML = randomSigs.map((s, idx) => `
-            <div class="sig-preview-item" style="animation-delay: ${idx * 3}s;${sigStyleInline}">
+            <div class="sig-preview-item" style="animation-delay:${idx*3}s;${sigStyleInline}">
               "${esc(s.text)}"
             </div>
           `).join('');
         } else {
-          sigSlider.innerHTML = `<div class="sig-preview-item" style="animation:none; opacity:0.6; color:#64748b;">✍️ لا تواقيع</div>`;
+          sigSlider.innerHTML = `<div class="sig-preview-item" style="animation:none;opacity:.6;color:#64748b">✍️ لا تواقيع</div>`;
         }
       }
 
-      // 4. تحديث صندوق التواقيع السفلي (Full List)
-      const fullSigContainer = document.getElementById('fullSignaturesBox');
-      if (fullSigContainer) {
-        const myCust = getProfileCustomization(p);   // ← تخصيصات صاحب الملف
-        const displayCount = myCust.sigDisplayCount || 3;
-        const displaySigs = signatures.slice(0, displayCount);
+      /* ---- صندوق التواقيع القابل للطي (آخر 3 فقط) ---- */
+      const sigTarget     = document.getElementById('sigContent') || document.getElementById('fullSignaturesBox');
+      const sigCountBadge = document.getElementById('sigCountBadge');
 
-        let sigHtml = `
-          <div class="signatures-head">
-            <span>${ic('edit','xs')} تواقيع الزوار (${signatures.length})</span>
-            ${state.viewingUid !== state.user.uid ? `
-              ${hasSignedRecently
-                ? '<span class="pill ok" style="font-size:9.5px">✓ لقد وقعت مؤخراً</span>'
-                : `<button class="sig-btn ${!isSubscribed ? 'locked' : ''}" data-action="open-signature" data-uid="${state.viewingUid}">
-                     ${ic('edit','xs')} ${isSubscribed ? 'وقّع الآن' : '🔒 يتطلب بلس'}
-                   </button>`}
-            ` : ''}
-          </div>`;
+      if (sigTarget) {
+        const displaySigs = signatures.slice(0, 3);   /* ← آخر 3 تواقيع */
 
-        if (displaySigs.length > 0) {
-          sigHtml += `
+        const signBtn = (state.viewingUid !== state.user.uid)
+          ? (hasSignedRecently
+              ? '<span class="pill ok" style="font-size:9.5px">✓ وقعت مؤخراً</span>'
+              : `<button class="sig-btn ${!isSubscribed?'locked':''}" data-action="open-signature" data-uid="${state.viewingUid}">
+                   ${ic('edit','xs')} ${isSubscribed?'وقّع الآن':'🔒 بلس'}
+                 </button>`)
+          : '';
+
+        if (displaySigs.length === 0) {
+          sigTarget.innerHTML = `
+            ${signBtn ? `<div style="text-align:center;margin-bottom:10px">${signBtn}</div>` : ''}
+            <div class="sig-empty">✍️ لا توجد تواقيع بعد</div>`;
+        } else {
+          sigTarget.innerHTML = `
+            ${signBtn ? `<div style="text-align:center;margin-bottom:10px">${signBtn}</div>` : ''}
             <div class="sig-list">
               ${displaySigs.map(s => {
-                const isMe = s.fromId === state.user.uid;
+                const isMe    = s.fromId === state.user.uid;
                 const isOwner = s.fromId === state.viewingUid;
                 const animClass = myCust.sigAnimation !== 'none'
                   ? `sig-anim-${myCust.sigAnimation}` : '';
-
                 return `
-                <div class="sig-item ${animClass}">
-                  ${myCust.sigShowAvatar
-                    ? avatar({name: s.fromName, avatarUrl: s.fromAvatar, grad: pickGrad(s.fromId)}, 32)
-                    : ''}
-                  <div class="sig-body">
-                    ${myCust.sigShowName ? `
-                      <div class="sig-name">
-                        ${esc(s.fromName || 'لاعب')}
-                        ${isMe ? '<span class="pill" style="font-size:8px;padding:1px 4px;background:var(--brand)">أنت</span>' : ''}
-                        ${isOwner ? '<span class="pill gold" style="font-size:8px;padding:1px 4px">صاحب الملف</span>' : ''}
-                      </div>
-                    ` : ''}
-                    <div style="${buildSignatureStyle(myCust)}">${esc(s.text || '')}</div>
-                    ${myCust.sigShowTime ? `<div class="sig-time">${timeAgo(s.createdAt)}</div>` : ''}
-                  </div>
-                </div>
-              `}).join('')}
+                  <div class="sig-item ${animClass}">
+                    ${myCust.sigShowAvatar
+                      ? avatar({ name:s.fromName, avatarUrl:s.fromAvatar, grad:pickGrad(s.fromId) }, 32)
+                      : ''}
+                    <div class="sig-body">
+                      ${myCust.sigShowName ? `
+                        <div class="sig-name">
+                          ${esc(s.fromName||'لاعب')}
+                          ${isMe ? '<span class="pill" style="font-size:8px;padding:1px 4px">أنت</span>' : ''}
+                          ${isOwner ? '<span class="pill gold" style="font-size:8px;padding:1px 4px">صاحب الملف</span>' : ''}
+                        </div>` : ''}
+                      <div style="${buildSignatureStyle(myCust)}">${esc(s.text||'')}</div>
+                      ${myCust.sigShowTime ? `<div class="sig-time">${timeAgo(s.createdAt)}</div>` : ''}
+                    </div>
+                  </div>`;
+              }).join('')}
             </div>
-            ${signatures.length > displayCount
-              ? `<div style="text-align:center;margin-top:8px;font-size:10.5px;color:var(--muted)">
-                   و ${signatures.length - displayCount} توقيع آخر…
-                 </div>`
-              : ''}
+            ${signatures.length > 3 ? `
+              <div style="text-align:center;margin-top:8px;font-size:10.5px;color:var(--muted)">
+                و ${signatures.length - 3} توقيع آخر…
+              </div>` : ''}
           `;
-        } else {
-          sigHtml += `<div class="sig-empty">✍️ لا توجد تواقيع بعد. كن أول من يوقع!</div>`;
         }
-        fullSigContainer.innerHTML = sigHtml;
       }
+      if (sigCountBadge) sigCountBadge.textContent = signatures.length;
+
     } catch(e) {
-      console.warn('❌ Error loading signatures:', e);
+      console.warn('❌ Signatures:', e);
+      /* ✅ fallback: أزل الـ spinner دائماً */
+      const sigTarget = document.getElementById('sigContent') || document.getElementById('fullSignaturesBox');
+      if (sigTarget) sigTarget.innerHTML = '<div class="sig-empty">⚠️ تعذّر تحميل التواقيع</div>';
     }
 
-    // 5. تحميل محتوى التبويب
+    /* ═══════════ 2) إحصائيات المباريات ═══════════ */
+    loadMatchStats(state.viewingUid, `pcMatchStats_${state.viewingUid}`);
+
+    /* ═══════════ 3) محتوى التبويب ═══════════ */
     try {
       const bodyHtml = await renderUserTabBody(state.viewingUid, state.profileTab);
       const bodyContainer = document.getElementById('profileTabBody');
       if (bodyContainer) bodyContainer.innerHTML = bodyHtml || emptyState('لا محتوى','grid');
     } catch(e) {
-      console.error('Tab body error:', e);
+      console.error('❌ Tab body:', e);
       const bodyContainer = document.getElementById('profileTabBody');
       if (bodyContainer) bodyContainer.innerHTML = emptyState('تعذّر تحميل المحتوى','close');
     }
+
   }, 50);
 
   return `
@@ -7200,7 +7381,8 @@ const tabs = [
   <div class="pc-avatar">
     ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
   </div>
-            <div class="sig-slider-preview" id="userSigSlider">
+            <div class="sig-slider-preview" id="userSigSlider"
+                 data-action="toggle-signatures" style="cursor:pointer">
               <div class="sig-preview-item" style="animation:none; opacity:0.5;">جاري التحميل...</div>
             </div>
           </div>
@@ -7211,6 +7393,13 @@ const tabs = [
             <span style="width:${Math.min(100,(p.xp||0)%100)}%;${cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` : ''}"></span>
           </div>
           <div class="pc-level-num" style="${cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : ''}">المستوى ${p.level||1}</div>
+        </div>
+
+        <!-- ★★★ عدد المباريات والانتصارات ★★★ -->
+        <div class="pc-match-stats" id="pcMatchStats_${p.uid}">
+          <div class="pms-item"><span class="pms-icon">🎮</span><span class="pms-val">…</span><span class="pms-lbl">مباراة</span></div>
+          <div class="pms-divider"></div>
+          <div class="pms-item"><span class="pms-icon">🏆</span><span class="pms-val">…</span><span class="pms-lbl">فوز</span></div>
         </div>
 
         <!-- ★★★ صف المتابعين — مع تطبيق التخصيصات ★★★ -->
@@ -7231,15 +7420,31 @@ const tabs = [
       </div>
     </div>
 
-    <!-- ✍️ قسم التواقيع السفلي -->
-    <div class="signatures-box" id="fullSignaturesBox">
-      <div class="spinner" style="margin:20px auto;width:24px;height:24px"></div>
+    <!-- ✍️ قسم التواقيع السفلي — قابل للطي -->
+    <div class="signatures-box ${state.sigExpanded ? 'expanded' : 'collapsed'}" id="fullSignaturesBox">
+      <div class="signatures-toggle" data-action="toggle-signatures">
+        <span class="sig-toggle-title">${ic('edit','xs')} تواقيع الزوار</span>
+        <span class="pill" id="sigCountBadge">0</span>
+        <span class="sig-chevron">▾</span>
+      </div>
+      <div class="signatures-content" id="sigContent">
+        <div class="spinner" style="margin:20px auto;width:24px;height:24px"></div>
+      </div>
     </div>
 
     <div class="pc-stats" style="margin-top:14px">
-      <div class="pc-stat f"><div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div></div>
-      <div class="pc-stat p"><div class="v">${nf(p.power)}</div><div class="l">القوة</div></div>
-      <div class="pc-stat s"><div class="v">${nf(p.support)}</div><div class="l">الدعم</div></div>
+      <div class="pc-stat f" data-action="show-stat-info" data-stat="fame" data-uid="${state.viewingUid}">
+        <div class="v">${nf(p.fame)}</div><div class="l">الشهرة</div>
+      </div>
+      <div class="pc-stat p" data-action="show-stat-info" data-stat="power" data-uid="${state.viewingUid}">
+        <div class="v">${nf(p.power)}</div><div class="l">القوة</div>
+      </div>
+      <div class="pc-stat s" data-action="show-stat-info" data-stat="support" data-uid="${state.viewingUid}">
+        <div class="v">${nf(p.support)}</div><div class="l">الدعم</div>
+      </div>
+      <div class="pc-stat h" data-action="show-stat-info" data-stat="heba" data-uid="${state.viewingUid}">
+        <div class="v">${nf(calculateHeba(p))}</div><div class="l">الهيبة</div>
+      </div>
     </div>
 
     <div class="pc-interactions">
@@ -7251,6 +7456,9 @@ const tabs = [
       </button>
       <button class="pci-chip" data-action="show-interactions" data-uid="${p.uid}" data-type="gameLikes">
         ${ic('gamepad','xs')} <b>${nf(p.likesGames)}</b> لعب
+      </button>
+      <button class="pci-chip" data-action="show-trusts" data-uid="${p.uid}">
+        ${ic('shield','xs')} <b>${nf(p.trustReceived||0)}</b> ثقة
       </button>
     </div>
 
@@ -7420,6 +7628,12 @@ async function openFullPreviewModal(){
             </div>
             <div class="pc-level-num" style="${buildEffectiveLevelStyle(cust, levelStyle)}${cust.levelTextColor?`background:${cust.levelTextColor};color:#070a11;`:''}">المستوى ${p.level||1}</div>
           </div>
+
+        <div class="pc-match-stats" id="pcMatchStats_${p.uid}">
+          <div class="pms-item"><span class="pms-icon">🎮</span><span class="pms-val">…</span><span class="pms-lbl">مباراة</span></div>
+          <div class="pms-divider"></div>
+          <div class="pms-item"><span class="pms-icon">🏆</span><span class="pms-val">…</span><span class="pms-lbl">فوز</span></div>
+        </div>
 
           <!-- ★ صف المتابعين -->
           <div class="pc-social-row"
@@ -10675,6 +10889,12 @@ if(zone === 'cover'){
         <div style="color:${cust.statusTextColor}">متاح للعب</div>
       </div>
 
+        <div class="pc-match-stats" id="pcMatchStats_${p.uid}">
+          <div class="pms-item"><span class="pms-icon">🎮</span><span class="pms-val">…</span><span class="pms-lbl">مباراة</span></div>
+          <div class="pms-divider"></div>
+          <div class="pms-item"><span class="pms-icon">🏆</span><span class="pms-val">…</span><span class="pms-lbl">فوز</span></div>
+        </div>
+
       <!-- ★ معاينة صف المتابعين بالنمط الجديد -->
       <div class="pc-social-row"
            style="margin-top:10px;border-radius:10px;
@@ -11725,6 +11945,44 @@ if(t.dataset.action === 'go-back'){ goBack(); return; }
   }
   if(t.dataset.action === 'show-interactions'){
     await openInteractionsModal(t.dataset.uid, t.dataset.type);
+    return;
+  }
+
+  /* ★★ معلومات الإحصائيات — الشهرة/القوة/الدعم/الهيبة ★★ */
+  if(t.dataset.action === 'show-stat-info'){
+    openStatInfoModal(t.dataset.uid, t.dataset.stat);
+    return;
+  }
+
+  /* ★★ قائمة الثقات ★★ */
+  if(t.dataset.action === 'show-trusts'){
+    await openTrustsModal(t.dataset.uid, 'received');
+    return;
+  }
+  if(t.dataset.trustTab){
+    await openTrustsModal(t.dataset.uid, t.dataset.trustTab);
+    return;
+  }
+
+  /* ★★ جميع التواقيع ★★ */
+  if(t.dataset.action === 'show-all-signatures'){
+    await openAllSignaturesModal(t.dataset.uid);
+    return;
+  }
+
+    /* ★★ طي/فتح التواقيع ★★ */
+  if(t.dataset.action === 'toggle-signatures'){
+    state.sigExpanded = !state.sigExpanded;
+    const box = document.getElementById('fullSignaturesBox');
+    if(box){
+      box.classList.toggle('expanded', state.sigExpanded);
+      box.classList.toggle('collapsed', !state.sigExpanded);
+      if(state.sigExpanded){
+        setTimeout(() => {
+          box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    }
     return;
   }
 

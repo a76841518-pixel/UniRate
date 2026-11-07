@@ -2874,6 +2874,21 @@ html[dir="rtl"] .scroll-top-btn { left: auto; right: 16px; }
    ============================================================ */
 @media (max-width: 420px) {
   .pc-card-actions .pc-act-btn{ padding: 5px 8px; font-size: 10.5px; }
+
+  /* ★ صندوق المتابعين — نسخة الجوال */
+  .pc-social-row{ min-height: 44px; }
+  .pc-social-row .pc-social-btn{ padding: 0 6px; }
+  .pc-social-row .pc-social-btn b{ font-size: 13px; }
+  .pc-social-row .pc-social-btn small{ font-size: 9px; }
+
+  /* ★ صندوق المباريات — نسخة الجوال */
+  .pc-match-stats{ min-height: 44px; gap: 12px; padding: 0 10px; }
+  .pms-val{ font-size: 12px; }
+  .pms-lbl{ font-size: 9px; }
+  .pms-icon{ font-size: 12px; }
+  .pms-divider{ height: 14px; }
+
+  /* ★ أزرار التفاعلات (مشاهدة/إعجاب/لعب/ثقة) */
   .pci-chip{ font-size: 10px; padding: 9px 6px; }
   .pci-chip .ic{ width: 12px; height: 12px; }
   .pci-chip b{ font-size: 11.5px; }
@@ -4797,7 +4812,6 @@ body.no-bars{ padding-bottom: 20px; }
    👥 صف المتابعين — تنسيق كامل ومتكامل
    ============================================================ */
 .pc-social-row{
-  /* متغيرات قابلة للتخصيص من JS — تمرَّر كـ inline style */
   --btn-bg: rgba(0,0,0,.22);
   --btn-fg: var(--txt);
   --btn-label-fg: var(--muted);
@@ -4808,6 +4822,8 @@ body.no-bars{ padding-bottom: 20px; }
   display: flex;
   align-items: stretch;
   width: 100%;
+  min-height: 48px;         /* ★ أصغر — مطابق لـ pc-match-stats */
+  box-sizing: border-box;
   background: var(--btn-bg);
   border-top: 1px solid var(--btn-divider);
   border-radius: 0 0 24px 24px;
@@ -4824,15 +4840,15 @@ body.no-bars{ padding-bottom: 20px; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 13px 8px;
-  min-height: 62px;
+  gap: 1px;                 /* ★ تقليل الفجوة */
+  padding: 0 8px;
+  min-height: 0;
   background: transparent;
   border: 0;
   outline: 0;
   color: var(--btn-fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
   transition: background .18s ease;
   -webkit-tap-highlight-color: transparent;
@@ -4863,9 +4879,10 @@ body.no-bars{ padding-bottom: 20px; }
 }
 
 /* ===== الرقم (يتبع --btn-fg) ===== */
+/* ★ تصغير النص */
 .pc-social-row .pc-social-btn b{
   display: block;
-  font-size: 17px;
+  font-size: 14px;          /* ★ أصغر — من 17 إلى 14 */
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -.3px;
@@ -4878,10 +4895,11 @@ body.no-bars{ padding-bottom: 20px; }
   transition: color .2s ease;
 }
 
+
 /* ===== التسمية (تتبع --btn-label-fg) ===== */
 .pc-social-row .pc-social-btn small{
   display: block;
-  font-size: 10.5px;
+  font-size: 9.5px;         /* ★ أصغر — من 10.5 إلى 9.5 */
   font-weight: 700;
   color: var(--btn-label-fg);
   letter-spacing: .2px;
@@ -4894,16 +4912,27 @@ body.no-bars{ padding-bottom: 20px; }
 
 /* ===== استجابة للشاشات الصغيرة ===== */
 @media (max-width: 400px){
+  .pc-social-row{
+    min-height: 44px;
+  }
   .pc-social-row .pc-social-btn{
-    padding: 11px 6px;
-    min-height: 56px;
+    padding: 0 6px;
+    min-height: 0;
   }
   .pc-social-row .pc-social-btn b{
-    font-size: 15.5px;
+    font-size: 13px;
   }
   .pc-social-row .pc-social-btn small{
-    font-size: 9.5px;
+    font-size: 9px;
   }
+  .pc-match-stats{
+    min-height: 44px;
+    gap: 12px;
+    padding: 0 10px;
+  }
+  .pms-val{ font-size: 12px; }
+  .pms-lbl{ font-size: 9px; }
+  .pms-icon{ font-size: 12px; }
 }
 
 /* ============================================================
@@ -5207,4 +5236,145 @@ body.no-bars{ padding-bottom: 20px; }
 @media (max-width: 420px){
   .sig-preview-list{ gap: 8px; }
   .sig-preview-row > div{ font-size: 11px !important; }
+}
+
+/* ============================================================
+   📊 إحصائيات البطاقة — 4 عناصر
+   ============================================================ */
+.pc-stats{display:flex;gap:9px;margin-top:13px}
+.pc-stat{
+  flex:1 1 0;min-width:0;
+  background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:13px 8px;text-align:center;
+  cursor:pointer;transition:.22s;
+}
+.pc-stat:hover{background:var(--card-2);border-color:rgba(108,92,231,.45);transform:translateY(-2px)}
+.pc-stat:active{transform:scale(.96)}
+.pc-stat .v{font-size:17px;font-weight:900;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+.pc-stat .l{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:2px}
+.pc-stat.f .v{color:#a78bfa}
+.pc-stat.p .v{color:#00d2ff}
+.pc-stat.s .v{color:#34d399}
+.pc-stat.h .v{color:#f5b301}
+
+/* ============================================================
+   🎮 صف المباريات والانتصارات داخل البطاقة
+   ============================================================ */
+.pc-match-stats{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:11px 16px;border-top:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.1);position:relative;z-index:1;
+}
+.pms-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted)}
+.pms-icon{font-size:14px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+.pms-val{font-size:14.5px;font-weight:900;color:var(--txt);font-variant-numeric:tabular-nums}
+.pms-lbl{color:var(--muted);font-size:10.5px}
+.pms-divider{width:1px;height:20px;background:rgba(255,255,255,.1)}
+
+/* ============================================================
+   📊 شبكة تفاعلات البطاقة — 2×2 (مشاهدة، إعجاب، لعب، ثقات)
+   ============================================================ */
+.pc-interactions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+
+/* ============================================================
+   📊 مودال معلومات الإحصائيات
+   ============================================================ */
+.stat-info-value{
+  padding:20px;border-radius:16px;text-align:center;
+  border:1.5px solid;margin-bottom:14px;font-variant-numeric:tabular-nums;
+}
+.stat-info-desc{
+  font-size:12.5px;color:var(--muted);line-height:1.75;
+  padding:0 2px 12px;border-bottom:1px solid var(--line);margin-bottom:14px;
+}
+.stat-info-section{
+  font-size:12px;font-weight:900;color:var(--brand-2);
+  margin-bottom:10px;display:flex;align-items:center;gap:6px;
+}
+.stat-info-row{
+  display:flex;gap:10px;padding:10px 12px;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;margin-bottom:7px;align-items:flex-start;
+}
+.sir-icon{font-size:18px;flex-shrink:0;line-height:1.2}
+.sir-text{font-size:12px;line-height:1.65;color:#dbe3f5}
+.sir-text b{color:var(--txt)}
+
+/* ============================================================
+   ✍️ مناطق التواقيع قابلة للنقر
+   ============================================================ */
+.signatures-box[data-action],
+.sig-slider-preview[data-action]{transition:border-color .2s,background .2s;cursor:pointer}
+.signatures-box[data-action]:hover{border-color:rgba(108,92,231,.4);background:rgba(255,255,255,.04)}
+
+/* ============================================================
+   ✍️ صندوق التواقيع القابل للطي
+   ============================================================ */
+.signatures-box{
+  padding: 0 !important;          /* إلغاء الـ padding الأصلي */
+  min-height: auto !important;    /* إلغاء min-height الأصلي */
+  overflow: hidden;
+}
+
+/* الرأس (قابل للنقر) */
+.signatures-toggle{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 14px;
+  cursor: pointer;
+  background: rgba(255,255,255,.025);
+  transition: background .2s, border-color .2s;
+  border-bottom: 1px solid transparent;
+  user-select: none;
+}
+.signatures-toggle:hover{
+  background: rgba(255,255,255,.06);
+}
+.signatures-box.expanded .signatures-toggle{
+  border-bottom-color: var(--line);
+}
+
+.sig-toggle-title{
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: var(--txt);
+}
+.sig-toggle-title .ic{
+  width: 14px;
+  height: 14px;
+  color: var(--brand-2);
+}
+
+.sig-chevron{
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  transform: rotate(0deg);
+  line-height: 1;
+}
+.signatures-box.expanded .sig-chevron{
+  transform: rotate(180deg);
+}
+
+/* المحتوى القابل للطي */
+.signatures-content{
+  display: none;
+  padding: 12px 14px 14px;
+}
+.signatures-box.expanded .signatures-content{
+  display: block;
+  animation: sigContentFade .3s ease;
+}
+@keyframes sigContentFade{
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ★ إزالة الـ padding الداخلي المزدوج من .signatures-head */
+.signatures-content .signatures-head{
+  margin-bottom: 10px;
 }
