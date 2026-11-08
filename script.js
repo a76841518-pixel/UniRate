@@ -300,18 +300,6 @@ const AVATAR_FILTERS = {
 };
 
 /* ============================================================
-   🎬 حركات الاسم
-   ============================================================ */
-const NAME_ANIMATIONS = {
-  none:    { label:'بدون',    emoji:'⬜' },
-  pulse:   { label:'نبض',     emoji:'💓' },
-  shake:   { label:'اهتزاز',  emoji:'🌪️' },
-  glow:    { label:'توهج',    emoji:'✨' },
-  rainbow: { label:'قزح',     emoji:'🌈' },
-  bounce:  { label:'قفز',     emoji:'⬆️' },
-};
-
-/* ============================================================
    🌟 توهج البطاقة
    ============================================================ */
 const CARD_GLOWS = {
@@ -323,13 +311,116 @@ const CARD_GLOWS = {
 };
 
 /* ============================================================
-   💫 ظل البطاقة
+   🎨 الثيمات — نمط + لون + توهج موحّد
+   ============================================================ */
+const THEME_PATTERNS = {
+  none:       { label:'بدون',       emoji:'⬜' },
+  dots:       { label:'نقاط',       emoji:'⚬' },
+  grid:       { label:'شبكة',       emoji:'▦' },
+  stripes:    { label:'خطوط',       emoji:'▥' },
+  waves:      { label:'موج',        emoji:'🌊' },
+  stars:      { label:'نجوم',       emoji:'✨' },
+  hexagon:    { label:'سداسي',      emoji:'⬡' },
+  triangles:  { label:'مثلثات',     emoji:'▲' },
+  zigzag:     { label:'زجزاج',      emoji:'⚡' },
+  circuit:    { label:'دوائر',      emoji:'⚙️' },
+  rings:      { label:'حلقات',      emoji:'◎' },
+  diagonal:   { label:'قطري',       emoji:'◨' },
+  noise:      { label:'ضجيج',       emoji:'▓' },
+  chevron:    { label:'شيفرون',     emoji:'❯' },
+  cross:      { label:'صليب',       emoji:'✚' },
+  splatter:   { label:'رذاذ',       emoji:'✦' },
+};
+
+const THEME_GLOWS = {
+  none:    { label:'بدون',  emoji:'⬜' },
+  soft:    { label:'ناعم',  emoji:'🌟' },
+  strong:  { label:'قوي',   emoji:'💫' },
+  rainbow: { label:'قزح',   emoji:'🌈' },
+  pulse:   { label:'نبض',   emoji:'💓' },
+};
+
+const THEME_GLOW_COLORS = [
+  '#6c5ce7','#00d2ff','#ff3d71','#f5b301','#22c55e',
+  '#a78bfa','#ff8a00','#ec4899','#ffffff','#000000',
+  '#ef4444','#10b981','#06b6d4','#8b5cf6','#f472b6',
+];
+
+/* ============================================================
+   🃏 ظلال البطاقة — 6 أحجام
    ============================================================ */
 const CARD_SHADOWS = {
+  none:      { label:'بدون',       emoji:'⬜', css:'none' },
+  xs:        { label:'صغير جداً',  emoji:'▪️', css:'0 2px 8px rgba(0,0,0,.18)' },
+  small:     { label:'صغير',       emoji:'▪️', css:'0 6px 16px rgba(0,0,0,.3)' },
+  medium:    { label:'متوسط',      emoji:'◼️', css:'0 20px 50px rgba(0,0,0,.45)' },
+  large:     { label:'كبير',       emoji:'⬛', css:'0 30px 80px rgba(0,0,0,.65)' },
+  xl:        { label:'ضخم',        emoji:'⬛', css:'0 40px 100px rgba(0,0,0,.8)' },
+};
+
+const CARD_GLOW_COLORS = [
+  '#6c5ce7','#00d2ff','#ff3d71','#f5b301','#22c55e',
+  '#a78bfa','#ff8a00','#ec4899','#ffffff','#000000',
+];
+
+/* ============================================================
+   ✨ حركات البطاقة — تمرير + ضغط + دخول
+   ============================================================ */
+const CARD_HOVER_EFFECTS = {
   none:   { label:'بدون',   emoji:'⬜' },
-  small:  { label:'صغير',   emoji:'▪️' },
-  medium: { label:'متوسط',  emoji:'◼️' },
-  large:  { label:'كبير',   emoji:'⬛' },
+  lift:   { label:'ارتفاع', emoji:'⬆️' },
+  tilt:   { label:'ميلان',  emoji:'↷' },
+  scale:  { label:'تكبير',  emoji:'⤢' },
+  glow:   { label:'توهج',   emoji:'✨' },
+  shake:  { label:'اهتزاز', emoji:'🌪️' },
+  border: { label:'حدود متوهجة', emoji:'💫' },
+  rotate: { label:'دوران',  emoji:'🔄' },
+};
+
+const CARD_PRESS_EFFECTS = {
+  none:    { label:'بدون',    emoji:'⬜' },
+  shrink:  { label:'انكماش',  emoji:'🔽' },
+  glow:    { label:'توهج',    emoji:'💥' },
+  scale:   { label:'تكبير',   emoji:'🔍' },
+  ripple:  { label:'موجة',    emoji:'🌊' },
+};
+
+const ENTRANCE_ANIMATIONS = {
+  none:     { label:'بدون',       emoji:'⬜' },
+  fade:     { label:'ظهور',       emoji:'💫' },
+  slide_r:  { label:'انزلاق يمين', emoji:'➡️' },
+  slide_l:  { label:'انزلاق يسار', emoji:'⬅️' },
+  slide_u:  { label:'انزلاق أعلى', emoji:'⬆️' },
+  slide_d:  { label:'انزلاق أسفل', emoji:'⬇️' },
+  zoom:     { label:'تكبير',      emoji:'🔍' },
+  flip:     { label:'انقلاب',     emoji:'🔄' },
+  bounce:   { label:'قفز',        emoji:'⬆️' },
+  rotate:   { label:'دوران',      emoji:'🔄' },
+};
+
+/* ============================================================
+   🏅 شارة المستوى — أشكال + مواضع
+   ============================================================ */
+const LEVEL_BADGE_SHAPES = {
+  rounded:  { label:'دائري',   emoji:'●' },
+  square:   { label:'مربع',    emoji:'■' },
+  diamond:  { label:'معيّن',   emoji:'◆' },
+  hexagon:  { label:'سداسي',   emoji:'⬡' },
+  star:     { label:'نجمة',    emoji:'⭐' },
+  shield:   { label:'درع',     emoji:'🛡️' },
+  pill:     { label:'كبسولة',  emoji:'💊' },
+  octagon:  { label:'ثماني',   emoji:'⬢' },
+};
+
+const LEVEL_BAR_STYLES = {
+  solid:    { label:'صلب' },
+  gradient: { label:'تدرج' },
+  striped:  { label:'مخطط' },
+  animated: { label:'متحرك' },
+  glow:     { label:'متوهج' },
+  dots:     { label:'نقاط' },
+  neon:     { label:'نيون' },
+  rainbow:  { label:'قزح' },
 };
 
 /* ============================================================
@@ -471,31 +562,151 @@ const NAME_COLOR_PRESETS = [
 ];
 
 /* ============================================================
-   🌈 تدرجات للاسم
+   🌈 تدرجات الاسم — موسّعة (24 تدرجاً)
    ============================================================ */
 const NAME_GRADIENTS = {
-  none:    { label:'بدون',    css:'none',              emoji:'⬜' },
-  sunset:  { label:'غروب',    css:'linear-gradient(90deg,#ff8a00,#ff3d71)', emoji:'🌅' },
-  ocean:   { label:'محيط',    css:'linear-gradient(90deg,#0891b2,#22d3ee)', emoji:'🌊' },
-  forest:  { label:'غابة',    css:'linear-gradient(90deg,#22c55e,#00d2ff)', emoji:'🌲' },
-  purple:  { label:'أرجوان',  css:'linear-gradient(90deg,#a78bfa,#6c5ce7)', emoji:'💜' },
-  fire:    { label:'نار',     css:'linear-gradient(90deg,#f5b301,#ff3d71)', emoji:'🔥' },
-  rainbow: { label:'قزح',     css:'linear-gradient(90deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3)', emoji:'🌈' },
-  gold:    { label:'ذهبي',    css:'linear-gradient(90deg,#f5b301,#ffd700,#f5b301)', emoji:'👑' },
-  ice:     { label:'جليد',    css:'linear-gradient(90deg,#a5f3fc,#22d3ee)', emoji:'❄️' },
-  neon:    { label:'نيون',    css:'linear-gradient(90deg,#39ff14,#00ffff)', emoji:'💡' },
-  candy:   { label:'حلوى',    css:'linear-gradient(90deg,#f472b6,#a78bfa,#38bdf8)', emoji:'🍬' },
+  none:      { label:'بدون',      css:'none', emoji:'⬜' },
+  sunset:    { label:'غروب',      css:'linear-gradient(90deg,#ff8a00,#ff3d71)', emoji:'🌅' },
+  ocean:     { label:'محيط',      css:'linear-gradient(90deg,#0891b2,#22d3ee)', emoji:'🌊' },
+  forest:    { label:'غابة',      css:'linear-gradient(90deg,#22c55e,#00d2ff)', emoji:'🌲' },
+  purple:    { label:'أرجوان',    css:'linear-gradient(90deg,#a78bfa,#6c5ce7)', emoji:'💜' },
+  fire:      { label:'نار',       css:'linear-gradient(90deg,#f5b301,#ff3d71)', emoji:'🔥' },
+  rainbow:   { label:'قزح',       css:'linear-gradient(90deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3)', emoji:'🌈' },
+  gold:      { label:'ذهبي',      css:'linear-gradient(90deg,#f5b301,#ffd700,#f5b301)', emoji:'👑' },
+  ice:       { label:'جليد',      css:'linear-gradient(90deg,#a5f3fc,#22d3ee)', emoji:'❄️' },
+  neon:      { label:'نيون',      css:'linear-gradient(90deg,#39ff14,#00ffff)', emoji:'💡' },
+  candy:     { label:'حلوى',      css:'linear-gradient(90deg,#f472b6,#a78bfa,#38bdf8)', emoji:'🍬' },
+  emerald:   { label:'زمرد',      css:'linear-gradient(90deg,#059669,#10b981)', emoji:'💚' },
+  blood:     { label:'دم',        css:'linear-gradient(90deg,#7f1d1d,#dc2626)', emoji:'🩸' },
+  sakura:    { label:'ساكورا',    css:'linear-gradient(90deg,#fbcfe8,#f472b6)', emoji:'🌸' },
+  matrix:    { label:'ماتريكس',   css:'linear-gradient(90deg,#003b00,#00ff41)', emoji:'🟢' },
+  cyber:     { label:'سايبر',     css:'linear-gradient(90deg,#00f0ff,#ff00aa)', emoji:'🤖' },
+  twilight:  { label:'شفق',       css:'linear-gradient(90deg,#6366f1,#f59e0b)', emoji:'🌆' },
+  crimson:   { label:'قرمزي',     css:'linear-gradient(90deg,#991b1b,#ef4444)', emoji:'🔴' },
+  aqua:      { label:'أكوا',      css:'linear-gradient(90deg,#06b6d4,#67e8f9)', emoji:'💧' },
+  lavender:  { label:'لافندر',    css:'linear-gradient(90deg,#e9d5ff,#a78bfa)', emoji:'💜' },
+  sunset2:   { label:'غروب ٢',   css:'linear-gradient(90deg,#f97316,#db2777)', emoji:'🌅' },
+  blue_fire: { label:'نار زرقاء', css:'linear-gradient(90deg,#1e40af,#0ea5e9,#00d2ff)', emoji:'🔵' },
+  mint:      { label:'نعناع',     css:'linear-gradient(90deg,#10b981,#a7f3d0)', emoji:'🍃' },
+  platinum:  { label:'بلاتيني',   css:'linear-gradient(90deg,#e5e7eb,#9ca3af,#e5e7eb)', emoji:'⬜' },
+  coffee:    { label:'قهوة',      css:'linear-gradient(90deg,#78350f,#d97706)', emoji:'☕' },
+  galaxy:    { label:'مجرة',      css:'linear-gradient(90deg,#312e81,#a78bfa,#f472b6)', emoji:'🌌' },
 };
 
 /* ============================================================
-   ✨ تأثيرات النص
+   🔤 الخطوط — موسّعة + دعم اللغة
+   ============================================================ */
+const TEXT_FONTS = {
+  cairo:     { label:'القاهرة',      value:"'Cairo',sans-serif", lang:'ar+en' },
+  tajawal:   { label:'تجوال',        value:"'Tajawal',sans-serif", lang:'ar+en' },
+  amiri:     { label:'أميري',        value:"'Amiri',serif", lang:'ar' },
+  changa:    { label:'تشانغا',       value:"'Changa',sans-serif", lang:'ar+en' },
+  elmessiri: { label:'المسيري',      value:"'El Messiri',sans-serif", lang:'ar' },
+  lalezar:   { label:'لاله زار',     value:"'Lalezar',cursive", lang:'ar' },
+  lemonada:  { label:'ليمونادة',     value:"'Lemonada',cursive", lang:'ar+en' },
+  markazi:   { label:'مركزي',        value:"'Markazi Text',serif", lang:'ar' },
+  mada:      { label:'مدى',          value:"'Mada',sans-serif", lang:'ar+en' },
+  readex:    { label:'ريدكس',        value:"'Readex Pro',sans-serif", lang:'ar+en' },
+  system:    { label:'نظام',         value:'system-ui,sans-serif', lang:'all' },
+  serif:     { label:'Serif',        value:'Georgia,serif', lang:'en' },
+  mono:      { label:'Monospace',    value:'ui-monospace,SFMono-Regular,monospace', lang:'en' },
+  cursive:   { label:'Cursive',      value:'cursive', lang:'en' },
+  fantasy:   { label:'Fantasy',      value:'fantasy', lang:'en' },
+  impact:    { label:'Impact',       value:'Impact,Haettenschweiler,sans-serif', lang:'en' },
+  helvetica: { label:'Helvetica',    value:'Helvetica,Arial,sans-serif', lang:'en' },
+  verdana:   { label:'Verdana',      value:'Verdana,Geneva,sans-serif', lang:'en' },
+  courier:   { label:'Courier',      value:"'Courier New',Courier,monospace", lang:'en' },
+  press_start:{ label:'Press Start', value:"'Press Start 2P',cursive", lang:'en' },
+  orbitron:  { label:'Orbitron',     value:"'Orbitron',sans-serif", lang:'en' },
+  bungee:    { label:'Bungee',       value:"'Bungee',cursive", lang:'en' },
+  fredoka:   { label:'Fredoka',      value:"'Fredoka',sans-serif", lang:'en' },
+  pacifico:  { label:'Pacifico',     value:"'Pacifico',cursive", lang:'en' },
+};
+
+/* أضف هذه الروابط في <head> بـ index.html لتُحمَّل الخطوط */
+/* (أدناه — قسم head) */
+
+/* ============================================================
+   ✨ تأثيرات الاسم — موسّعة (10 تأثيرات)
    ============================================================ */
 const TEXT_EFFECTS = {
-  none:    { label:'بدون',    emoji:'⬜' },
-  glow:    { label:'توهج',    emoji:'✨' },
-  shadow:  { label:'ظل',      emoji:'🌑' },
-  outline: { label:'حدود',    emoji:'⬛' },
-  neon:    { label:'نيون',    emoji:'💡' },
+  none:      { label:'بدون',      emoji:'⬜' },
+  glow:      { label:'توهج',      emoji:'✨' },
+  shadow:    { label:'ظل',        emoji:'🌑' },
+  outline:   { label:'حدود',      emoji:'⬛' },
+  neon:      { label:'نيون',      emoji:'💡' },
+  emboss:    { label:'نقش بارز',  emoji:'🔨' },
+  inset:     { label:'غائر',      emoji:'🕳️' },
+  long_shadow:{ label:'ظل طويل',  emoji:'↘️' },
+  glow_outline:{ label:'توهج + حدود', emoji:'💫' },
+  double_shadow:{ label:'ظل مزدوج', emoji:'👥' },
+  soft:      { label:'ناعم',      emoji:'☁️' },
+  blur:      { label:'ضبابي',     emoji:'💨' },
+};
+
+/* ============================================================
+   🎬 حركات الاسم — موسّعة (12 حركة — بدون التوهج/القزح)
+   ============================================================ */
+const NAME_ANIMATIONS = {
+  none:       { label:'بدون',      emoji:'⬜' },
+  pulse:      { label:'نبض',       emoji:'💓' },
+  shake:      { label:'اهتزاز',    emoji:'🌪️' },
+  bounce:     { label:'قفز',       emoji:'⬆️' },
+  typewriter: { label:'آلة كاتبة', emoji:'⌨️' },
+  blink:      { label:'وميض',      emoji:'💡' },
+  wave:       { label:'موج',       emoji:'🌊' },
+  glitch:     { label:'خلل',       emoji:'⚡' },
+  flip:       { label:'انقلاب',    emoji:'🔄' },
+  swing:      { label:'تأرجح',     emoji:'🎐' },
+  slide:      { label:'انزلاق',    emoji:'➡️' },
+  pop:        { label:'فرقعة',     emoji:'🎈' },
+};
+
+const NAME_ANIMATION_SPEEDS = {
+  very_slow: { label:'بطيء جداً', duration: 8 },
+  slow:      { label:'بطيء',      duration: 5 },
+  normal:    { label:'عادي',      duration: 3 },
+  fast:      { label:'سريع',      duration: 1.5 },
+  very_fast: { label:'سريع جداً', duration: 0.8 },
+};
+
+/* ============================================================
+   👑 شارات الاسم — موسّعة (32 شارة)
+   ============================================================ */
+const NAME_BADGES = {
+  none:     { emoji:'', label:'بدون' },
+  star:     { emoji:'⭐', label:'نجمة' },
+  crown:    { emoji:'👑', label:'تاج' },
+  fire:     { emoji:'🔥', label:'نار' },
+  gem:      { emoji:'💎', label:'جوهرة' },
+  skull:    { emoji:'💀', label:'جمجمة' },
+  sword:    { emoji:'⚔️', label:'سيف' },
+  heart:    { emoji:'❤️', label:'قلب' },
+  bolt:     { emoji:'⚡', label:'برق' },
+  moon:     { emoji:'🌙', label:'قمر' },
+  sun:      { emoji:'☀️', label:'شمس' },
+  flower:   { emoji:'🌸', label:'زهرة' },
+  dragon:   { emoji:'🐉', label:'تنين' },
+  rocket:   { emoji:'🚀', label:'صاروخ' },
+  ghost:    { emoji:'👻', label:'شبح' },
+  alien:    { emoji:'👽', label:'فضائي' },
+  lion:     { emoji:'🦁', label:'أسد' },
+  eagle:    { emoji:'🦅', label:'نسر' },
+  wolf:     { emoji:'🐺', label:'ذئب' },
+  tiger:    { emoji:'🐯', label:'نمر' },
+  shark:    { emoji:'🦈', label:'قرش' },
+  phoenix:  { emoji:'🦅', label:'عنقاء' },
+  unicorn:  { emoji:'🦄', label:'وحيد القرن' },
+  frog:     { emoji:'🐸', label:'ضفدع' },
+  fox:      { emoji:'🦊', label:'ثعلب' },
+  panda:    { emoji:'🐼', label:'باندا' },
+  turtle:   { emoji:'🐢', label:'سلحفاة' },
+  wizard:   { emoji:'🧙', label:'ساحر' },
+  ninja:    { emoji:'🥷', label:'نينجا' },
+  king:     { emoji:'🤴', label:'ملك' },
+  queen:    { emoji:'👸', label:'ملكة' },
+  trophy:   { emoji:'🏆', label:'كأس' },
+  medal:    { emoji:'🥇', label:'ميدالية' },
 };
 
 /* ============================================================
@@ -510,39 +721,153 @@ const FONT_WEIGHTS = {
 };
 
 /* ============================================================
-   🖼️ أشكال الأفاتار الموسّعة (8 أشكال)
+   🖼️ أشكال الأفاتار — موسّعة (16 شكلاً)
    ============================================================ */
 const AVATAR_SHAPES = {
-  circle:  { label:'دائرية',  radius:'50%' },
-  rounded: { label:'مستديرة', radius:'23px' },
-  square:  { label:'مربعة',   radius:'6px' },
-  hexagon: { label:'سداسية',  radius:'0', clip:'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' },
-  octagon: { label:'ثمانية',  radius:'0', clip:'polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)' },
-  diamond: { label:'معينة',   radius:'0', clip:'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' },
-  star:    { label:'نجمة',    radius:'0', clip:'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
-  blob:    { label:'عضوية',   radius:'60% 40% 30% 70% / 60% 30% 70% 40%' },
+  circle:      { label:'دائرية',   radius:'50%' },
+  rounded:     { label:'مستديرة',  radius:'23px' },
+  square:      { label:'مربعة',    radius:'6px' },
+  hexagon:     { label:'سداسية',   radius:'0', clip:'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' },
+  octagon:     { label:'ثمانية',   radius:'0', clip:'polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)' },
+  diamond:     { label:'معينة',    radius:'0', clip:'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' },
+  star:        { label:'نجمة',     radius:'0', clip:'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
+  blob:        { label:'عضوية',    radius:'60% 40% 30% 70% / 60% 30% 70% 40%' },
+  pentagon:    { label:'خماسية',   radius:'0', clip:'polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%)' },
+  heptagon:    { label:'سباعية',   radius:'0', clip:'polygon(50% 0%,89% 25%,100% 71%,71% 100%,29% 100%,0% 71%,11% 25%)' },
+  triangle:    { label:'مثلث',     radius:'0', clip:'polygon(50% 0%,100% 100%,0% 100%)' },
+  parallelogram:{ label:'متوازي',  radius:'0', clip:'polygon(25% 0,100% 0,75% 100%,0% 100%)' },
+  arrow:       { label:'سهم',      radius:'0', clip:'polygon(0 20%,60% 20%,60% 0,100% 50%,60% 100%,60% 80%,0 80%)' },
+  pill:        { label:'كبسولة',   radius:'50px' },
+  egg:         { label:'بيضة',     radius:'50% 50% 45% 45% / 60% 60% 40% 40%' },
+  drop:        { label:'قطرة',     radius:'0', clip:'polygon(50% 0%,100% 60%,100% 100%,0 100%,0 60%)' },
 };
 
 /* ============================================================
-   🎖️ شارات بجانب الاسم
+   ⚪ أنماط حدود الأفاتار — 12 نمطاً
    ============================================================ */
-const NAME_BADGES = {
-  none:    { emoji:'',   label:'بدون' },
-  star:    { emoji:'⭐', label:'نجمة' },
-  crown:   { emoji:'👑', label:'تاج' },
-  fire:    { emoji:'🔥', label:'نار' },
-  gem:     { emoji:'💎', label:'جوهرة' },
-  skull:   { emoji:'💀', label:'جمجمة' },
-  sword:   { emoji:'⚔️', label:'سيف' },
-  heart:   { emoji:'❤️', label:'قلب' },
-  bolt:    { emoji:'⚡', label:'برق' },
-  moon:    { emoji:'🌙', label:'قمر' },
-  sun:     { emoji:'☀️', label:'شمس' },
-  flower:  { emoji:'🌸', label:'زهرة' },
-  dragon:  { emoji:'🐉', label:'تنين' },
-  rocket:  { emoji:'🚀', label:'صاروخ' },
-  ghost:   { emoji:'👻', label:'شبح' },
-  alien:   { emoji:'👽', label:'فضائي' },
+const AVATAR_BORDERS = {
+  none:       { label:'بدون',         emoji:'🚫' },
+  solid:      { label:'صلب',          emoji:'⚪' },
+  gradient:   { label:'تدرّج',        emoji:'🎨' },
+  glow:       { label:'توهج',         emoji:'✨' },
+  rainbow:    { label:'قزح',          emoji:'🌈' },
+  double:     { label:'مزدوج',        emoji:'⏸️' },
+  dashed:     { label:'متقطع',        emoji:'▤' },
+  dotted:     { label:'منقط',         emoji:'⣿' },
+  groove:     { label:'محزوز',        emoji:'▦' },
+  ridge:      { label:'بارز',         emoji:'⬛' },
+  neon:       { label:'نيون',         emoji:'💡' },
+  pulse:      { label:'نبض',          emoji:'💓' },
+  rainbow_dash:{ label:'قزح متقطع',   emoji:'🌈' },
+  triple:     { label:'ثلاثي',        emoji:'☰' },
+};
+
+/* ============================================================
+   🖼️ الإطارات — كلها مجانية الآن + 24 نمطاً
+   ============================================================ */
+const FRAME_STYLES = {
+  none:        { name:'بدون',          class:'' },
+  pulse:       { name:'نبض',           class:'frame-pulse' },
+  glow:        { name:'توهج',          class:'frame-glow' },
+  stars:       { name:'نجوم',          class:'frame-stars' },
+  rainbow:     { name:'قوس قزح',       class:'frame-rainbow' },
+  neon:        { name:'نيون',          class:'frame-neon' },
+  fire:        { name:'نار',           class:'frame-fire' },
+  ice:         { name:'جليد',          class:'frame-ice' },
+  gold:        { name:'ذهبي',          class:'frame-gold' },
+  galaxy:      { name:'مجرة',          class:'frame-galaxy' },
+  gradient_anim:{ name:'تدرّج متحرك', class:'frame-gradient-anim' },
+  dashed:      { name:'متقطع',         class:'frame-dashed' },
+  dotted:      { name:'منقط',          class:'frame-dotted' },
+  double:      { name:'مزدوج',         class:'frame-double' },
+  striped:     { name:'مخطط',          class:'frame-striped' },
+  sparkle:     { name:'بريق',          class:'frame-sparkle' },
+  hearts:      { name:'قلوب',          class:'frame-hearts' },
+  glow_rainbow:{ name:'قزح متوهج',     class:'frame-glow-rb' },
+  matrix:      { name:'ماتريكس',       class:'frame-matrix' },
+  steam:       { name:'بخار',          class:'frame-steam' },
+  circuit:     { name:'دوائر',         class:'frame-circuit' },
+  royal:       { name:'ملكي',          class:'frame-royal' },
+  cosmic:      { name:'كوني',          class:'frame-cosmic' },
+  chrome:      { name:'كروم',          class:'frame-chrome' },
+  shattered:   { name:'مبعثر',         class:'frame-shattered' },
+  wood:        { name:'خشبي',          class:'frame-wood' },
+  marble:      { name:'رخامي',         class:'frame-marble' },
+  holographic: { name:'هولوغرام',      class:'frame-holo' },
+};
+
+/* دالة موحدة: كل الإطارات مجانية */
+function canUseFrame(_profile, frameId){
+  return !!FRAME_STYLES[frameId];
+}
+function getFrameTier(_frameId){ return 'free'; }
+
+/* ============================================================
+   👑 الزخارف — موسّعة (24 زخرفة) + موضع + ألوان
+   ============================================================ */
+const AVATAR_DECORATIONS = {
+  none:       { label:'بدون',       emoji:'' },
+  crown:      { label:'تاج',        emoji:'👑' },
+  halo:       { label:'هالة',       emoji:'😇' },
+  horns:      { label:'قرون',       emoji:'😈' },
+  cat_ears:   { label:'آذان قط',    emoji:'🐱' },
+  flowers:    { label:'زهور',       emoji:'🌸' },
+  sparkle:    { label:'بريق',       emoji:'✨' },
+  headphones: { label:'سماعات',     emoji:'🎧' },
+  fire:       { label:'نار',        emoji:'🔥' },
+  star:       { label:'نجمة',       emoji:'⭐' },
+  leaf:       { label:'ورقة',       emoji:'🍃' },
+  moon:       { label:'قمر',        emoji:'🌙' },
+  star_glow:  { label:'نجمة متوهجة', emoji:'🌟' },
+  rainbow_ring:{ label:'قوس',       emoji:'🌈' },
+  wings:      { label:'أجنحة',      emoji:'🦋' },
+  lightning:  { label:'برق',        emoji:'⚡' },
+  snowflake:  { label:'ثلج',        emoji:'❄️' },
+  shamrock:   { label:'برسيم',      emoji:'🍀' },
+  skull:      { label:'جمجمة',      emoji:'💀' },
+  music_note: { label:'نوتة',       emoji:'🎵' },
+  gem:        { label:'جوهرة',      emoji:'💎' },
+  planet:     { label:'كوكب',       emoji:'🪐' },
+  comet:      { label:'مذنب',       emoji:'☄️' },
+  sword:      { label:'سيوف',       emoji:'⚔️' },
+};
+
+/* مواضع الزخرفة (4 زوايا) */
+const DECORATION_POSITIONS = {
+  top_right:    { label:'أعلى يمين',  style:'top:-12px; inset-inline-end:-8px; inset-inline-start:auto; bottom:auto;' },
+  top_left:     { label:'أعلى يسار',  style:'top:-12px; inset-inline-start:-8px; inset-inline-end:auto; bottom:auto;' },
+  bottom_right: { label:'أسفل يمين',  style:'bottom:-12px; inset-inline-end:-8px; inset-inline-start:auto; top:auto;' },
+  bottom_left:  { label:'أسفل يسار',  style:'bottom:-12px; inset-inline-start:-8px; inset-inline-end:auto; top:auto;' },
+};
+
+/* ============================================================
+   🎬 حركات الأفاتار — 16 حركة + سرعات
+   ============================================================ */
+const AVATAR_MOVEMENTS = {
+  none:      { label:'بدون',      emoji:'⬜' },
+  breathe:   { label:'تنفس',      emoji:'🫁' },
+  float:     { label:'طوفان',     emoji:'🎈' },
+  pulse:     { label:'نبض',       emoji:'💓' },
+  rotate:    { label:'دوران',     emoji:'🔄' },
+  bounce:    { label:'قفز',       emoji:'⬆️' },
+  swing:     { label:'تأرجح',     emoji:'🎐' },
+  shake:     { label:'اهتزاز',    emoji:'🌪️' },
+  tilt:      { label:'ميلان',     emoji:'↷' },
+  wobble:    { label:'تموّج',     emoji:'〰️' },
+  flip:      { label:'انقلاب',    emoji:'🔃' },
+  heartbeat: { label:'نبض قلب',   emoji:'💗' },
+  tada:      { label:'احتفال',    emoji:'🎉' },
+  rubber:    { label:'مطاطي',     emoji:'🧽' },
+  zoom:      { label:'تكبير',     emoji:'🔍' },
+  slide_x:   { label:'انزلاق أفقي', emoji:'⬅️' },
+};
+
+const AVATAR_MOVEMENT_SPEEDS = {
+  very_slow: { label:'بطيء جداً', duration: 8 },
+  slow:      { label:'بطيء',      duration: 5 },
+  normal:    { label:'عادي',      duration: 3 },
+  fast:      { label:'سريع',      duration: 1.5 },
+  very_fast: { label:'سريع جداً', duration: 0.8 },
 };
 
 /* ============================================================
@@ -557,31 +882,77 @@ const BIO_STYLES = {
 };
 
 /* ============================================================
-   🔵 أشكال حدود الأفاتار
+   🖼️ إضافات الغلاف
    ============================================================ */
-const AVATAR_BORDERS = {
-  gradient: { label:'تدرّج',   emoji:'🎨' },
-  solid:    { label:'لون ثابت', emoji:'⚪' },
-  glow:     { label:'توهج',    emoji:'✨' },
-  rainbow:  { label:'قزح',     emoji:'🌈' },
-  none:     { label:'بدون',    emoji:'🚫' },
+/* ============================================================
+   🖼️ أنماط الغلاف — موسّعة (12 نمط)
+   ============================================================ */
+const COVER_PATTERNS = {
+  none:       { label:'بدون',         emoji:'⬜' },
+  dots:       { label:'نقاط',         emoji:'⚬' },
+  grid:       { label:'شبكة',         emoji:'▦' },
+  diagonal:   { label:'قطري',         emoji:'◨' },
+  waves:      { label:'موج',          emoji:'🌊' },
+  noise:      { label:'ضجيج',         emoji:'▓' },
+  circuit:    { label:'دوائر',        emoji:'⚙️' },
+  hexagon:    { label:'سداسي',        emoji:'⬡' },
+  cross:      { label:'صليب',         emoji:'✚' },
+  gradient_stripes:{ label:'خطوط متدرجة', emoji:'🌈' },
+  triangles:  { label:'مثلثات',       emoji:'▲' },
+  zigzag:     { label:'زجزاج',        emoji:'⚡' },
+  circles:    { label:'حلقات',        emoji:'◎' },
+  arrows:     { label:'أسهم',         emoji:'➤' },
+  chevron:    { label:'شيفرون',       emoji:'❯' },
+  splatter:   { label:'رذاذ',         emoji:'✦' },
 };
 
 /* ============================================================
-   🖼️ إضافات الغلاف
+   ✨ تأثيرات الغلاف — موسّعة (14 تأثيراً)
    ============================================================ */
-const COVER_PATTERNS = {
-  none:     { label:'بدون',    emoji:'⬜' },
-  dots:     { label:'نقاط',    emoji:'⚬' },
-  grid:     { label:'شبكة',    emoji:'▦' },
-  diagonal: { label:'قطري',    emoji:'◨' },
-  waves:    { label:'موج',     emoji:'🌊' },
-  noise:    { label:'ضجيج',    emoji:'▓' },
-  circuit:  { label:'دوائر',   emoji:'⚙️' },
-  hexagon:  { label:'سداسي',   emoji:'⬡' },
-  cross:    { label:'صليب',    emoji:'✚' },
-  gradient_stripes:{ label:'خطوط متدرجة', emoji:'🌈' },
+const COVER_EFFECTS = {
+  none:       { label:'بدون',          emoji:'⬜' },
+  particles:  { label:'جزيئات',        emoji:'✨' },
+  stars:      { label:'نجوم',          emoji:'⭐' },
+  wave:       { label:'موجة',          emoji:'🌊' },
+  snow:       { label:'ثلج',           emoji:'❄️' },
+  rain:       { label:'مطر',           emoji:'🌧️' },
+  fire:       { label:'لهب',           emoji:'🔥' },
+  bubbles:    { label:'فقاعات',        emoji:'🫧' },
+  hearts:     { label:'قلوب',          emoji:'💖' },
+  sparkles:   { label:'بريق',          emoji:'💎' },
+  lightning:  { label:'برق',           emoji:'⚡' },
+  matrix:     { label:'ماتريكس',       emoji:'🟢' },
+  confetti:   { label:'ورق احتفال',    emoji:'🎉' },
+  aurora:     { label:'شفق',           emoji:'🌌' },
+  fog:        { label:'ضباب',          emoji:'🌫️' },
 };
+
+/* ============================================================
+   🎬 حركات الغلاف — 10 حركات
+   ============================================================ */
+const COVER_ANIMATIONS = {
+  none:   { label:'بدون',           emoji:'⬜' },
+  pan:    { label:'تحريك',          emoji:'➡️' },
+  zoom:   { label:'تكبير/تصغير',    emoji:'🔍' },
+  pulse:  { label:'نبض',            emoji:'💓' },
+  sway:   { label:'تمايل',          emoji:'🌊' },
+  rotate: { label:'دوران',          emoji:'🔄' },
+  float:  { label:'طوفان',          emoji:'🎈' },
+  breathe:{ label:'تنفس',           emoji:'🫁' },
+  glitch: { label:'خلل',            emoji:'📺' },
+  wave:   { label:'تموّج',          emoji:'〰️' },
+};
+
+/* ============================================================
+   🎨 ألوان تأثيرات الغلاف — 24 لوناً
+   ============================================================ */
+const EFFECT_COLORS = [
+  '#ffffff','#f8fafc','#94a3b8','#1e293b','#000000',
+  '#ef4444','#f97316','#f59e0b','#eab308','#84cc16',
+  '#22c55e','#10b981','#14b8a6','#06b6d4','#0ea5e9',
+  '#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef',
+  '#ec4899','#f43f5e','#6c5ce7','#00d2ff','#f5b301',
+];
 
 const COVER_OVERLAYS = {
   none:      { label:'بدون',         emoji:'⬜' },
@@ -618,24 +989,6 @@ const COVER_BRIGHTNESS_STEPS = [
   { label:'ساطع جداً', value: 1.5 },
 ];
 
-/* ============================================================
-   👤 إضافات الصورة الشخصية
-   ============================================================ */
-const AVATAR_DECORATIONS = {
-  none:      { label:'بدون',    emoji:'⬜' },
-  crown:     { label:'تاج',     emoji:'👑' },
-  halo:      { label:'هالة',    emoji:'😇' },
-  horns:     { label:'قرون',    emoji:'😈' },
-  cat_ears:  { label:'آذان قط', emoji:'🐱' },
-  flowers:   { label:'زهور',    emoji:'🌸' },
-  sparkle:   { label:'بريق',    emoji:'✨' },
-  headphones:{ label:'سماعات',  emoji:'🎧' },
-  fire:      { label:'نار',     emoji:'🔥' },
-  star:      { label:'نجمة',    emoji:'⭐' },
-  leaf:      { label:'ورقة',    emoji:'🍃' },
-  moon:      { label:'قمر',     emoji:'🌙' },
-};
-
 const AVATAR_BG_PATTERNS = {
   none:    { label:'بدون',  emoji:'⬜' },
   dots:    { label:'نقاط',  emoji:'⚬' },
@@ -659,26 +1012,6 @@ const AVATAR_FILTERS_EXTENDED = {
   cold:       { label:'بارد',      css:'hue-rotate(200deg) saturate(1.1)', emoji:'🧊' },
   hot:        { label:'حار',       css:'hue-rotate(-20deg) saturate(1.4)', emoji:'🌶️' },
   fade:       { label:'باهت',      css:'opacity(0.85) brightness(1.1)', emoji:'🌫️' },
-};
-
-/* ============================================================
-   🖼️ أنماط إطارات موسّعة (مع أنواع جديدة)
-   ============================================================ */
-const FRAME_STYLES = {
-  ...ANIMATED_FRAMES,
-  // أنماط جديدة
-  dotted:     { name:'منقط',        class:'frame-dotted',   tier:'free' },
-  striped:    { name:'مخطط',        class:'frame-striped',  tier:'free' },
-  sparkle:    { name:'بريق',        class:'frame-sparkle',  tier:'plus' },
-  hearts:     { name:'قلوب',        class:'frame-hearts',   tier:'plus' },
-  glow_rainbow:{ name:'قزح متوهج',  class:'frame-glow-rb',  tier:'plus' },
-  matrix:     { name:'ماتريكس',     class:'frame-matrix',   tier:'plus2' },
-  steam:      { name:'بخار',        class:'frame-steam',    tier:'plus2' },
-  circuit:    { name:'دوائر',       class:'frame-circuit',  tier:'plus2' },
-  royal:      { name:'ملكي',        class:'frame-royal',    tier:'exclusive', price:3500 },
-  cosmic:     { name:'كوني',        class:'frame-cosmic',   tier:'exclusive', price:4500 },
-  chrome:     { name:'كروم',        class:'frame-chrome',   tier:'exclusive', price:5000 },
-  shattered:  { name:'مبعثر',       class:'frame-shattered',tier:'exclusive', price:4000 },
 };
 
 /* ============================================================
@@ -751,26 +1084,6 @@ const BIO_STYLES_EXTENDED = {
 };
 
 /* ============================================================
-   🏅 تخصيصات مستوى موسّعة
-   ============================================================ */
-const LEVEL_BADGE_SHAPES = {
-  rounded: { label:'دائري', emoji:'●', style:'border-radius:12px' },
-  square:  { label:'مربع',  emoji:'■', style:'border-radius:4px' },
-  diamond: { label:'معيّن', emoji:'◆', style:'transform:rotate(45deg)' },
-  hexagon: { label:'سداسي', emoji:'⬡', style:'clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' },
-  star:    { label:'نجمة',  emoji:'⭐', style:'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
-};
-
-const LEVEL_BAR_STYLES = {
-  solid:    { label:'صلب' },
-  gradient: { label:'تدرج' },
-  striped:  { label:'مخطط' },
-  animated: { label:'متحرك' },
-  glow:     { label:'متوهج' },
-  dots:     { label:'نقاط' },
-};
-
-/* ============================================================
    🃏 أنماط بطاقة موسّعة
    ============================================================ */
 const CARD_CORNERS = {
@@ -787,26 +1100,6 @@ const CARD_BORDER_STYLES = {
   dashed: { label:'متقطع',  css:'dashed' },
   dotted: { label:'منقط',   css:'dotted' },
   double: { label:'مزدوج',  css:'double' },
-};
-
-const CARD_HOVER_EFFECTS = {
-  none:   { label:'بدون',  emoji:'⬜' },
-  lift:   { label:'ارتفاع', emoji:'⬆️' },
-  tilt:   { label:'ميلان',  emoji:'↷' },
-  scale:  { label:'تكبير',  emoji:'⤢' },
-  glow:   { label:'توهج',   emoji:'✨' },
-  shake:  { label:'اهتزاز', emoji:'🌪️' },
-};
-
-/* ============================================================
-   🔤 خطوط النصوص
-   ============================================================ */
-const TEXT_FONTS = {
-  cairo:   { label:'القاهرة',   value:"'Cairo',sans-serif" },
-  system:  { label:'نظام',      value:'system-ui,sans-serif' },
-  serif:   { label:'Serif',     value:'Georgia,serif' },
-  mono:    { label:'Monospace', value:'ui-monospace,monospace' },
-  cursive: { label:'مائل',      value:'cursive' },
 };
 
 /* ============================================================
@@ -901,18 +1194,6 @@ const EXTRA_AVATAR_FILTERS = {
 };
 
 /* ============================================================
-   ✨ حركات دخول البطاقة
-   ============================================================ */
-const ENTRANCE_ANIMATIONS = {
-  none:    { label:'بدون',   emoji:'⬜' },
-  fade:    { label:'ظهور',   emoji:'💫' },
-  slide_r: { label:'انزلاق يمين', emoji:'➡️' },
-  slide_u: { label:'انزلاق أعلى', emoji:'⬆️' },
-  zoom:    { label:'تكبير',  emoji:'🔍' },
-  flip:    { label:'انقلاب', emoji:'🔄' },
-};
-
-/* ============================================================
    💫 تأثيرات البطاقة عند التمرير
    ============================================================ */
 const SCROLL_EFFECTS = {
@@ -921,11 +1202,6 @@ const SCROLL_EFFECTS = {
   float: { label:'طوفان', emoji:'🎈' },
   pulse: { label:'نبض',   emoji:'💓' },
 };
-
-/* ============ إطارات لا تظهر في الاشتراكات ============ */
-function getFrameTier(frameId){
-  return ANIMATED_FRAMES[frameId]?.tier || 'free';
-}
 
 /* ============ دوال الاشتراك ============ */
 function getSubscription(profile){
@@ -945,26 +1221,6 @@ function getSubscription(profile){
 
 function getOwnedItems(profile){
   return profile?.ownedItems || [];
-}
-
-/* هل يملك المستخدم إطاراً؟ */
-function canUseFrame(profile, frameId){
-  const frame = ANIMATED_FRAMES[frameId];
-  if(!frame) return false;
-  
-  /* مجاني للجميع */
-  if(frame.tier === 'free') return true;
-  
-  /* حصري: يجب شراؤه */
-  if(frame.tier === 'exclusive'){
-    return (profile?.ownedItems || []).includes(`frame_${frameId}`);
-  }
-  
-  /* اشتراك */
-  const sub = getSubscription(profile);
-  if(frame.tier === 'plus')  return sub.plan === 'plus' || sub.plan === 'plus2';
-  if(frame.tier === 'plus2') return sub.plan === 'plus2';
-  return false;
 }
 
 /* هل يمكنه تغيير لون الاسم؟ */
@@ -1132,6 +1388,14 @@ custFieldTab: null,   // ★ جديد: التبويب الثالث (التخصي
     commentsLoading: false,
     returnToComments: null,
     _commentsInitialCollapseDone: false,
+  /* ★★ علم إعادة التعيين — لمنع render المتكرر ★★ */
+  _resettingAll: false,
+  _resettingZone: false,
+  _savingCustomization: false,
+
+  /* ★★★ منشورات وصفحة المنشور ★★★ */
+  viewingPostId: null,
+  viewingPostsUid: null,
 };
 
 /* ============ نظام المستويات ============ */
@@ -1297,6 +1561,11 @@ function go(page, opt={}, skipHistory=false){
     state.returnToComments = null;
   }
 
+/* أضف داخل دالة go() عند بداية الانتقال */
+if(page !== 'profile' && page !== 'userprofile'){
+  stopProfileMusic();
+}
+
   /* ★ أضف الصفحة الحالية للمكدس */
   if(!skipHistory && state.page && state.page !== page) {
     state.navStack.push(state.page);
@@ -1311,6 +1580,24 @@ function go(page, opt={}, skipHistory=false){
   if(state.page === 'messages' && page !== 'messages' && state.chatUnsub){
     try { state.chatUnsub(); } catch(e){}
     state.chatUnsub = null; state.chatWith = null;
+  }
+
+  /* ★ تنظيف صفحة المنشور المفرد — احتفظ بـ viewingPostId للرجوع */
+  if(state.page === 'post' && page !== 'post'){
+    if(state.commentsUnsub){ try{ state.commentsUnsub(); }catch(e){} state.commentsUnsub = null; }
+    state.currentPostId = null;
+    state.replyingTo = null;
+    state.editingCommentId = null;
+    state.commentEmojiOpen = false;
+    state.collapsedThreads.clear();
+    state._commentsInitialCollapseDone = false;
+    state.commentsLoading = false;
+    /* لا تمسح state.viewingPostId — نحتاجه للرجوع */
+  }
+
+  /* ★ تنظيف صفحة المنشورات */
+  if(state.page === 'posts' && page !== 'posts'){
+    state.viewingPostsUid = null;
   }
 
   /* ★ إعادة تعيين حالة طي التواقيع عند كل تنقل لملف مستخدم */
@@ -1427,6 +1714,14 @@ function getPageHeaderConfig(){
     case 'profile':
       cfg.title = 'ملفي الشخصي';
       cfg.actions = `
+        ${state.returnToComments ? `
+          <button class="page-hbtn primary" data-action="go-back" title="العودة إلى التعليقات">
+            ${ic('comment','xs')}<span>التعليقات</span>
+          </button>
+        ` : ''}
+        <button class="page-hbtn primary" data-nav="posts" data-posts-uid="${state.user.uid}" title="منشوراتي">
+          ${ic('grid','xs')}<span>منشوراتي</span>
+        </button>
         <button class="page-hbtn" data-action="edit-profile" title="تعديل">
           ${ic('edit','xs')}<span>تعديل</span>
         </button>
@@ -1438,6 +1733,56 @@ function getPageHeaderConfig(){
         </button>
       `;
       break;
+
+    case 'posts': {
+      const puid = state.viewingPostsUid || state.user.uid;
+      const pCount = state.posts.filter(x => x.authorId === puid && !x.reblogOf).length;
+      cfg.title = puid === state.user.uid
+        ? `منشوراتي (${pCount})`
+        : `المنشورات (${pCount})`;
+      break;
+    }
+
+    case 'post': {
+      const p = state.posts.find(x => x.id === state.viewingPostId);
+      if(!p){
+        cfg.title = 'المنشور';
+        break;
+      }
+
+      const authorName = p.author?.name || 'مستخدم';
+      const authorUsername = p.author?.username || '';
+      const authorGrad = p.author?.grad || pickGrad(p.authorId);
+      const initials = (authorName || '?').split(/\s+/).map(w=>w[0]).slice(0,2).join('');
+
+      const avatarHtml = p.author?.avatarUrl
+        ? `<div class="av" style="--s:34px;background:${authorGrad};overflow:hidden;border-radius:50%">
+             <img src="${esc(p.author.avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">
+           </div>`
+        : `<div class="av" style="--s:34px;background:${authorGrad};font-size:12px;border-radius:50%">${esc(initials)}</div>`;
+
+      cfg.title = 'المنشور';
+      cfg.titleHTML = `
+        <div class="ph-post-author">
+          <div class="ph-author-avatar" data-view-profile="${p.authorId}">${avatarHtml}</div>
+          <div class="ph-author-info" data-view-profile="${p.authorId}">
+            <div class="ph-author-name">${esc(authorName)}</div>
+            <div class="ph-author-sub">
+              <span>@${esc(authorUsername)}</span>
+              <span class="ph-dot">·</span>
+              <span>${timeAgo(p.createdAt)}</span>
+              ${p.edited ? `<span class="ph-dot">·</span><span>معدّل</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+      cfg.actions = `
+        <button class="page-hbtn" data-post-menu="${p.id}" title="خيارات">
+          ${ic('dots','xs')}
+        </button>
+      `;
+      break;
+    }
 
 case 'userprofile': {
   const on = state.followed.has(state.viewingUid);
@@ -1452,6 +1797,9 @@ case 'userprofile': {
     <button class="page-hbtn ${on?'on':'primary'}" data-follow="${state.viewingUid}">
       ${on ? '✓ متابَع' : '+ متابعة'}
     </button>
+            <button class="page-hbtn" data-nav="posts" data-posts-uid="${state.viewingUid}" title="المنشورات">
+          ${ic('grid','xs')}
+        </button>
     <button class="page-hbtn" data-action="profile-actions" data-uid="${state.viewingUid}" title="خيارات">
       ${ic('dots','xs')}
     </button>
@@ -1901,7 +2249,12 @@ state.unsubs.push(onSnapshot(
       state.profile = snap.data();
       updateTopbarCoins();
       renderTopbar();
-if (['profile','stats','settings','userprofile','customization'].includes(state.page)) render();
+if (
+  !state._resettingAll &&
+  !state._resettingZone &&
+  !state._savingCustomization &&   // ← ★ جديد
+  ['profile','stats','settings','userprofile'].includes(state.page)
+) render();
     } else {
       console.warn('Profile document disappeared');
     }
@@ -4649,7 +5002,7 @@ function suggestCard(u){
   </div>`;
 }
 
-function postCard(p, trendMode=false, trendingScore=null){
+function postCard(p, trendMode=false, trendingScore=null, showFull=false){
   /* ♻️ إعادة نشر — مع حماية كاملة */
   if(p && p.reblogOf){
     try { return renderReblogCard(p, trendMode); }
@@ -4667,6 +5020,11 @@ function postCard(p, trendMode=false, trendingScore=null){
   const authorCust = getProfileCustomization(authorProfile);
   const postStyle = buildPostCardStyle(authorCust, authorProfile);
 
+  /* ★ منطق طي المنشور الطويل */
+  const rawText = p.text || '';
+  const lineCount = rawText.split('\n').length;
+  const needsTruncation = !showFull && (lineCount > 6 || rawText.length > 350);
+
   const liked = state.liked[p.id];
   const saved = state.saved[p.id];
   const visIcon = p.visibility==='followers'?'users':p.visibility==='private'?'lock':'globe';
@@ -4677,7 +5035,7 @@ function postCard(p, trendMode=false, trendingScore=null){
   const avatarRadius = POST_AVATAR_SHAPES[authorCust.postAvatarShape]?.radius || '50%';
   const avatarSize = authorCust.postAvatarSize || 44;
 
-  return `<article class="post ${authorCust.postCardStyle !== 'minimal' ? 'card' : ''} ${p.pinned?'pinned':''} ${p.hidden?'hidden-post':''}" data-post-id="${p.id}" style="${postStyle}">
+  return `<article class="post ${authorCust.postCardStyle !== 'minimal' ? 'card' : ''} ${p.pinned?'pinned':''} ${p.hidden?'hidden-post':''}" data-post-id="${p.id}" data-post-card="${p.id}" style="${postStyle}">
     ${p.pinned ? '<div class="pinned-badge">📌 مثبّت</div>' : ''}
     <header class="post-h">
       <div data-view-profile="${p.authorId}" style="cursor:pointer">
@@ -4711,7 +5069,12 @@ function postCard(p, trendMode=false, trendingScore=null){
       })() : ''}
       <button class="post-menu-btn" data-post-menu="${p.id}" title="خيارات">${ic('dots','sm')}</button>
     </header>
-    <p class="post-text" style="${textColorStyle}">${formatPostText(p.text||'')}</p>
+    <p class="post-text ${needsTruncation ? 'truncated' : ''}" style="${textColorStyle}">${formatPostText(rawText)}</p>
+    ${needsTruncation ? `
+      <button type="button" class="post-text-more" data-open-post-page="${p.id}">
+        عرض المزيد ↓
+      </button>
+    ` : ''}
     ${renderPostMedia(p)}
     ${authorCust.postShowActions !== false ? `
     <div class="post-actions">
@@ -7595,281 +7958,352 @@ function getProfileCustomization(p){
   if(!p) return {};
   return {
     /* ============ الأصلي ============ */
-    avatarShape:       p.avatarShape       || 'circle',
-    avatarBorder:      p.avatarBorder      || 'gradient',
+    avatarShape: p.avatarShape || 'circle',
+    avatarBorder: p.avatarBorder || 'gradient',
     avatarBorderColor: p.avatarBorderColor || '#6c5ce7',
+    avatarBorderColor2: p.avatarBorderColor2 || '#00d2ff',
     avatarBorderWidth: p.avatarBorderWidth || 3,
-    profileLayout:     p.profileLayout     || 'default',
-    bannerEffect:      p.bannerEffect      || 'none',
-    accentColor:       p.accentColor       || '#6c5ce7',
-    musicUrl:          p.musicUrl          || '',
-    pronouns:          p.pronouns          || '',
-    location:          p.location          || '',
-    website:           p.website           || '',
-    birthday:          p.birthday          || '',
-    discord:           p.discord           || '',
-    twitter:           p.twitter           || '',
-    nameColor:         p.nameColor         || '#ffffff',
-    usernameColor:     p.usernameColor     || '#00d2ff',
-    titleColor:        p.titleColor        || '#f5b301',
-    coverPosition:     p.coverPosition     || '50% 50%',
-    nameEffect:        p.nameEffect        || 'none',
-    nameGradient:      p.nameGradient      || 'none',
-    nameWeight:        p.nameWeight        || 'black',
-    usernameEffect:    p.usernameEffect    || 'none',
-    usernameWeight:    p.usernameWeight    || 'bold',
-    nameBadge:         p.nameBadge         || 'none',
-    bioStyle:          p.bioStyle          || 'plain',
-    coverBlur:         p.coverBlur         ?? 0,
-    coverOverlay:      p.coverOverlay      ?? 0,
-    coverBrightness:   p.coverBrightness   ?? 1,
-    avatarRotation:    p.avatarRotation    ?? 0,
-avatarScale: (() => {
-  const v = p.avatarScale;
-  if (v == null) return 1;                          // القيمة الافتراضية
-  if (v >= 0.5 && v <= 1.5) return v;               // الصيغة الصحيحة
-  if (v >= 50  && v <= 150) return v / 100;         // صيغة قديمة خاطئة (100 → 1)
-  return 1;                                          // أي قيمة شاذة → الافتراضي
-})(),
-    avatarFilter:      p.avatarFilter      || 'none',
-    nameAnimation:     p.nameAnimation     || 'none',
-    cardBorderColor:   p.cardBorderColor   || '',
-    cardGlow:          p.cardGlow          || 'none',
-    cardShadow:        p.cardShadow        || 'medium',
-    levelStyle:        p.levelStyle        || 'default',
-    levelColor:        p.levelColor        || '#00d2ff',
-    statusEffect:      p.statusEffect      || 'none',
-    bgPattern:         p.bgPattern         || 'none',
-    joinDateColor:     p.joinDateColor     || '#8a95ad',
+    avatarBorderStyle: p.avatarBorderStyle || 'solid',
+    profileLayout: p.profileLayout || 'default',
+    bannerEffect: p.bannerEffect || 'none',
+    bannerEffectColor: p.bannerEffectColor || '#00d2ff',
+    accentColor: p.accentColor || '#6c5ce7',
+    accentColor2: p.accentColor2 || '',
+    musicUrl: p.musicUrl || '',
+    musicVolume: p.musicVolume ?? 70,
+    musicAutoplay: p.musicAutoplay ?? false,
+    pronouns: p.pronouns || '',
+    location: p.location || '',
+    website: p.website || '',
+    birthday: p.birthday || '',
+    discord: p.discord || '',
+    twitter: p.twitter || '',
+    nameColor: p.nameColor || '#ffffff',
+    nameEffectColor: p.nameEffectColor || p.nameColor || '#00d2ff',
+    nameShadowColor: p.nameShadowColor || '#000000',
+    usernameColor: p.usernameColor || '#00d2ff',
+    titleColor: p.titleColor || '#f5b301',
+    coverPosition: p.coverPosition || '50% 50%',
+    nameEffect: p.nameEffect || 'none',
+    nameGradient: p.nameGradient || 'none',
+    nameGradient2: p.nameGradient2 || 'none',
+    nameWeight: p.nameWeight || 'black',
+    usernameEffect: p.usernameEffect || 'none',
+    usernameWeight: p.usernameWeight || 'bold',
+    nameBadge: p.nameBadge || 'none',
+    nameBadgeColor: p.nameBadgeColor || '',     /* ★ لون مستقل للشارة */
+    nameBadgeEffect: p.nameBadgeEffect || 'inherit', /* inherit / none / glow */
+    bioStyle: p.bioStyle || 'plain',
+    bioGradient: p.bioGradient || 'none',        /* ★ منفصل */
+    coverBlur: p.coverBlur ?? 0,
+    coverOverlay: p.coverOverlay ?? 0,
+    coverBrightness: p.coverBrightnessNew ?? 100,
+    avatarRotation: p.avatarRotation ?? 0,
+    avatarScale: (() => {
+      const v = p.avatarScale;
+      if(v == null) return 1;
+      if(v >= 0.5 && v <= 1.5) return v;
+      if(v >= 50 && v <= 150) return v / 100;
+      return 1;
+    })(),
+    avatarFilter: p.avatarFilter || 'none',
+    nameAnimation: p.nameAnimation || 'none',
+    nameAnimationSpeed: p.nameAnimationSpeed || 'normal',
+    cardBorderColor: p.cardBorderColor || '',
+    cardGlow: p.cardGlow || 'none',
+    cardGlowColor: p.cardGlowColor || '#00d2ff',
+    cardShadow: p.cardShadow || 'medium',
+    levelStyle: p.levelStyle || 'default',
+    levelColor: p.levelColor || '#00d2ff',
+    statusEffect: p.statusEffect || 'none',
+    joinDateColor: p.joinDateColor || '#8a95ad',
     followersBtnColor: p.followersBtnColor || '#00d2ff',
-    followersBtnBg:    p.followersBtnBg    || 'transparent',
-    locationColor:     p.locationColor     || '#8a95ad',
-    levelBarColor:     p.levelBarColor     || '',
-    levelTextColor:    p.levelTextColor    || '#ffffff',
+    followersBtnBg: p.followersBtnBg || 'transparent',
+    locationColor: p.locationColor || '#8a95ad',
+    levelBarColor: p.levelBarColor || '',
+    levelTextColor: p.levelTextColor || '#ffffff',
 
-    /* ============ 🖼️ الغلاف — جديد ============ */
-    coverPattern:       p.coverPattern       || 'none',
-    coverPatternColor:  p.coverPatternColor  || '#ffffff',
-    coverOverlayStyle:  p.coverOverlayStyle  || 'none',
-    coverTint:          p.coverTint          || '',
-    coverZoom:          p.coverZoom          ?? 100,
-    coverBrightnessNew: p.coverBrightnessNew ?? 100,
-    coverContrast:      p.coverContrast      ?? 100,
-    coverSaturation:    p.coverSaturation    ?? 100,
-    coverVignette:      p.coverVignette      ?? 0,
-    coverPreset:        p.coverPreset        || '',
+    /* ============ 🖼️ الغلاف ============ */
+    coverPattern: p.coverPattern || 'none',
+    coverPatternColor: p.coverPatternColor || '#ffffff',
+    coverPatternSize: p.coverPatternSize ?? 20,
+    coverPatternOpacity: p.coverPatternOpacity ?? 35,
+    coverOverlayStyle: p.coverOverlayStyle || 'none',
+    coverTint: p.coverTint || '',
+    coverZoom: p.coverZoom ?? 100,
+    coverContrast: p.coverContrast ?? 100,
+    coverSaturation: p.coverSaturation ?? 100,
+    coverVignette: p.coverVignette ?? 0,
+    coverPreset: p.coverPreset || '',
+    coverHue: p.coverHue ?? 0,
+    coverOpacity: p.coverOpacity ?? 100,
+    coverRadius: p.coverRadius ?? 0,
+    coverAnimType: p.coverAnimType || 'none',
+    coverAnimSpeed: p.coverAnimSpeed || 'normal',
+    coverEffectColor: p.coverEffectColor || '#00d2ff',
+    coverOverlap: p.coverOverlap ?? false,     /* ★ جديد: تداخل مع الثيم */
 
-    /* ============ 👤 الأفاتار — جديد ============ */
-    avatarDecoration:   p.avatarDecoration   || 'none',
+    /* ============ 👤 الأفاتار ============ */
+    avatarDecoration: p.avatarDecoration || 'none',
     avatarDecorationColor: p.avatarDecorationColor || '#f5b301',
-    avatarBgPattern:    p.avatarBgPattern    || 'none',
-    avatarBgColor:      p.avatarBgColor      || '',
-    avatarOffsetX:      p.avatarOffsetX      ?? 0,
-    avatarOffsetY:      p.avatarOffsetY      ?? 0,
-    avatarBreathing:    p.avatarBreathing    || false,
+    avatarDecorationPosition: p.avatarDecorationPosition || 'top_right',
+    avatarDecorationSize: p.avatarDecorationSize ?? 100, /* 50–150 */
+    avatarBgPattern: p.avatarBgPattern || 'none',
+    avatarBgColor: p.avatarBgColor || '',
+    avatarOffsetX: p.avatarOffsetX ?? 0,
+    avatarOffsetY: p.avatarOffsetY ?? 0,
+    avatarBreathing: false,   /* ← حُذف — استُبدل بالحركات */
+    avatarMovement: p.avatarMovement || 'none',
+    avatarMovementSpeed: p.avatarMovementSpeed || 'normal',
+    avatarSize: p.avatarSize ?? 88,
+    avatarGlowColor: p.avatarGlowColor || '#6c5ce7',
+    avatarGlowIntensity: p.avatarGlowIntensity ?? 0,
 
-    /* ============ 🖼️ الإطارات — جديد ============ */
-    frameColor1:        p.frameColor1        || '#6c5ce7',
-    frameColor2:        p.frameColor2        || '#00d2ff',
-    frameThickness:     p.frameThickness     ?? 3,
+    /* ============ 🖼️ الإطارات ============ */
+    frameColor1: p.frameColor1 || '#6c5ce7',
+    frameColor2: p.frameColor2 || '#00d2ff',
+    frameThickness: p.frameThickness ?? 3,
     frameGlowIntensity: p.frameGlowIntensity ?? 60,
-    frameRotation:      p.frameRotation      || false,
-    frameSpeed:         p.frameSpeed         ?? 3,
+    frameRotation: p.frameRotation || false,
+    frameSpeed: p.frameSpeed ?? 3,
 
-    /* ============ ✏️ الاسم — جديد ============ */
-    nameGradient2:      p.nameGradient2      || 'none',
-    nameSize:           p.nameSize           || 'md',
-    nameLetterSpacing:  p.nameLetterSpacing  ?? 0,
-    nameFont:           p.nameFont           || 'cairo',
-    nameUnderline:      p.nameUnderline      || 'none',
+    /* ============ ✏️ الاسم ============ */
+    nameSize: p.nameSize || 'md',
+    nameLetterSpacing: p.nameLetterSpacing ?? 0,
+    nameFont: p.nameFont || 'cairo',
+    nameFontStyle: p.nameFontStyle || 'normal',
+    nameTransform: p.nameTransform || 'none',
+    nameUnderline: p.nameUnderline || 'none',
     nameUnderlineColor: p.nameUnderlineColor || '#00d2ff',
+    nameLineHeight: p.nameLineHeight ?? 1.3,
 
-    /* ============ @ اسم المستخدم — جديد ============ */
-    usernameGradient:   p.usernameGradient   || 'none',
-    usernameSize:       p.usernameSize       || 'md',
+    /* ============ @ اسم المستخدم ============ */
+    usernameGradient: p.usernameGradient || 'none',
+    usernameSize: p.usernameSize || 'md',
     usernameLetterSpacing: p.usernameLetterSpacing ?? 0,
-    usernameAnimation:  p.usernameAnimation  || 'none',
-    usernameBadge:      p.usernameBadge      || 'none',
+    usernameAnimation: p.usernameAnimation || 'none',
+    usernameOpacity: p.usernameOpacity ?? 100,
+    usernameFont: p.usernameFont || 'cairo',
+    usernameShowAt: p.usernameShowAt ?? true,
+    usernameItalic: p.usernameItalic ?? false,
+    usernameAnimationSpeed: p.usernameAnimationSpeed || 'normal',
 
-    /* ============ 📝 النبذة — جديد ============ */
-    bioColor:        p.bioColor        || '#b7c2d8',
-    bioGradient:     p.bioGradient     || 'none',
-    bioEffect:       p.bioEffect       || 'none',
-    bioBg:           p.bioBg           || '',
-    bioBgOpacity:    p.bioBgOpacity    ?? 100,
-    bioBorderColor:  p.bioBorderColor  || '#6c5ce7',
-    bioBorderWidth:  p.bioBorderWidth  ?? 2,
-    bioAlign:        p.bioAlign        || 'right',
-    bioFontSize:     p.bioFontSize     || 'md',
-    bioFontWeight:   p.bioFontWeight   || 'normal',
-    bioIcon:         p.bioIcon         || '',
-    bioIconColor:    p.bioIconColor    || '#00d2ff',
+    /* ============ 📝 النبذة ============ */
+    bioColor: p.bioColor || '#b7c2d8',
+    bioEffect: p.bioEffect || 'none',
+    bioEffectColor: p.bioEffectColor || '',
+    bioBg: p.bioBg || '',
+    bioBgOpacity: p.bioBgOpacity ?? 100,
+    bioBorderColor: p.bioBorderColor || '#6c5ce7',
+    bioBorderWidth: p.bioBorderWidth ?? 2,
+    bioAlign: p.bioAlign || 'right',
+    bioFontSize: p.bioFontSize || 'md',
+    bioFontWeight: p.bioFontWeight || 'normal',
+    bioIcon: p.bioIcon || '',
+    bioIconColor: p.bioIconColor || '',           /* ← فارغ = إيموجي كما هو */
+    bioLineHeight: p.bioLineHeight ?? 1.7,
+    bioLetterSpacing: p.bioLetterSpacing ?? 0,
+    bioFontFamily: p.bioFontFamily || 'cairo',
+    bioMaxWidth: p.bioMaxWidth ?? 100,
+    bioItalic: p.bioItalic ?? false,
+    bioUnderline: p.bioUnderline || 'none',
 
-    /* ============ 🎨 الثيم — جديد ============ */
-    themeOpacity:     p.themeOpacity     ?? 100,
-    themeBlend:       p.themeBlend       || 'normal',
+    /* ============ 🎨 الثيم ============ */
+    themeOpacity: p.themeOpacity ?? 100,
+    themePattern: p.themePattern || 'none',
+    themePatternColor: p.themePatternColor || '#ffffff',
+    themePatternSize: p.themePatternSize ?? 20,
+    themePatternOpacity: p.themePatternOpacity ?? 35,
+    themeGlow: p.themeGlow || 'none',
+    themeGlowColor: p.themeGlowColor || '#00d2ff',
     themeGradientAngle: p.themeGradientAngle ?? 135,
-    themePattern:     p.themePattern     || 'none',
-    themeGlow:        p.themeGlow        || 'none',
+    themeBlend: p.themeBlend || 'normal',
+    themeHue: p.themeHue ?? 0,
+    themeSaturation: p.themeSaturation ?? 100,
+    themeBrightness: p.themeBrightness ?? 100,
+    themeBlur: p.themeBlur ?? 0,
+    bgVignette: p.bgVignette ?? 0,
+    bgGradient: p.bgGradient || 'none',
+    themePattern: p.themePattern || p.bgPattern || 'none',
+    themePatternColor: p.themePatternColor || p.cardPatternColor || '#ffffff',
+    themePatternSize: p.themePatternSize ?? 20,
+    themePatternOpacity: p.themePatternOpacity ?? 35,
 
-    /* ============ 🃏 البطاقة — جديد ============ */
-    cardCorner:       p.cardCorner       || 'rounded',
-    cardBorderWidth:  p.cardBorderWidth  ?? 1,
-    cardBorderStyle:  p.cardBorderStyle  || 'solid',
+    /* ============ 🃏 البطاقة ============ */
+    cardCorner: p.cardCorner || 'rounded',
+    cardBorderWidth: p.cardBorderWidth ?? 1,
+    cardBorderStyle: p.cardBorderStyle || 'solid',
     cardInnerPadding: p.cardInnerPadding ?? 16,
-    cardOpacity:      p.cardOpacity      ?? 100,
+    cardOpacity: p.cardOpacity ?? 100,
     cardBackdropBlur: p.cardBackdropBlur ?? 14,
-    cardHoverEffect:  p.cardHoverEffect  || 'none',
-    cardEntrance:     p.cardEntrance     || 'fade',
+    cardHoverEffect: p.cardHoverEffect || 'none',
+    cardPressEffect: p.cardPressEffect || 'none',
+    cardEntrance: p.cardEntrance || 'fade',
     cardScrollEffect: p.cardScrollEffect || 'none',
-    cardPatternColor: p.cardPatternColor || '#ffffff',
+    cardPadding: p.cardPadding ?? 16,
+    cardRotate: p.cardRotate ?? 0,
+    cardBlendMode: p.cardBlendMode || 'normal',
+    cardMaxWidth: p.cardMaxWidth ?? 100,
+    cardZIndex: p.cardZIndex ?? 1,
 
-    /* ============ 🏅 المستوى — جديد ============ */
-    levelBadgeShape:  p.levelBadgeShape  || 'rounded',
+    /* ============ 🏅 المستوى ============ */
+    levelBadgeShape: p.levelBadgeShape || 'rounded',
     levelBadgeColor1: p.levelBadgeColor1 || '#6c5ce7',
     levelBadgeColor2: p.levelBadgeColor2 || '#00d2ff',
-    levelBarStyle:    p.levelBarStyle    || 'gradient',
-    levelBarColor1:   p.levelBarColor1   || '#6c5ce7',
-    levelBarColor2:   p.levelBarColor2   || '#00d2ff',
-    levelIcon:        p.levelIcon        || '',
-    levelShowLabel:   p.levelShowLabel   ?? true,
-    levelLabelText:   p.levelLabelText   || 'المستوى',
+    levelBarStyle: p.levelBarStyle || 'gradient',
+    levelBarColor1: p.levelBarColor1 || '#6c5ce7',
+    levelBarColor2: p.levelBarColor2 || '#00d2ff',
+    levelIcon: p.levelIcon || '',
+    levelShowLabel: p.levelShowLabel ?? true,
+    levelLabelText: p.levelLabelText || 'المستوى',
+    levelBarHeight: p.levelBarHeight ?? 9,
+    levelTextSize: p.levelTextSize || 'md',
+    levelBadgeSize: p.levelBadgeSize || 'md',
+    levelBadgePosition: p.levelBadgePosition || 'left',
+    levelBarSpeed: p.levelBarSpeed ?? 2,
 
-    /* ============ 🔤 النصوص — جديد ============ */
-    globalFont:      p.globalFont      || 'cairo',
-    bioTextColor:    p.bioTextColor    || '#b7c2d8',
+    /* ============ 🔤 النصوص ============ */
+    globalFont: p.globalFont || 'cairo',
+    bioTextColor: p.bioTextColor || '#b7c2d8',
     joinedTextColor: p.joinedTextColor || '#8a95ad',
-    teamTextColor:   p.teamTextColor   || '#f5c451',
+    teamTextColor: p.teamTextColor || '#f5c451',
     statusTextColor: p.statusTextColor || '#8a95ad',
     pronounsTextColor: p.pronounsTextColor || '#8a95ad',
+    textLetterSpacing: p.textLetterSpacing ?? 0,
+    textShadowColor: (p.textShadowColor === 'transparent' ? '' : (p.textShadowColor || '')),
+    textShadowBlur: p.textShadowBlur ?? 0,
+    textTransform: p.textTransform || 'none',
 
-    /* ============ 💎 أفكار جديدة ============ */
-    showParticles:   p.showParticles   || false,
-    particleColor:   p.particleColor   || '#00d2ff',
-    showSparkles:    p.showSparkles    || false,
-    customCursor:    p.customCursor    || 'default',
+    /* ============ 💎 إضافات ============ */
+    showParticles: p.showParticles || false,
+    particleColor: p.particleColor || '#00d2ff',
+    particleCount: p.particleCount ?? 15,
+    particleSpeed: p.particleSpeed ?? 5,
+    showSparkles: p.showSparkles || false,
+    sparkleColor: p.sparkleColor || '#ffffff',
+    sparkleCount: p.sparkleCount ?? 8,
+    customCursor: p.customCursor || 'default',
     profileSoundUrl: p.profileSoundUrl || '',
-    bioEmojis:       p.bioEmojis       || '',
+    bioEmojis: p.bioEmojis || '',
     accentButtonColor: p.accentButtonColor || '',
 
-    /* ============ 🆕 تخصيصات الغلاف ============ */
-coverHue:          p.coverHue          ?? 0,
-coverOpacity:      p.coverOpacity      ?? 100,
-coverAnimType:     p.coverAnimType     || 'none',
-coverRadius:       p.coverRadius       ?? 0,
+    /* ============ ✍️ التواقيع ============ */
+    sigStyle: p.sigStyle || 'plain',
+    sigColor: p.sigColor || '#c7d1e6',
+    sigGradient: p.sigGradient || 'none',
+    sigEffect: p.sigEffect || 'none',
+    sigBg: p.sigBg || '',
+    sigBgOpacity: p.sigBgOpacity ?? 100,
+    sigBorderColor: p.sigBorderColor || '#6c5ce7',
+    sigBorderWidth: p.sigBorderWidth ?? 1,
+    sigBorderRadius: p.sigBorderRadius ?? 10,
+    sigFontSize: p.sigFontSize || 'md',
+    sigFontWeight: p.sigFontWeight || 'normal',
+    sigFontFamily: p.sigFontFamily || 'cairo',
+    sigFontStyle: p.sigFontStyle || 'italic',
+    sigAnimation: p.sigAnimation || 'none',
+    sigAlign: p.sigAlign || 'center',
+    sigPadding: p.sigPadding ?? 8,
+    sigShadow: p.sigShadow || 'none',
+    sigLetterSpacing: p.sigLetterSpacing ?? 0,
+    sigLineHeight: p.sigLineHeight ?? 1.5,
+    sigDisplayCount: p.sigDisplayCount ?? 3,
+    sigShowAvatar: p.sigShowAvatar ?? true,
+    sigShowTime: p.sigShowTime ?? true,
+    sigShowName: p.sigShowName ?? true,
 
-/* ============ 🆕 تخصيصات الأفاتار ============ */
-avatarOffsetX:     p.avatarOffsetX     ?? 0,
-avatarOffsetY:     p.avatarOffsetY     ?? 0,
-avatarGlowColor:   p.avatarGlowColor   || '#6c5ce7',
-avatarGlowIntensity: p.avatarGlowIntensity ?? 0,
-avatarBorderStyle: p.avatarBorderStyle || 'solid',
-avatarSize:        p.avatarSize        ?? 88,
-
-/* ============ 🆕 تخصيصات الاسم ============ */
-nameShadowColor:   p.nameShadowColor   || '#000000',
-nameTransform:     p.nameTransform     || 'none',
-nameFontStyle:     p.nameFontStyle     || 'normal',
-nameLineHeight:    p.nameLineHeight    ?? 1.3,
-
-/* ============ 🆕 تخصيصات اسم المستخدم ============ */
-usernameOpacity:   p.usernameOpacity   ?? 100,
-usernameFont:      p.usernameFont      || 'cairo',
-usernameShowAt:    p.usernameShowAt    ?? true,
-usernameItalic:    p.usernameItalic    ?? false,
-
-/* ============ 🆕 تخصيصات النبذة ============ */
-bioLineHeight:     p.bioLineHeight     ?? 1.7,
-bioLetterSpacing:  p.bioLetterSpacing  ?? 0,
-bioFontFamily:     p.bioFontFamily     || 'cairo',
-bioMaxWidth:       p.bioMaxWidth       ?? 100,
-bioItalic:         p.bioItalic         ?? false,
-bioUnderline:      p.bioUnderline      || 'none',
-
-/* ============ 🆕 تخصيصات الثيم ============ */
-themeHue:          p.themeHue          ?? 0,
-themeSaturation:   p.themeSaturation   ?? 100,
-themeBrightness:   p.themeBrightness   ?? 100,
-themeBlur:         p.themeBlur         ?? 0,
-accentColor2:      p.accentColor2      || '',
-musicVolume:       p.musicVolume       ?? 70,
-musicAutoplay:     p.musicAutoplay     ?? false,
-
-/* ============ 🆕 تخصيصات البطاقة ============ */
-cardMaxWidth:      p.cardMaxWidth      ?? 100,
-cardRotate:        p.cardRotate        ?? 0,
-cardPadding:       p.cardPadding       ?? 16,
-cardBlendMode:     p.cardBlendMode     || 'normal',
-cardZIndex:        p.cardZIndex        ?? 1,
-
-/* ============ 🆕 تخصيصات المستوى ============ */
-levelBarHeight:    p.levelBarHeight    ?? 9,
-levelTextSize:     p.levelTextSize     || 'md',
-levelBadgeSize:    p.levelBadgeSize    || 'md',
-levelBadgePosition:p.levelBadgePosition|| 'left',
-levelBarSpeed:     p.levelBarSpeed     ?? 2,
-
-/* ============ 🆕 تخصيصات النصوص ============ */
-textLetterSpacing: p.textLetterSpacing ?? 0,
-textShadowColor:   p.textShadowColor   || 'transparent',
-textShadowBlur:    p.textShadowBlur    ?? 0,
-textTransform:     p.textTransform     || 'none',
-
-/* ============ 🆕 تخصيصات التأثيرات ============ */
-particleCount:     p.particleCount     ?? 15,
-particleSpeed:     p.particleSpeed     ?? 5,
-sparkleColor:      p.sparkleColor      || '#ffffff',
-sparkleCount:      p.sparkleCount      ?? 8,
-bgGradient:        p.bgGradient        || 'none',
-bgVignette:        p.bgVignette        ?? 0,
-
-    /* ============ ✍️ تخصيصات التواقيع ============ */
-    sigStyle:          p.sigStyle          || 'plain',
-    sigColor:          p.sigColor          || '#c7d1e6',
-    sigGradient:       p.sigGradient       || 'none',
-    sigEffect:         p.sigEffect         || 'none',
-    sigBg:             p.sigBg             || '',
-    sigBgOpacity:      p.sigBgOpacity      ?? 100,
-    sigBorderColor:    p.sigBorderColor    || '#6c5ce7',
-    sigBorderWidth:    p.sigBorderWidth    ?? 1,
-    sigBorderRadius:   p.sigBorderRadius   ?? 10,
-    sigFontSize:       p.sigFontSize       || 'md',
-    sigFontWeight:     p.sigFontWeight     || 'normal',
-    sigFontFamily:     p.sigFontFamily     || 'cairo',
-    sigFontStyle:      p.sigFontStyle      || 'italic',
-    sigAnimation:      p.sigAnimation      || 'none',
-    sigAlign:          p.sigAlign          || 'center',
-    sigPadding:        p.sigPadding        ?? 8,
-    sigShadow:         p.sigShadow         || 'none',
-    sigLetterSpacing:  p.sigLetterSpacing  ?? 0,
-    sigLineHeight:     p.sigLineHeight     ?? 1.5,
-    sigDisplayCount:   p.sigDisplayCount   ?? 3,
-    sigShowAvatar:     p.sigShowAvatar     ?? true,
-    sigShowTime:       p.sigShowTime       ?? true,
-    sigShowName:       p.sigShowName       ?? true,
-
-    /* ============ 📰 تخصيصات المنشورات ============ */
-    postCardStyle:     p.postCardStyle     || 'default',
-    postLayout:        p.postLayout        || 'standard',
-    postBgColor:       p.postBgColor       || '',
-    postBgOpacity:     p.postBgOpacity     ?? 100,
-    postBorderColor:   p.postBorderColor   || '',
-    postBorderWidth:   p.postBorderWidth   ?? 1,
-    postBorderRadius:  p.postBorderRadius  ?? 18,
-    postGlow:          p.postGlow          || 'none',
-    postAvatarShape:   p.postAvatarShape   || 'circle',
-    postAvatarSize:    p.postAvatarSize    ?? 44,
-    postShowActions:   p.postShowActions   ?? true,
-    postNameColor:     p.postNameColor     || '',
-    postTextColor:     p.postTextColor     || '',
+    /* ============ 📰 المنشورات ============ */
+    postCardStyle: p.postCardStyle || 'default',
+    postLayout: p.postLayout || 'standard',
+    postBgColor: p.postBgColor || '',
+    postBgOpacity: p.postBgOpacity ?? 100,
+    postBorderColor: p.postBorderColor || '',
+    postBorderWidth: p.postBorderWidth ?? 1,
+    postBorderRadius: p.postBorderRadius ?? 18,
+    postGlow: p.postGlow || 'none',
+    postAvatarShape: p.postAvatarShape || 'circle',
+    postAvatarSize: p.postAvatarSize ?? 44,
+    postShowActions: p.postShowActions ?? true,
+    postNameColor: p.postNameColor || '',
+    postTextColor: p.postTextColor || '',
   };
 }
 
 /* ============================================================
-   🎨 أنماط مشتركة للتخصيص — تُستخدم في المعاينة والصفحة الحقيقية
+   ✨ بناء طبقة الجزيئات + البريق للبطاقة الحقيقية
    ============================================================ */
+function buildCardParticleLayer(cust){
+  if(!cust.showParticles) return '';
+  const count = Math.min(cust.particleCount || 15, 25);
+  const color = cust.particleColor || '#00d2ff';
+  const speed = cust.particleSpeed || 5;
+
+  const spans = Array.from({ length: count }).map((_, i) => {
+    const left = (i * 41) % 100;
+    const top = (i * 67) % 100;
+    const delay = ((i * 0.31) % speed).toFixed(2);
+    return `<span style="left:${left}%;top:${top}%;
+                          background:${color};
+                          box-shadow:0 0 6px ${color};
+                          animation-duration:${speed}s;
+                          animation-delay:${delay}s;"></span>`;
+  }).join('');
+
+  return `<div class="card-particles-fx">${spans}</div>`;
+}
+
 /* ============================================================
-   ✏️ بناء نمط الاسم — يحل التعارض بين اللون/التدرج/التأثير/الحركة
+   🎨 تحويل Hex إلى Hue لتلوين الإيموجي
+   ============================================================ */
+function hexToHue(hex) {
+  if (!hex || hex.length < 7) return 0;
+  const r = parseInt(hex.slice(1,3), 16) / 255;
+  const g = parseInt(hex.slice(3,5), 16) / 255;
+  const b = parseInt(hex.slice(5,7), 16) / 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  const d = max - min;
+  let h = 0;
+  if (d === 0) h = 0;
+  else if (max === r) h = ((g-b)/d) % 6;
+  else if (max === g) h = (b-r)/d + 2;
+  else h = (r-g)/d + 4;
+  h = Math.round(h * 60);
+  if (h < 0) h += 360;
+  return h;
+}
+
+/* يُعيد CSS filter يحوّل الإيموجي إلى لون مقارب */
+function emojiColorFilter(hexColor) {
+  if (!hexColor || hexColor === 'original') return '';
+  const hue = hexToHue(hexColor);
+  // sepia produces ~40° hue; rotate to target
+  const rotation = (hue - 40 + 360) % 360;
+  return `grayscale(1) sepia(1) saturate(8) brightness(1.05) hue-rotate(${rotation}deg)`;
+}
+
+/* يبني ستايل الشارة بدمج فلتر اللون + فلتر التوهج */
+function buildBadgeStyle(cust) {
+  const color = cust.nameBadgeColor || '';
+  const effect = cust.nameBadgeEffect || 'inherit';
+  const filters = [];
+
+  // 1) فلتر اللون (إذا ليس أصلي)
+  if (color && color !== 'original') {
+    const c = emojiColorFilter(color);
+    if (c) filters.push(c);
+  }
+
+  // 2) فلتر التأثير
+  if (effect === 'glow') {
+    const glowColor = (color && color !== 'original') ? color : (cust.nameEffectColor || cust.nameColor || '#00d2ff');
+    filters.push(`drop-shadow(0 0 6px ${glowColor}) drop-shadow(0 0 12px ${glowColor}88)`);
+  }
+
+  return filters.length ? `filter:${filters.join(' ')};` : '';
+}
+
+/* ============================================================
+   🎨 أنماط مشتركة للتخصيص — تُستخدم في المعاينة والصفحة الحقيقية
    ============================================================ */
 function buildNameStyle(cust){
   const weight = FONT_WEIGHTS[cust.nameWeight]?.value || 900;
@@ -7880,35 +8314,26 @@ function buildNameStyle(cust){
 
   let s = `font-weight:${weight};font-size:${size};font-family:${font};`;
   s += `letter-spacing:${cust.nameLetterSpacing}px;`;
+  s += `line-height:${cust.nameLineHeight ?? 1.3};`;
+  s += `font-style:${cust.nameFontStyle || 'normal'};`;
+  s += `text-transform:${cust.nameTransform || 'none'};`;
 
   const hasGradient = gradient.css !== 'none';
-  const hasRainbowAnim = cust.nameAnimation === 'rainbow';
   const hasEffect = cust.nameEffect !== 'none';
+  const effectColor = cust.nameEffectColor || cust.nameColor || '#00d2ff';
 
-  // ✅ الأولوية: التدرج > اللون، التأثير يُطبَّق كـ drop-shadow مع التدرج
-  if(hasGradient && !hasRainbowAnim){
+  if(hasGradient){
     s += `background:${gradient.css};-webkit-background-clip:text;background-clip:text;color:transparent;`;
-    // مع التدرج نستخدم drop-shadow بدلاً من text-shadow (لأنه يتعارض مع color:transparent)
-    if(hasEffect){
-      const shadow = buildEffectDropShadow(cust.nameEffect, cust.nameColor);
-      if(shadow) s += `filter:${shadow};`;
-    }
-  } else if(hasRainbowAnim){
-    // الحركة القزحية تتكفل بالخلفية
-    if(hasEffect){
-      const shadow = buildEffectDropShadow(cust.nameEffect, cust.nameColor);
-      if(shadow) s += `filter:${shadow};`;
-    }
   } else {
-    // لون عادي + text-shadow
     s += `color:${cust.nameColor};`;
-    if(hasEffect){
-      const shadow = buildEffectTextShadow(cust.nameEffect, cust.nameColor);
-      if(shadow) s += `${shadow};`;
-    }
   }
 
-  // ✅ الزخرفة (underline)
+  /* ✅ التأثير — يستخدم effectColor المستقل */
+  if(hasEffect){
+    const shadow = buildEffectTextShadow(cust.nameEffect, effectColor, cust.nameShadowColor);
+    if(shadow) s += `${shadow};`;
+  }
+
   if(cust.nameUnderline && cust.nameUnderline !== 'none'){
     s += buildUnderlineStyle(cust.nameUnderline, cust.nameUnderlineColor);
   }
@@ -7916,20 +8341,30 @@ function buildNameStyle(cust){
   return s;
 }
 
-function buildEffectTextShadow(effect, color){
+/* ✅ تحديث دالة التأثير — لا تعتمد على اللون الأساسي */
+function buildEffectTextShadow(effect, color, _shadowColor){
+  const sh = color || 'rgba(0,0,0,.8)';
   switch(effect){
-    case 'glow':    return `text-shadow:0 0 10px ${color}, 0 0 22px ${color}88`;
-    case 'shadow':  return `text-shadow:2px 2px 6px rgba(0,0,0,.8)`;
-    case 'outline': return `-webkit-text-stroke:1.5px ${color};color:transparent`;
-    case 'neon':    return `text-shadow:0 0 4px #fff, 0 0 12px ${color}, 0 0 24px ${color}`;
-    default:        return '';
+    case 'glow':         return `text-shadow:0 0 10px ${color}, 0 0 22px ${color}88`;
+    case 'shadow':       return `text-shadow:2px 2px 6px ${sh}`;
+    case 'outline':      return `-webkit-text-stroke:1.5px ${color}`;
+    case 'neon':         return `text-shadow:0 0 4px #fff, 0 0 12px ${color}, 0 0 24px ${color}`;
+    case 'emboss':       return `text-shadow:1px 1px 0 rgba(255,255,255,.4), -1px -1px 0 rgba(0,0,0,.6)`;
+    case 'inset':        return `text-shadow:inset 2px 2px 3px ${sh}, inset -2px -2px 3px rgba(255,255,255,.2)`;
+    case 'long_shadow':  return `text-shadow:1px 1px 0 ${sh}, 2px 2px 0 ${sh}, 3px 3px 0 ${sh}, 4px 4px 0 ${sh}, 5px 5px 0 ${sh}`;
+    case 'glow_outline': return `-webkit-text-stroke:1px ${color}; text-shadow:0 0 8px ${color}`;
+    case 'double_shadow':return `text-shadow:2px 2px 0 ${sh}, -2px -2px 0 ${color}`;
+    case 'soft':         return `text-shadow:0 2px 12px ${color}66`;
+    case 'blur':         return `filter:blur(0.5px);`;
+    default:             return '';
   }
 }
 
-function buildEffectDropShadow(effect, color){
+
+function buildEffectDropShadow(effect, color, shadowColor){
   switch(effect){
     case 'glow':    return `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 14px ${color})`;
-    case 'shadow':  return `drop-shadow(2px 2px 3px rgba(0,0,0,.8))`;
+    case 'shadow':  return `drop-shadow(2px 2px 3px ${shadowColor || 'rgba(0,0,0,.8)'})`;
     case 'neon':    return `drop-shadow(0 0 3px #fff) drop-shadow(0 0 8px ${color}) drop-shadow(0 0 16px ${color})`;
     default:        return '';
   }
@@ -7956,16 +8391,23 @@ function buildUsernameStyle(cust){
 
   let s = `color:${cust.usernameColor};font-weight:${weight};font-size:${size};`;
   s += `letter-spacing:${cust.usernameLetterSpacing}px;`;
+  s += `font-family:${TEXT_FONTS[cust.usernameFont]?.value || 'inherit'};`;
+  s += `font-style:${cust.usernameItalic ? 'italic' : 'normal'};`;
+  s += `opacity:${(cust.usernameOpacity ?? 100) / 100};`;
+  s += `display:inline-block;`;
 
   if(gradient.css !== 'none'){
     s += `background:${gradient.css};-webkit-background-clip:text;background-clip:text;color:transparent;`;
-    if(cust.usernameEffect === 'glow'){
-      s += `filter:drop-shadow(0 0 6px ${cust.usernameColor});`;
-    }
-  } else if(cust.usernameEffect === 'glow'){
+  }
+
+  if(cust.usernameEffect === 'glow'){
     s += `text-shadow:0 0 10px ${cust.usernameColor};`;
   } else if(cust.usernameEffect === 'shadow'){
     s += `text-shadow:1px 1px 3px rgba(0,0,0,.7);`;
+  } else if(cust.usernameEffect === 'neon'){
+    s += `text-shadow:0 0 4px #fff, 0 0 12px ${cust.usernameColor};`;
+  } else if(cust.usernameEffect === 'outline'){
+    s += `-webkit-text-stroke:1px ${cust.usernameColor};`;
   }
 
   return s;
@@ -7984,73 +8426,177 @@ function buildAvatarFrameHTML(p, size, frameClass){
   const frame = FRAME_STYLES[frameId];
   const hasAnimatedFrame = frame && frame.class;
 
-  // لون الإطار (يُستخدم في الحدود الصلبة/التوهج)
-  const borderColor = cust.avatarBorderColor || '#6c5ce7';
+  const borderColor1 = cust.avatarBorderColor || '#6c5ce7';
+  const borderColor2 = cust.avatarBorderColor2 || '#00d2ff';
   const borderWidth = cust.avatarBorderWidth || 3;
+  const borderStyle = cust.avatarBorderStyle || 'solid';
 
-  // حاوية الأفاتار
-// ✅ Clamp دفاعي — يمنع أي قيمة شاذة من التسبب في حجم خيالي
-const safeScale  = Math.max(0.5, Math.min(1.5, cust.avatarScale || 1));
-const safeRotate = Math.max(0,   Math.min(360, cust.avatarRotation || 0));
-const transform  = `rotate(${safeRotate}deg) scale(${safeScale})`;
+  const safeScale = Math.max(0.5, Math.min(1.5, cust.avatarScale || 1));
+  const safeRotate = Math.max(0, Math.min(360, cust.avatarRotation || 0));
+  const transform = `rotate(${safeRotate}deg) scale(${safeScale})`;
   const filter = AVATAR_FILTERS_EXTENDED[cust.avatarFilter]?.css || 'none';
 
-  // ---- طبقة الإطار (خلفية، أكبر بقليل) ----
-  const frameThickness = (cust.frameThickness || 3);
+  /* ---- طبقة الإطار ---- */
+  const frameThickness = cust.frameThickness || 3;
   let frameStyle = `
     position:absolute; inset:-${frameThickness}px;
     border-radius:${radius};
     ${clip ? `clip-path:${clip};` : ''}
+    border-style:${borderStyle};
   `;
 
-  // نمط الإطار حسب النوع
-  if(hasAnimatedFrame){
-    frameStyle += `background:linear-gradient(135deg,${cust.frameColor1 || '#6c5ce7'},${cust.frameColor2 || '#00d2ff'});`;
-    if(frameId === 'neon') frameStyle += `box-shadow:0 0 20px ${cust.frameColor2 || '#00d2ff'}, inset 0 0 20px ${cust.frameColor2 || '#00d2ff'}55;`;
-    if(frameId === 'glow') frameStyle += `box-shadow:0 0 20px 3px ${borderColor}aa;`;
-    if(frameId === 'gold') frameStyle += `background:linear-gradient(135deg,#f5b301,#ff8a00,#f5b301);`;
-    if(frameId === 'fire') frameStyle += `background:linear-gradient(135deg,#ff3d71,#f5b301,#ff3d71);`;
-    if(frameId === 'ice')  frameStyle += `background:linear-gradient(135deg,#22d3ee,#0891b2);`;
-  } else if(cust.avatarBorder === 'solid'){
-    frameStyle += `background:${borderColor};`;
-  } else if(cust.avatarBorder === 'gradient'){
-    frameStyle += `background:linear-gradient(135deg,${cust.frameColor1 || '#6c5ce7'},${cust.frameColor2 || '#00d2ff'});`;
-  } else if(cust.avatarBorder === 'rainbow'){
-    frameStyle += `background:conic-gradient(from 0deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3,#ff0000);`;
-  } else if(cust.avatarBorder === 'none'){
-    frameStyle += `background:transparent;`;
+  /* ✅ كل الإطارات مجانية — نطبّق تدرج الألوان من الإعدادات */
+  if(hasAnimatedFrame && frameId !== 'none'){
+    frameStyle += `background:linear-gradient(135deg,${borderColor1},${borderColor2});`;
+    /* بعض الإطارات لها خلفية خاصة في CSS — نتخطّاها إن وُجدت */
+  } else {
+    switch(cust.avatarBorder){
+      case 'solid':
+        frameStyle += `background:${borderColor1}; border-color:${borderColor1};`;
+        break;
+      case 'gradient':
+        frameStyle += `background:linear-gradient(135deg,${borderColor1},${borderColor2});`;
+        break;
+      case 'rainbow':
+        frameStyle += `background:conic-gradient(from 0deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3,#ff0000);`;
+        break;
+      case 'double':
+        frameStyle += `background:transparent; border:${borderWidth}px double ${borderColor1};`;
+        break;
+      case 'dashed':
+        frameStyle += `background:transparent; border:${borderWidth}px dashed ${borderColor1};`;
+        break;
+      case 'dotted':
+        frameStyle += `background:transparent; border:${borderWidth}px dotted ${borderColor1};`;
+        break;
+      case 'groove':
+        frameStyle += `background:transparent; border:${borderWidth}px groove ${borderColor1};`;
+        break;
+      case 'ridge':
+        frameStyle += `background:transparent; border:${borderWidth}px ridge ${borderColor1};`;
+        break;
+      case 'neon':
+        frameStyle += `background:${borderColor1}; box-shadow:0 0 20px ${borderColor1}, inset 0 0 20px ${borderColor2}55;`;
+        break;
+      case 'pulse':
+        frameStyle += `background:${borderColor1}; animation:borderPulse 1.5s infinite;`;
+        break;
+      case 'rainbow_dash':
+        frameStyle += `background:transparent; border:${borderWidth}px dashed transparent; border-image:conic-gradient(from 0deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3) 1;`;
+        break;
+      case 'triple':
+        frameStyle += `background:transparent; box-shadow:0 0 0 ${borderWidth}px ${borderColor1}, 0 0 0 ${borderWidth*2}px ${borderColor2}, 0 0 0 ${borderWidth*3}px ${borderColor1};`;
+        break;
+      case 'glow':
+        frameStyle += `background:${borderColor1}; box-shadow:0 0 20px 3px ${borderColor1}aa;`;
+        break;
+      case 'none':
+        frameStyle += `background:transparent;`;
+        break;
+    }
   }
 
-  // ---- طبقة الصورة (داخلية، بنفس الشكل) ----
-  const innerStyle = `
+  /* توهج إضافي (من التأثيرات) */
+  if((cust.avatarGlowIntensity || 0) > 0){
+    const intensity = cust.avatarGlowIntensity / 100;
+    frameStyle += `box-shadow:0 0 ${20 * intensity}px ${5 * intensity}px ${cust.avatarGlowColor || '#6c5ce7'}aa;`;
+  }
+
+  /* الحركة */
+  let moveStyle = '';
+  let moveClass = '';
+  const move = cust.avatarMovement || 'none';
+  const speed = AVATAR_MOVEMENT_SPEEDS[cust.avatarMovementSpeed] || AVATAR_MOVEMENT_SPEEDS.normal;
+  if(move !== 'none'){
+    moveClass = `av-move-${move}`;
+    moveStyle = `--move-duration:${speed.duration}s;`;
+  }
+
+  /* الأبعاد */
+  const actualSize = Math.max(60, Math.min(140, cust.avatarSize || size));
+
+  let innerStyle = `
     position:relative; width:100%; height:100%;
     border-radius:${radius};
     ${clip ? `clip-path:${clip};` : ''}
     overflow:hidden;
-    transform:${transform};
+    transform:translate(${cust.avatarOffsetX || 0}px, ${cust.avatarOffsetY || 0}px) rotate(${safeRotate}deg) scale(${safeScale});
     filter:${filter};
     transition:transform .3s ease, filter .3s ease;
   `;
 
-  // زخرفة الأفاتار (تاج/هالة/قرون...)
+  /* الزخرفة — مع الموضع والحجم واللون (الإيموجي لا يتلوّن) */
+  const decorPos = DECORATION_POSITIONS[cust.avatarDecorationPosition] || DECORATION_POSITIONS.top_right;
+  const decorSize = Math.round(actualSize * 0.28 * ((cust.avatarDecorationSize || 100) / 100));
   const decoration = cust.avatarDecoration !== 'none'
-    ? `<span class="av-decoration" style="color:${cust.avatarDecorationColor}">${AVATAR_DECORATIONS[cust.avatarDecoration]?.emoji || ''}</span>`
+    ? `<span class="av-decoration"
+             style="font-size:${decorSize}px; ${decorPos.style}">${
+         AVATAR_DECORATIONS[cust.avatarDecoration]?.emoji || ''
+       }</span>`
     : '';
 
-  // خلفية الأفاتار
+  /* خلفية الأفاتار */
   const bgPattern = cust.avatarBgPattern !== 'none'
-    ? `<div class="av-bg av-bg-${cust.avatarBgPattern}" style="--bg-color:${cust.avatarBgColor || cust.frameColor1}"></div>`
+    ? `<div class="av-bg av-bg-${cust.avatarBgPattern}" style="--bg-color:${cust.avatarBgColor || borderColor1}"></div>`
     : '';
 
-  return `<div class="av-wrap" style="--s:${size}px; ${cust.avatarBreathing ? 'animation:avBreath 3s ease-in-out infinite;' : ''}">
-    <div class="av-frame-layer ${frameClass || ''}" style="${frameStyle}"></div>
+  const resolvedFrameClass = frame?.class || frameClass || '';
+  return `<div class="av-wrap ${moveClass}" style="--s:${size}px;${moveStyle}">
+    <div class="av-frame-layer ${resolvedFrameClass}" style="${frameStyle}"></div>
     <div class="av-image-layer" style="${innerStyle}">
       ${bgPattern}
-      ${p.avatarUrl ? `<img src="${esc(p.avatarUrl)}" style="width:100%;height:100%;object-fit:cover;position:relative;z-index:1">`
+      ${p.avatarUrl
+        ? `<img src="${esc(p.avatarUrl)}" style="width:100%;height:100%;object-fit:cover;position:relative;z-index:1">`
         : `<div class="av-initials" style="background:${p.grad || pickGrad(p.uid || '')};position:relative;z-index:1">${esc((p.name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join(''))}</div>`}
     </div>
     ${decoration}
   </div>`;
+}
+
+/* ============================================================
+   🎵 تشغيل موسيقى الملف الشخصي
+   ============================================================ */
+function playProfileMusic(profile){
+  const audio = document.getElementById('profileMusicAudio');
+  if(!audio) return;
+
+  const url = profile?.musicUrl || '';
+  const cust = getProfileCustomization(profile);
+
+  if(!url){
+    audio.pause();
+    audio.src = '';
+    return;
+  }
+
+  /* إذا نفس الرابط — لا تعيد التحميل */
+  if(audio.dataset.currentUrl === url){
+    audio.volume = (cust.musicVolume ?? 70) / 100;
+    audio.loop = true;
+    if(cust.musicAutoplay && audio.paused){
+      audio.play().catch(() => {});
+    }
+    return;
+  }
+
+  audio.dataset.currentUrl = url;
+  audio.src = url;
+  audio.volume = (cust.musicVolume ?? 70) / 100;
+  audio.loop = true;
+
+  if(cust.musicAutoplay){
+    audio.play().catch(e => console.warn('autoplay blocked:', e.message));
+  }
+}
+
+/* أوقف الموسيقى */
+function stopProfileMusic(){
+  const audio = document.getElementById('profileMusicAudio');
+  if(audio){
+    audio.pause();
+    audio.src = '';
+    audio.dataset.currentUrl = '';
+  }
 }
 
 /* ============================================================
@@ -8090,18 +8636,18 @@ function buildSignatureStyle(cust){
   /* الإطار */
   if((cust.sigBorderWidth ?? 1) > 0){
     s += `border:${cust.sigBorderWidth}px solid ${cust.sigBorderColor || '#6c5ce7'};`;
-  } else {
-    s += `border:0;`;
   }
 
   /* الظل */
   const shadowMap = {
-    none: '',
-    small: 'box-shadow:0 2px 6px rgba(0,0,0,.2);',
-    medium: 'box-shadow:0 4px 12px rgba(0,0,0,.3);',
-    large: 'box-shadow:0 8px 24px rgba(0,0,0,.45);',
+    none: 'none',
+    xs: '0 2px 8px rgba(0,0,0,.18)',
+    small: '0 2px 6px rgba(0,0,0,.2)',
+    medium: '0 4px 12px rgba(0,0,0,.3)',
+    large: '0 8px 24px rgba(0,0,0,.45)',
+    xl: '0 12px 32px rgba(0,0,0,.6)',
   };
-  s += shadowMap[cust.sigShadow] || '';
+  s += `box-shadow:${shadowMap[cust.sigShadow] || 'none'};`;
 
   /* الأنماط الخاصة */
   const col = cust.sigColor || '#c7d1e6';
@@ -8130,7 +8676,7 @@ function buildSignatureStyle(cust){
       s += `text-decoration:underline;text-decoration-color:${col};text-underline-offset:4px;text-decoration-thickness:1.5px;`;
       break;
     case 'dashed':
-      s += `border-style:dashed !important;`;
+      s += `border-style:dashed;`;
       break;
     case 'gradient':
       if(!cust.sigBg) s += `background:linear-gradient(135deg,${col}22,${cust.sigBorderColor}22);`;
@@ -8138,16 +8684,14 @@ function buildSignatureStyle(cust){
   }
 
   /* التأثير */
-  if(cust.sigEffect === 'glow') s += `filter:drop-shadow(0 0 6px ${col});`;
+  if(cust.sigEffect === 'glow')   s += `filter:drop-shadow(0 0 6px ${col});`;
   if(cust.sigEffect === 'shadow') s += `filter:drop-shadow(1px 1px 2px rgba(0,0,0,.8));`;
-  if(cust.sigEffect === 'neon') s += `filter:drop-shadow(0 0 4px ${col}) drop-shadow(0 0 12px ${col});`;
-  if(cust.sigEffect === 'outline') s += `-webkit-text-stroke:1px ${col};`;
+  if(cust.sigEffect === 'neon')   s += `filter:drop-shadow(0 0 4px ${col}) drop-shadow(0 0 12px ${col});`;
+  if(cust.sigEffect === 'outline')s += `-webkit-text-stroke:1px ${col};`;
 
   /* الحركة */
-  const animKey = cust.sigAnimation || 'none';
-  if(animKey !== 'none'){
-    s += `animation: sigAnim_${animKey} 3s ease-in-out infinite;`;
-  }
+  const anim = cust.sigAnimation || 'none';
+  if(anim !== 'none') s += `animation:sigAnim_${anim} 3s ease-in-out infinite;`;
 
   return s;
 }
@@ -8255,45 +8799,65 @@ function buildBioStyle(cust){
   s += `font-size:${{sm:'11px',md:'12.5px',lg:'14px',xl:'16px'}[cust.bioFontSize] || '12.5px'};`;
   s += `font-weight:${{normal:400,medium:600,bold:700,black:900}[cust.bioFontWeight] || 400};`;
   s += `text-align:${cust.bioAlign || 'right'};`;
-  s += `line-height:1.7;white-space:pre-wrap;word-wrap:break-word;`;
+  s += `line-height:${cust.bioLineHeight ?? 1.7};`;
+  s += `letter-spacing:${cust.bioLetterSpacing ?? 0}px;`;
+  s += `font-family:${TEXT_FONTS[cust.bioFontFamily]?.value || 'inherit'};`;
+  s += `font-style:${cust.bioItalic ? 'italic' : 'normal'};`;
+  s += `white-space:pre-wrap;word-wrap:break-word;max-width:${cust.bioMaxWidth}%;`;
 
-  // التدرج
+  if(cust.bioUnderline && cust.bioUnderline !== 'none'){
+    s += `text-decoration:underline ${cust.bioUnderline === 'double' ? 'double' : ''};`;
+    s += `text-decoration-color:${cust.bioBorderColor};text-underline-offset:4px;`;
+  }
+
+  /* ★ التدرج — يُطبَّق فقط إذا لم يكن هناك نمط يستخدم الخلفية */
   const gradient = NAME_GRADIENTS[cust.bioGradient] || NAME_GRADIENTS.none;
-  if(gradient.css !== 'none'){
+  const styleHasBg = ['quote','quote_box','card','dashed','code','ribbon','highlight'].includes(cust.bioStyle);
+
+  if(gradient.css !== 'none' && !styleHasBg){
     s += `background:${gradient.css};-webkit-background-clip:text;background-clip:text;color:transparent;`;
   }
 
-  // التأثير
-  if(cust.bioEffect === 'glow') s += `text-shadow:0 0 8px ${cust.bioColor};`;
+  /* ★ التأثير — يستخدم bioEffectColor المستقل */
+  const effColor = cust.bioEffectColor || cust.bioColor || '#00d2ff';
+  if(cust.bioEffect === 'glow') s += `text-shadow:0 0 8px ${effColor};`;
   else if(cust.bioEffect === 'shadow') s += `text-shadow:1px 1px 3px rgba(0,0,0,.8);`;
+  else if(cust.bioEffect === 'neon') s += `text-shadow:0 0 4px #fff, 0 0 12px ${effColor};`;
+  else if(cust.bioEffect === 'outline') s += `-webkit-text-stroke:1px ${effColor};`;
 
-  // الخلفية
+  /* ★ الخلفية */
   if(cust.bioBg){
-    const opacity = cust.bioBgOpacity / 100;
-    s += `background:${cust.bioBg}${Math.round(opacity*255).toString(16).padStart(2,'0')};`;
+    const alpha = Math.round(((cust.bioBgOpacity ?? 100) / 100) * 255).toString(16).padStart(2,'0');
+    s += `background-color:${cust.bioBg}${alpha};`;
     s += `padding:10px 14px;border-radius:10px;`;
   }
 
-  // الأنماط الخاصة
+  /* ★ الأنماط — تُطبَّق فقط عندما يكون النمط "plain" لا يفرض خلفية */
   const style = cust.bioStyle;
+  const borderCol = cust.bioBorderColor || 'var(--brand-2)';
+
   if(style === 'quote' || style === 'quote_box'){
-    s += `padding:10px 14px;border-inline-start:3px solid ${cust.bioBorderColor || 'var(--brand-2)'};background:rgba(0,210,255,.06);border-radius:8px;font-style:italic;`;
+    s += `padding:10px 14px;border-inline-start:3px solid ${borderCol};background:rgba(0,210,255,.06);border-radius:8px;font-style:italic;`;
   } else if(style === 'italic'){
     s += `font-style:italic;`;
   } else if(style === 'glow'){
-    s += `text-shadow:0 0 8px rgba(0,210,255,.4);`;
+    s += `text-shadow:0 0 8px ${borderCol};`;
   } else if(style === 'card'){
     s += `padding:10px 14px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;`;
   } else if(style === 'highlight'){
-    s += `background:linear-gradient(180deg,transparent 60%,${cust.bioBorderColor || 'rgba(0,210,255,.3)'} 60%);padding:0 4px;`;
+    s += `background:linear-gradient(180deg,transparent 60%,${borderCol} 60%);padding:0 4px;`;
   } else if(style === 'dashed'){
-    s += `padding:10px 14px;border:2px dashed ${cust.bioBorderColor || 'var(--brand-2)'};border-radius:10px;`;
+    s += `padding:10px 14px;border:2px dashed ${borderCol};border-radius:10px;`;
   } else if(style === 'underline'){
-    s += `text-decoration:underline;text-decoration-color:${cust.bioBorderColor || 'var(--brand-2)'};text-underline-offset:4px;`;
+    s += `text-decoration:underline;text-decoration-color:${borderCol};text-underline-offset:4px;`;
   } else if(style === 'code'){
-    s += `font-family:monospace;background:rgba(0,0,0,.3);padding:8px 12px;border-radius:8px;border:1px solid ${cust.bioBorderColor || 'var(--line)'};`;
+    s += `font-family:ui-monospace,monospace;background:rgba(0,0,0,.3);padding:8px 12px;border-radius:8px;border:1px solid ${borderCol};`;
   } else if(style === 'ribbon'){
-    s += `padding:10px 16px;background:${cust.bioBorderColor || 'var(--brand-2)'};border-radius:0 8px 8px 0;position:relative;`;
+    s += `padding:10px 16px;background:${borderCol};border-radius:0 8px 8px 0;`;
+  }
+
+  if((cust.bioBorderWidth ?? 2) > 0 && ['card','dashed','code'].includes(style)){
+    s += `border-width:${cust.bioBorderWidth}px;`;
   }
 
   return s;
@@ -8304,11 +8868,12 @@ function buildCoverStyle(p, cust, theme){
   const pos = p.coverPosition || '50% 50%';
   const zoom = cust.coverZoom || 100;
   const blur = cust.coverBlur || 0;
-  const brightness = (cust.coverBrightnessNew ?? 100) / 100;
+  const brightness = (cust.coverBrightness ?? 100) / 100;
   const contrast = (cust.coverContrast ?? 100) / 100;
   const saturate = (cust.coverSaturation ?? 100) / 100;
+  const hue = cust.coverHue || 0;
+  const opacity = (cust.coverOpacity ?? 100) / 100;
 
-  // خلفية الغلاف
   let bg = img;
   if(!p.coverUrl && cust.coverPreset){
     const preset = COVER_PRESETS.find(x => x.id === cust.coverPreset);
@@ -8318,47 +8883,77 @@ function buildCoverStyle(p, cust, theme){
     bg = `linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})`;
   }
 
+  const size = img !== 'none' ? `${zoom}%` : 'cover';
+  const filter = `blur(${blur}px) brightness(${brightness}) contrast(${contrast}) saturate(${saturate}) hue-rotate(${hue}deg)`;
+
   let s = `background-image:${bg};`;
   s += `background-position:${pos};`;
-  s += `background-size:${img !== 'none' ? `${zoom}%` : 'cover'};`;
+  s += `background-size:${size};`;
   s += `background-repeat:no-repeat;`;
-  s += `filter:blur(${blur}px) brightness(${brightness}) contrast(${contrast}) saturate(${saturate});`;
+  s += `filter:${filter};`;
+  s += `opacity:${opacity};`;
+
   if(cust.coverTint){
     s += `background-color:${cust.coverTint};background-blend-mode:multiply;`;
+  }
+  if(cust.coverRadius){
+    s += `border-radius:${cust.coverRadius}px;`;
   }
   return s;
 }
 
+/* ✅ تحديث دالة التراكب — تشمل النمط + التأثير + الحركة */
 function buildCoverOverlayHTML(cust){
   let html = '';
-  // Overlay
+
+  /* Overlay */
   if(cust.coverOverlayStyle && cust.coverOverlayStyle !== 'none'){
-    const cls = `cover-overlay cover-overlay-${cust.coverOverlayStyle}`;
-    html += `<div class="${cls}" style="position:absolute;inset:0;pointer-events:none;z-index:1"></div>`;
+    html += `<div class="cover-overlay cover-overlay-${cust.coverOverlayStyle}"
+                  style="position:absolute;inset:0;pointer-events:none;z-index:1"></div>`;
   }
-  // Pattern
+
+  /* Pattern */
   if(cust.coverPattern && cust.coverPattern !== 'none'){
-    html += `<div class="cover-pattern cover-pattern-${cust.coverPattern}" style="color:${cust.coverPatternColor};position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.35"></div>`;
+    const size = cust.coverPatternSize || 20;
+    const op = (cust.coverPatternOpacity ?? 35) / 100;
+    html += `<div class="cover-pattern cover-pattern-${cust.coverPattern}"
+                  style="color:${cust.coverPatternColor};position:absolute;inset:0;
+                         pointer-events:none;z-index:2;opacity:${op};
+                         background-size:${size}px ${size}px;"></div>`;
   }
-  // Vignette
+
+  /* Vignette */
   if(cust.coverVignette > 0){
-    html += `<div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,${cust.coverVignette/100}) 100%);pointer-events:none;z-index:3"></div>`;
+    html += `<div style="position:absolute;inset:0;
+              background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,${cust.coverVignette/100}) 100%);
+              pointer-events:none;z-index:3"></div>`;
   }
+
+  /* Effect (متحرك) */
+  const eff = cust.bannerEffect || 'none';
+  if(eff !== 'none'){
+    const color = cust.coverEffectColor || '#00d2ff';
+    const typeCls = `cover-fx cover-fx-${eff}`;
+    const style = `color:${color};`;
+    html += `<div class="${typeCls}" style="${style}"></div>`;
+  }
+
   return html;
 }
 
 function buildCardStyle(cust){
-  const shadowMap = {
-    none:'none', small:'0 6px 16px rgba(0,0,0,.3)',
-    medium:'0 20px 50px rgba(0,0,0,.45)', large:'0 30px 80px rgba(0,0,0,.65)',
-  };
+  const shadowCss = CARD_SHADOWS[cust.cardShadow]?.css || CARD_SHADOWS.medium.css;
+  const glowColor = cust.cardGlowColor || '#00d2ff';
+
   const glowMap = {
-    none:'', soft:'0 0 20px rgba(0,210,255,.4)',
-    strong:'0 0 40px rgba(0,210,255,.7), 0 0 80px rgba(108,92,231,.4)',
-    rainbow:'0 0 30px rgba(255,0,255,.5), 0 0 60px rgba(0,210,255,.4)',
-    gold:'0 0 30px rgba(245,179,1,.6), 0 0 60px rgba(255,138,0,.3)',
+    none:    '',
+    soft:    `0 0 20px ${glowColor}44`,
+    strong:  `0 0 40px ${glowColor}88, 0 0 80px ${glowColor}44`,
+    rainbow: `0 0 30px rgba(255,0,255,.5), 0 0 60px rgba(0,210,255,.4)`,
+    gold:    `0 0 30px rgba(245,179,1,.6), 0 0 60px rgba(255,138,0,.3)`,
   };
-  const shadows = [shadowMap[cust.cardShadow] || shadowMap.medium, glowMap[cust.cardGlow] || ''].filter(Boolean);
+
+  const shadows = [shadowCss, glowMap[cust.cardGlow] || ''].filter(s => s && s !== 'none');
 
   const corner = CARD_CORNERS[cust.cardCorner] || CARD_CORNERS.rounded;
   const borderStyle = CARD_BORDER_STYLES[cust.cardBorderStyle] || CARD_BORDER_STYLES.solid;
@@ -8366,9 +8961,14 @@ function buildCardStyle(cust){
   return [
     `border-radius:${corner.value}px`,
     `box-shadow:${shadows.join(', ') || 'none'}`,
-    cust.cardBorderColor ? `border:${cust.cardBorderWidth || 1}px ${borderStyle.css} ${cust.cardBorderColor}` : 'border:1px solid var(--line)',
+    cust.cardBorderColor
+      ? `border:${cust.cardBorderWidth || 1}px ${borderStyle.css} ${cust.cardBorderColor}`
+      : 'border:1px solid var(--line)',
     `opacity:${(cust.cardOpacity || 100) / 100}`,
     cust.cardBackdropBlur ? `backdrop-filter:blur(${cust.cardBackdropBlur}px)` : '',
+    cust.cardRotate ? `transform:rotate(${cust.cardRotate}deg)` : '',
+    `max-width:${cust.cardMaxWidth || 100}%`,
+    cust.cardBlendMode && cust.cardBlendMode !== 'normal' ? `mix-blend-mode:${cust.cardBlendMode}` : '',
   ].filter(Boolean).join(';');
 }
 
@@ -8544,6 +9144,14 @@ async function checkUsernameAvailability(username, statusEl){
    💾 حفظ حقل تخصيص واحد
    ============================================================ */
 async function saveCustomField(field, value){
+  /* ★ تحويل القيم الخاصة إلى الصيغة المقبولة في القواعد */
+  if(field === 'textShadowColor' && value === 'transparent'){
+    value = '';
+  }
+
+  /* ★ ارفع العلم لمنع onSnapshot من إعادة الرسم */
+  state._savingCustomization = true;
+
   try{
     await updateDoc(doc(db, 'users', state.user.uid), { [field]: value });
     if(state.profile) state.profile[field] = value;
@@ -8554,6 +9162,9 @@ async function saveCustomField(field, value){
     if(e.code === 'permission-denied') toast(`🔒 القاعدة لا تسمح بحفظ "${field}"`);
     else toast('فشل حفظ ' + field);
     return false;
+  }finally{
+    /* ★ أنزل العلم بعد تأخير بسيط — نافذة أمان تكفي وصول onSnapshot */
+    setTimeout(() => { state._savingCustomization = false; }, 350);
   }
 }
 
@@ -8575,6 +9186,171 @@ function buildLevelStyle(cust, levelStyle){
     return `background:${cust.levelColor};color:#070a11;box-shadow:0 4px 12px ${cust.levelColor}66;`;
   }
   return levelStyle;
+}
+
+/* ============================================================
+   📰 صفحة المنشورات — عرض كل منشورات المستخدم
+   ============================================================ */
+function pagePosts(){
+  const uid = state.viewingPostsUid || state.user.uid;
+  const isOwn = uid === state.user.uid;
+  const user = isOwn ? state.profile : state.users[uid];
+
+  if(!user) return emptyState('المستخدم غير موجود','user');
+
+  const userPosts = state.posts
+    .filter(x => x.authorId === uid && !x.reblogOf)
+    .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+
+  return `
+    <div class="posts-page-header">
+      <div class="posts-page-title">
+        ${ic('grid','sm')}
+        ${isOwn ? 'منشوراتي' : `منشورات ${esc(user.name)}`}
+        <span class="posts-page-count">${userPosts.length}</span>
+      </div>
+    </div>
+    ${userPosts.length
+      ? userPosts.map(p => postCard(p)).join('')
+      : emptyState(
+          isOwn ? 'لم تنشر بعد — ابدأ بإنشاء أول منشور' : 'لا منشورات بعد',
+          'grid'
+        )}
+  `;
+}
+
+/* ============================================================
+   📄 صفحة المنشور المفرد — شريط رأس موحد + تعليقات متصلة
+   ============================================================ */
+function pagePost(){
+  const postId = state.viewingPostId;
+  const p = state.posts.find(x => x.id === postId);
+  if(!p) return emptyState('المنشور غير موجود','grid');
+
+  /* إعداد التعليقات */
+  if(state.currentPostId !== postId || !state.commentsUnsub){
+    state.currentPostId = postId;
+    state.commentsSort = 'newest';
+    state.replyingTo = null;
+    state.editingCommentId = null;
+    state.commentEmojiOpen = false;
+    state.collapsedThreads.clear();
+    state._commentsInitialCollapseDone = false;
+    state.commentsLoading = true;
+
+    if(!state.comments[postId]) state.comments[postId] = [];
+
+    setTimeout(() => {
+      if(state.currentPostId !== postId) return;
+
+      subscribeToComments(postId);
+
+      const input = document.getElementById('commentInput');
+      if(input){
+        input.addEventListener('input', onCommentInputChange);
+        input.addEventListener('keydown', (ev) => {
+          if((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter'){
+            ev.preventDefault();
+            submitComment();
+          }
+        });
+      }
+
+      setTimeout(() => {
+        if(state.currentPostId === postId && state.commentsLoading){
+          state.commentsLoading = false;
+          renderCommentsList();
+        }
+      }, 8000);
+    }, 60);
+  }
+
+  const liked = state.liked[p.id];
+  const saved = state.saved[p.id];
+  const wasReblogged = (p.rebloggedBy || []).includes(state.user.uid);
+
+  return `
+    <div class="single-post-view">
+
+      <!-- ═══ محتوى المنشور ═══ -->
+      <div class="spa-body">
+        ${p.place ? `
+          <div class="spa-place">
+            ${ic('location','xs')} ${esc(p.place)}
+          </div>` : ''}
+        ${p.text ? `
+          <p class="post-text spa-text">${formatPostText(p.text)}</p>
+        ` : ''}
+        ${renderPostMedia(p)}
+      </div>
+
+      <!-- ═══ شريط التفاعل (بدون زر تعليقات) ═══ -->
+      <div class="spa-actions">
+        <button class="pact ${liked?'liked':''}" data-like="${p.id}">
+          ${ic('heart','sm')} <span>${nf(p.likes)}</span>
+        </button>
+        <button class="pact ${wasReblogged?'reblogged':''}" data-reblog="${p.id}">
+          ${ic('share','sm')} <span>${nf(p.reblogs||0)}</span>
+        </button>
+        <button class="pact ml ${saved?'saved':''}" data-save="${p.id}">
+          ${ic('bookmark','sm')}
+        </button>
+      </div>
+
+      <!-- ═══ التعليقات متصلة مباشرة ═══ -->
+      <div class="spa-comments">
+        <div class="spa-comments-head">
+          <span class="spa-comments-title">
+            ${ic('comment','sm')} التعليقات
+            <span class="comments-count-badge" id="commentsCountBadge">0</span>
+          </span>
+          <div class="spa-sort">
+            <button class="spa-sort-btn active" data-comment-sort="newest" title="الأحدث">
+              ${ic('clock','xs')}
+            </button>
+            <button class="spa-sort-btn" data-comment-sort="top" title="الأفضل">
+              ${ic('heart','xs')}
+            </button>
+            <button class="spa-sort-btn" data-comment-sort="oldest" title="الأقدم">
+              ${ic('back','xs')}
+            </button>
+          </div>
+        </div>
+
+        <div class="comments-body" id="commentsListBody">
+          <div class="comments-loading">
+            <div class="spinner"></div>
+            <span>جاري تحميل التعليقات…</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══ صندوق التعليق المثبت أسفل الصفحة ═══ -->
+    <div class="fixed-comment-bar" id="fixedCommentBar">
+      <div id="replyContextWrap"></div>
+      <div class="comment-input-row">
+        <div class="comment-input-avatar">
+          ${avatar(state.profile, 36)}
+        </div>
+        <div class="comment-input-wrap">
+          <textarea id="commentInput"
+                    placeholder="اكتب تعليقاً…"
+                    maxlength="500"
+                    rows="1"
+                    autocomplete="off"></textarea>
+        </div>
+        <button type="button" class="comment-send-btn" id="sendCommentBtn"
+                data-post-id="${postId}" disabled>
+          ${ic('send','sm')}
+        </button>
+      </div>
+      <div class="comment-input-footer">
+        <span class="comment-char-counter" id="commentCharCounter">0/500</span>
+      </div>
+    </div>
+  `;
 }
 
 function pageProfile(){ // ★ تم إزالة async
@@ -8620,8 +9396,8 @@ const tabs = [
   const prog = xpProgress(p.xp || 0);
   const cust = getProfileCustomization(p);
 
-  const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
-  const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+  const theme = THEMES_EXTENDED[p.equipped?.themeId || p.themeId || 'default'] || THEMES_EXTENDED.default;
+  const frameClass = FRAME_STYLES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
   const avatarShapeClass = `shape-${cust.avatarShape}`;
   const avatarBorderClass = `border-${cust.avatarBorder}`;
 
@@ -8634,6 +9410,21 @@ const levelStyle = {
 }[cust.levelStyle] || '';
 
   const levelBarBg = cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` : '';
+    /* ★★ متغيرات الحركة والشارة ★★ */
+  const nameAnimSpeed = (NAME_ANIMATION_SPEEDS[cust.nameAnimationSpeed] || NAME_ANIMATION_SPEEDS.normal).duration;
+  const unameSpeed = (NAME_ANIMATION_SPEEDS[cust.usernameAnimationSpeed] || NAME_ANIMATION_SPEEDS.normal).duration;
+  const moveSpeed = (AVATAR_MOVEMENT_SPEEDS[cust.avatarMovementSpeed] || AVATAR_MOVEMENT_SPEEDS.normal).duration;
+  const moveClass = cust.avatarMovement !== 'none' ? `av-move-${cust.avatarMovement}` : '';
+  const hoverCls = cust.cardHoverEffect && cust.cardHoverEffect !== 'none' ? `hover-${cust.cardHoverEffect}` : '';
+  const pressCls = cust.cardPressEffect && cust.cardPressEffect !== 'none' ? `press-${cust.cardPressEffect}` : '';
+  const entranceCls = cust.cardEntrance && cust.cardEntrance !== 'fade' ? `entrance-${cust.cardEntrance}` : '';
+  const badge = NAME_BADGES[cust.nameBadge] || NAME_BADGES.none;
+  const badgeColor = cust.nameBadgeColor || '';
+  const badgeEffect = cust.nameBadgeEffect || 'inherit';
+  const badgeStyleStr = buildBadgeStyle(cust);
+  const badgeHTML = badge.emoji
+    ? `<span class="name-badge-sep" style="${badgeStyleStr}">${badge.emoji}</span>`
+    : '';
   const levelBadgeBg = cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : '';
 
 setTimeout(() => {
@@ -8671,9 +9462,33 @@ setTimeout(() => {
       });
   }, 50);
 
-  return `
-    <div class="player-card" style="${buildCardStyle(cust)}">
-<div class="pc-cover" data-action="cover-click" style="cursor:pointer;${buildCoverStyle(p, cust, theme)}">
+    /* ★ إزالة كلاس الدخول بعد انتهاء الحركة */
+  setTimeout(() => {
+    document.querySelectorAll('.player-card').forEach(card => {
+      card.classList.remove(
+        'entrance-fade','entrance-slide_r','entrance-slide_l',
+        'entrance-slide_u','entrance-slide_d','entrance-zoom',
+        'entrance-flip','entrance-bounce','entrance-rotate'
+      );
+    });
+  }, 900);
+
+  // ✅✅✅ أضف هنا — قبل الـ return ✅✅✅
+  const themeAlpha1 = Math.round((cust.themeOpacity ?? 100) * 0.35).toString(16).padStart(2,'0');
+  const themeAlpha2 = Math.round((cust.themeOpacity ?? 100) * 0.12).toString(16).padStart(2,'0');
+  const themeFilter = 'hue-rotate(' + (cust.themeHue || 0) + 'deg) ' +
+                      'saturate(' + ((cust.themeSaturation ?? 100) / 100) + ') ' +
+                      'brightness(' + ((cust.themeBrightness ?? 100) / 100) + ')';
+  const themeAngle = (cust.themeGradientAngle || 180) + 'deg';
+/* ★ شغّل الموسيقى */
+setTimeout(() => playProfileMusic(p), 100);
+
+  return `<div class="player-card ${cust.coverOverlap ? 'cover-overlap' : ''} ${cust.showParticles ? 'particle-active' : ''} ${cust.showSparkles ? 'sparkle-active' : ''} ${hoverCls} ${pressCls} ${entranceCls}"
+     style="${buildCardStyle(cust)};--card-glow-c:${cust.cardGlowColor || '#00d2ff'};--sparkle-c:${cust.sparkleColor || '#fff'}">
+  ${buildCardParticleLayer(cust)}
+<div class="pc-cover ${cust.coverAnimType !== 'none' ? `cover-anim cover-anim-${cust.coverAnimType}` : ''}"
+     data-action="cover-click"
+     style="cursor:pointer;--anim-duration:${(AVATAR_MOVEMENT_SPEEDS[cust.coverAnimSpeed] || AVATAR_MOVEMENT_SPEEDS.normal).duration}s;${buildCoverStyle(p, cust, theme)}">
   ${buildCoverOverlayHTML(cust)}
   ${!p.coverUrl ? `
     <div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]});display:grid;place-items:center;color:rgba(255,255,255,.55);font-size:13px;font-weight:800;z-index:1">
@@ -8684,16 +9499,21 @@ setTimeout(() => {
 
 <!-- ★ حُذف .pc-card-actions — انتقل إلى شريط الرأس -->
 
-<div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12;position:relative">
-  ${buildBgPattern(cust.bgPattern)}
+<div class="pc-body-section" 
+     style="--tc1:${theme.colors[0]}${themeAlpha1};
+            --tc2:${theme.colors[1]}${themeAlpha2};
+            --tc-angle:${cust.themeGradientAngle}deg;
+            --tc-filter:${themeFilter};
+            position:relative">
+              ${buildBgPattern(cust.bgPattern)}
   <div class="pc-body">
           <div class="pc-info">
-            <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
-              ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
-              ${esc(p.name)} ${getAdminBadge(p)}
-              ${cust.pronouns ? `<span class="pc-pronouns">${esc(cust.pronouns)}</span>` : ''}
-            </div>
-            <div class="pc-user" style="${buildUsernameStyle(cust)}">@${esc(p.username)}</div>
+<div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)};--anim-duration:${nameAnimSpeed}s">
+  ${badgeHTML}${esc(p.name)} ${getAdminBadge(p)}
+</div>
+           <div class="pc-user ${cust.usernameAnimation !== 'none' ? `anim-name-${cust.usernameAnimation}` : ''}" style="${buildUsernameStyle(cust)};--anim-duration:${unameSpeed}s">
+  ${cust.usernameShowAt ? '@' : ''}${esc(p.username)}
+</div>
             <div class="pc-joined" style="color:${cust.joinDateColor}">
               ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
             </div>
@@ -8708,11 +9528,17 @@ setTimeout(() => {
                 ${cust.discord ? `<span>${ic('message','xs')} ${esc(cust.discord)}</span>` : ''}
               </div>` : ''}
 
-            <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
+            <div class="pc-bio" style="${buildBioStyle(cust)}">${
+              cust.bioIcon
+                ? `<span style="margin-inline-end:6px;${
+                    cust.bioIconColor ? `color:${cust.bioIconColor};text-shadow:0 0 8px ${cust.bioIconColor}88;` : ''
+                  }">${cust.bioIcon}</span>`
+                : ''
+            }${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
           </div>
 
 <div class="avatar-sig-wrapper">
-  <div class="pc-avatar" data-action="avatar-click" style="cursor:pointer">
+  <div class="pc-avatar ${moveClass}" data-action="avatar-click" style="cursor:pointer;--move-duration:${moveSpeed}s">
     ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
   </div>
             <div class="sig-slider-preview" id="mySigSlider"
@@ -8736,15 +9562,16 @@ ${(() => {
     ${cust.levelBadgeShape === 'diamond' ? 'padding:6px;' : ''}
   `;
   return `
-  <div class="pc-level">
-    <div class="pc-level-bar level-bar-${cust.levelBarStyle || 'gradient'}">
-      <span style="width:${Math.min(100, (p.xp || 0) % 100)}%;
-                   ${cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` :
-                     `background:linear-gradient(90deg, ${cust.levelBarColor1}, ${cust.levelBarColor2});`}"></span>
-    </div>
-    <div class="pc-level-num" style="${badgeStyle}" title="${lvlLabel}${lvlNum}">
-      ${cust.levelBadgeShape === 'diamond' ? `<div style="transform:rotate(-45deg)">${lvlIcon}${lvlLabel}${lvlNum}</div>` : `${lvlIcon}${lvlLabel}${lvlNum}`}
-    </div>
+<div class="pc-level">
+  <div class="pc-level-bar level-bar-${cust.levelBarStyle || 'gradient'}"
+       style="--lvl-bar-1:${cust.levelBarColor1};--lvl-bar-2:${cust.levelBarColor2};${cust.levelBarColor ? `--lvl-bar-single:${cust.levelBarColor};` : ''}">
+    <span style="width:${Math.min(100, (p.xp || 0) % 100)}%;${cust.levelBarColor ? `background:${cust.levelBarColor} !important;box-shadow:0 0 14px ${cust.levelBarColor};` : ''}"></span>
+  </div>
+  <div class="pc-level-num size-text-${cust.levelTextSize || 'md'}"
+       style="${badgeStyle}" title="${lvlLabel}${lvlNum}">
+    ${cust.levelBadgeShape === 'diamond' ? `<div style="transform:rotate(-45deg)">${lvlIcon}${lvlLabel}${lvlNum}</div>` : `${lvlIcon}${lvlLabel}${lvlNum}`}
+  </div>
+</div>
   </div>`;
 })()}
 
@@ -8826,8 +9653,8 @@ if (state.lastViewedProfileUid !== state.viewingUid) {
 
   const on = state.followed.has(state.viewingUid);
   const cust = getProfileCustomization(p);
-  const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
-  const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+  const theme = THEMES_EXTENDED[p.equipped?.themeId || p.themeId || 'default'] || THEMES_EXTENDED.default;
+  const frameClass = FRAME_STYLES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
   const avatarShapeClass = `shape-${cust.avatarShape}`;
   const avatarBorderClass = `border-${cust.avatarBorder}`;
 
@@ -8843,6 +9670,20 @@ const tabs = [
   {id:'gifts',        label:'الهدايا',     icon:'star'},
 ];
   if(!tabs.find(t => t.id === state.profileTab)) state.profileTab = 'posts';
+    /* ★★ متغيرات الحركة والشارة ★★ */
+  const nameAnimSpeed = (NAME_ANIMATION_SPEEDS[cust.nameAnimationSpeed] || NAME_ANIMATION_SPEEDS.normal).duration;
+  const unameSpeed = (NAME_ANIMATION_SPEEDS[cust.usernameAnimationSpeed] || NAME_ANIMATION_SPEEDS.normal).duration;
+  const moveSpeed = (AVATAR_MOVEMENT_SPEEDS[cust.avatarMovementSpeed] || AVATAR_MOVEMENT_SPEEDS.normal).duration;
+  const moveClass = cust.avatarMovement !== 'none' ? `av-move-${cust.avatarMovement}` : '';
+  const hoverCls = cust.cardHoverEffect && cust.cardHoverEffect !== 'none' ? `hover-${cust.cardHoverEffect}` : '';
+  const pressCls = cust.cardPressEffect && cust.cardPressEffect !== 'none' ? `press-${cust.cardPressEffect}` : '';
+  const entranceCls = cust.cardEntrance && cust.cardEntrance !== 'fade' ? `entrance-${cust.cardEntrance}` : '';
+  const badge = NAME_BADGES[cust.nameBadge] || NAME_BADGES.none;
+  const badgeColor = cust.nameBadgeColor || '';
+  const badgeEffect = cust.nameBadgeEffect || 'inherit';
+  const badgeHTML = badge.emoji
+    ? `<span class="name-badge-sep ${badgeEffect === 'glow' ? 'glow' : ''}" style="${badgeColor ? `color:${badgeColor}` : ''}">${badge.emoji}</span>`
+    : '';
 
   setTimeout(async () => {
 
@@ -8957,11 +9798,34 @@ const tabs = [
 
   }, 50);
 
-  return `
-    <!-- ★ حُذف صف الرجوع الداخلي — انتقل إلى شريط الرأس -->
+  /* ★ إزالة كلاس الدخول بعد انتهاء الحركة */
+  setTimeout(() => {
+    document.querySelectorAll('.player-card').forEach(card => {
+      card.classList.remove(
+        'entrance-fade','entrance-slide_r','entrance-slide_l',
+        'entrance-slide_u','entrance-slide_d','entrance-zoom',
+        'entrance-flip','entrance-bounce','entrance-rotate'
+      );
+    });
+  }, 900);
 
-    <div class="player-card" style="${buildCardStyle(cust)}">
-<div class="pc-cover" data-action="cover-click" style="cursor:pointer;${buildCoverStyle(p, cust, theme)}">
+  // ✅✅✅ أضف هنا — قبل الـ return ✅✅✅
+  const themeAlpha1 = Math.round((cust.themeOpacity ?? 100) * 0.35).toString(16).padStart(2,'0');
+  const themeAlpha2 = Math.round((cust.themeOpacity ?? 100) * 0.12).toString(16).padStart(2,'0');
+  const themeFilter = 'hue-rotate(' + (cust.themeHue || 0) + 'deg) ' +
+                      'saturate(' + ((cust.themeSaturation ?? 100) / 100) + ') ' +
+                      'brightness(' + ((cust.themeBrightness ?? 100) / 100) + ')';
+  const themeAngle = (cust.themeGradientAngle || 180) + 'deg';
+/* ★ شغّل الموسيقى */
+setTimeout(() => playProfileMusic(p), 100);
+
+  return `<div class="player-card ${cust.coverOverlap ? 'cover-overlap' : ''} ${cust.showParticles ? 'particle-active' : ''} ${cust.showSparkles ? 'sparkle-active' : ''} ${hoverCls} ${pressCls} ${entranceCls}"
+     style="${buildCardStyle(cust)};--card-glow-c:${cust.cardGlowColor || '#00d2ff'};--sparkle-c:${cust.sparkleColor || '#fff'}">
+  ${buildCardParticleLayer(cust)}
+
+<div class="pc-cover ${cust.coverAnimType !== 'none' ? `cover-anim cover-anim-${cust.coverAnimType}` : ''}"
+     data-action="cover-click"
+     style="cursor:pointer;--anim-duration:${(AVATAR_MOVEMENT_SPEEDS[cust.coverAnimSpeed] || AVATAR_MOVEMENT_SPEEDS.normal).duration}s;${buildCoverStyle(p, cust, theme)}">
   ${buildCoverOverlayHTML(cust)}
   ${!p.coverUrl ? `
     <div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]});display:grid;place-items:center;color:rgba(255,255,255,.55);font-size:13px;font-weight:800;z-index:1">
@@ -8972,15 +9836,26 @@ const tabs = [
 
 <!-- ★ حُذف .pc-card-actions — انتقل إلى شريط الرأس -->
 
-<div class="pc-body-section" style="--tc1:${theme.colors[0]}35;--tc2:${theme.colors[1]}12;position:relative">
+<div class="pc-body-section"
+     style="--tc1:${theme.colors[0]}${themeAlpha1};
+            --tc2:${theme.colors[1]}${themeAlpha2};
+            --tc-angle:${themeAngle};
+            --tc-filter:${themeFilter};
+            position:relative">
   ${buildBgPattern(cust.bgPattern)}
   <div class="pc-body">
           <div class="pc-info">
-            <div class="pc-nick anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
-              ${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji ? `<span style="margin-inline-end:4px">${(NAME_BADGES[cust.nameBadge]||NAME_BADGES.none).emoji}</span>` : ''}
-              ${esc(p.name)} ${getAdminBadge(p)}
-            </div>
-            <div class="pc-user" style="${buildUsernameStyle(cust)}">@${esc(p.username)}</div>
+<div style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap">
+  <div class="pc-nick anim-name-${cust.nameAnimation}"
+       style="${buildNameStyle(cust)};--anim-duration:${nameAnimSpeed}s">
+    ${badgeHTML}${esc(p.name)}
+  </div>
+  ${getAdminBadge(p)}
+  ${cust.pronouns ? `<span class="pc-pronouns">${esc(cust.pronouns)}</span>` : ''}
+</div>
+            <div class="pc-user ${cust.usernameAnimation !== 'none' ? `anim-name-${cust.usernameAnimation}` : ''}" style="${buildUsernameStyle(cust)};--anim-duration:${unameSpeed}s">
+  ${cust.usernameShowAt ? '@' : ''}${esc(p.username)}
+</div>
             <div class="pc-joined" style="color:${cust.joinDateColor}">
               ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
             </div>
@@ -8989,11 +9864,17 @@ const tabs = [
 
             ${cust.location ? `<div class="pc-meta-row"><span style="color:${cust.locationColor}">${ic('location','xs')} ${esc(cust.location)}</span></div>` : ''}
 
-            <div class="pc-bio" style="${buildBioStyle(cust)}">${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
+            <div class="pc-bio" style="${buildBioStyle(cust)}">${
+              cust.bioIcon
+                ? `<span style="margin-inline-end:6px;${
+                    cust.bioIconColor ? `color:${cust.bioIconColor};text-shadow:0 0 8px ${cust.bioIconColor}88;` : ''
+                  }">${cust.bioIcon}</span>`
+                : ''
+            }${esc(p.bio||'').replace(/\n/g,'<br>')}</div>
           </div>
 
 <div class="avatar-sig-wrapper">
-  <div class="pc-avatar">
+  <div class="pc-avatar ${moveClass}" style="--move-duration:${moveSpeed}s">
     ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
   </div>
             <div class="sig-slider-preview" id="userSigSlider"
@@ -9003,12 +9884,14 @@ const tabs = [
           </div>
         </div>
 
-        <div class="pc-level">
-          <div class="pc-level-bar">
-            <span style="width:${Math.min(100,(p.xp||0)%100)}%;${cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` : ''}"></span>
-          </div>
-          <div class="pc-level-num" style="${cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : ''}">المستوى ${p.level||1}</div>
-        </div>
+<div class="pc-level">
+  <div class="pc-level-bar level-bar-${cust.levelBarStyle || 'gradient'}"
+       style="--lvl-bar-1:${cust.levelBarColor1};--lvl-bar-2:${cust.levelBarColor2};${cust.levelBarColor ? `--lvl-bar-single:${cust.levelBarColor};` : ''}">
+    <span style="width:${Math.min(100,(p.xp||0)%100)}%;${cust.levelBarColor ? `background:${cust.levelBarColor} !important;box-shadow:0 0 14px ${cust.levelBarColor};` : ''}"></span>
+  </div>
+  <div class="pc-level-num size-text-${cust.levelTextSize || 'md'}"
+       style="${cust.levelTextColor ? `background:${cust.levelTextColor};color:#070a11;` : ''}">المستوى ${p.level||1}</div>
+</div>
 
         <!-- ★★★ عدد المباريات والانتصارات ★★★ -->
         <div class="pc-match-stats" id="pcMatchStats_${p.uid}">
@@ -9188,8 +10071,8 @@ async function openFullPreviewModal(){
   const p = state.profile;
   if(!p) return;
   const cust = getProfileCustomization(p);
-  const theme = THEMES[p.equipped?.themeId || p.themeId || 'default'] || THEMES.default;
-  const frameClass = ANIMATED_FRAMES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+  const theme = THEMES_EXTENDED[p.equipped?.themeId || p.themeId || 'default'] || THEMES_EXTENDED.default;
+  const frameClass = FRAME_STYLES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
   const levelStyle = {
     default:'', badge:'background:linear-gradient(135deg,#a78bfa,#6c5ce7);',
     gem:'background:linear-gradient(135deg,#00d2ff,#0891b2);',
@@ -10289,10 +11172,12 @@ const PAGES = {
   war: pageWar,
   activity: pageActivity,
   season: pageSeason,
-customization: pageCustomization,
-gifts: pageGifts,
-gamestats: pageGameStats,
+  customization: pageCustomization,
+  gifts: pageGifts,
+  gamestats: pageGameStats,
   hashtag: pageHashtag,
+  posts: pagePosts,   /* ★ جديد */
+  post: pagePost,     /* ★ جديد */
 };
 
 function render(){
@@ -10314,7 +11199,15 @@ function render(){
   if(pageHeader){
     if(!isMain){
       const cfg = getPageHeaderConfig();
-      if(titleEl)   titleEl.textContent = cfg.title;
+      if(titleEl){
+        if(cfg.titleHTML){
+          titleEl.innerHTML = cfg.titleHTML;
+          titleEl.classList.add('has-html');
+        } else {
+          titleEl.textContent = cfg.title;
+          titleEl.classList.remove('has-html');
+        }
+      }
       if(actionsEl) actionsEl.innerHTML = cfg.actions;
       pageHeader.classList.remove('hidden');
     } else {
@@ -12327,7 +13220,7 @@ function renderZoneBody(zone, p, sub, cust, themeId, frameId){
    ══════════════════════════════════════════════════════════ */
 if(zone === 'signatures'){
   return `
-    <!-- ═══ تبويب: النمط ═══ -->
+    <!-- النمط -->
     <div class="cust-field" data-subtab="style">
       <label>نمط التوقيع</label>
       <div class="compact-chips">
@@ -12355,29 +13248,23 @@ if(zone === 'signatures'){
       </label>
     </div>
 
-    <!-- ═══ تبويب: اللون ═══ -->
+    <!-- اللون -->
     <div class="cust-field" data-subtab="color">
       <label>لون النص</label>
       <div class="color-strip">
-        ${NAME_COLOR_PRESETS.slice(0,20).map(c =>
-          `<button class="color-dot ${cust.sigColor===c?'active':''}" style="background:${c}" data-cust="sigColor" data-val="${c}"></button>`
-        ).join('')}
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.sigColor===c?'active':''}" style="background:${c}" data-cust="sigColor" data-val="${c}"></button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="color">
       <label>تدرج النص</label>
       <div class="compact-chips">
-        ${Object.entries(NAME_GRADIENTS).map(([k,g]) =>
-          `<button class="cchip ${cust.sigGradient===k?'active':''}" data-cust="sigGradient" data-val="${k}">${g.emoji} ${g.label}</button>`
-        ).join('')}
+        ${Object.entries(NAME_GRADIENTS).map(([k,g]) => `<button class="cchip ${cust.sigGradient===k?'active':''}" data-cust="sigGradient" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="color">
       <label>تأثير النص</label>
       <div class="compact-chips">
-        ${Object.entries(TEXT_EFFECTS).map(([k,e]) =>
-          `<button class="cchip ${cust.sigEffect===k?'active':''}" data-cust="sigEffect" data-val="${k}">${e.emoji} ${e.label}</button>`
-        ).join('')}
+        ${Object.entries(TEXT_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.sigEffect===k?'active':''}" data-cust="sigEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="color">
@@ -12386,9 +13273,7 @@ if(zone === 'signatures'){
         <button class="color-dot ${!cust.sigBg?'active':''}"
                 style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
                 data-cust="sigBg" data-val="" title="بدون"></button>
-        ${NAME_COLOR_PRESETS.slice(0,20).map(c =>
-          `<button class="color-dot ${cust.sigBg===c?'active':''}" style="background:${c}" data-cust="sigBg" data-val="${c}"></button>`
-        ).join('')}
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.sigBg===c?'active':''}" style="background:${c}" data-cust="sigBg" data-val="${c}"></button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="color">
@@ -12398,53 +13283,41 @@ if(zone === 'signatures'){
     <div class="cust-field" data-subtab="color">
       <label>لون الإطار</label>
       <div class="color-strip">
-        ${NAME_COLOR_PRESETS.slice(0,20).map(c =>
-          `<button class="color-dot ${cust.sigBorderColor===c?'active':''}" style="background:${c}" data-cust="sigBorderColor" data-val="${c}"></button>`
-        ).join('')}
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.sigBorderColor===c?'active':''}" style="background:${c}" data-cust="sigBorderColor" data-val="${c}"></button>`).join('')}
       </div>
     </div>
 
-    <!-- ═══ تبويب: الخط ═══ -->
+    <!-- الخط -->
     <div class="cust-field" data-subtab="font">
       <label>الحجم</label>
       <div class="compact-chips">
-        ${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) =>
-          `<button class="cchip ${cust.sigFontSize===v?'active':''}" data-cust="sigFontSize" data-val="${v}">${l}</button>`
-        ).join('')}
+        ${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) => `<button class="cchip ${cust.sigFontSize===v?'active':''}" data-cust="sigFontSize" data-val="${v}">${l}</button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="font">
       <label>السماكة</label>
       <div class="compact-chips">
-        ${Object.entries(FONT_WEIGHTS).map(([k,w]) =>
-          `<button class="cchip ${cust.sigFontWeight===k?'active':''}" data-cust="sigFontWeight" data-val="${k}" style="font-weight:${w.value}">${w.label}</button>`
-        ).join('')}
+        ${Object.entries(FONT_WEIGHTS).map(([k,w]) => `<button class="cchip ${cust.sigFontWeight===k?'active':''}" data-cust="sigFontWeight" data-val="${k}" style="font-weight:${w.value}">${w.label}</button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="font">
       <label>الخط</label>
       <div class="compact-chips">
-        ${Object.entries(SIGNATURE_FONTS).map(([k,f]) =>
-          `<button class="cchip ${cust.sigFontFamily===k?'active':''}" data-cust="sigFontFamily" data-val="${k}" style="font-family:${f.value}">${f.label}</button>`
-        ).join('')}
+        ${Object.entries(SIGNATURE_FONTS).map(([k,f]) => `<button class="cchip ${cust.sigFontFamily===k?'active':''}" data-cust="sigFontFamily" data-val="${k}" style="font-family:${f.value}">${f.label}</button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="font">
       <label>نمط الخط</label>
       <div class="compact-chips">
-        ${[['normal','عادي'],['italic','مائل'],['oblique','مائل 2']].map(([k,l]) =>
-          `<button class="cchip ${cust.sigFontStyle===k?'active':''}" data-cust="sigFontStyle" data-val="${k}">${l}</button>`
-        ).join('')}
+        ${[['normal','عادي'],['italic','مائل'],['oblique','مائل 2']].map(([k,l]) => `<button class="cchip ${cust.sigFontStyle===k?'active':''}" data-cust="sigFontStyle" data-val="${k}">${l}</button>`).join('')}
       </div>
     </div>
 
-    <!-- ═══ تبويب: التخطيط ═══ -->
+    <!-- التخطيط -->
     <div class="cust-field" data-subtab="layout">
       <label>المحاذاة</label>
       <div class="compact-chips">
-        ${[['right','يمين'],['center','وسط'],['left','يسار']].map(([k,l]) =>
-          `<button class="cchip ${cust.sigAlign===k?'active':''}" data-cust="sigAlign" data-val="${k}">${l}</button>`
-        ).join('')}
+        ${[['right','يمين'],['center','وسط'],['left','يسار']].map(([k,l]) => `<button class="cchip ${cust.sigAlign===k?'active':''}" data-cust="sigAlign" data-val="${k}">${l}</button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="layout">
@@ -12476,7 +13349,7 @@ if(zone === 'signatures'){
       </div>
     </div>
 
-    <!-- ═══ تبويب: الحركة ═══ -->
+    <!-- الحركة -->
     <div class="cust-field" data-subtab="animation">
       <label>حركة التوقيع</label>
       <div class="compact-chips">
@@ -12486,13 +13359,13 @@ if(zone === 'signatures'){
       </div>
     </div>
 
-    <!-- ═══ تبويب: العرض ═══ -->
+    <!-- العرض -->
     <div class="cust-field" data-subtab="display">
       <label>عدد التواقيع المعروضة <span class="range-val" id="sigDisplayCountVal">${cust.sigDisplayCount}</span></label>
       <input type="range" class="crop-slider" id="sigDisplayCountSlider" min="1" max="10" value="${cust.sigDisplayCount}">
     </div>
     <div class="info-hint">
-      💡 هذه التخصيصات تُطبَّق على <b>قسم التواقيع</b> في ملفك الشخصي عند الزوار
+      💡 هذه التخصيصات تُطبَّق على <b>قسم التواقيع</b> في ملفك الشخصي
     </div>
   `;
 }
@@ -12502,7 +13375,7 @@ if(zone === 'signatures'){
    ══════════════════════════════════════════════════════════ */
 if(zone === 'posts'){
   return `
-    <!-- ═══ تبويب: النمط ═══ -->
+    <!-- النمط -->
     <div class="cust-field" data-subtab="style">
       <label>نمط بطاقة المنشور</label>
       <div class="compact-chips">
@@ -12518,7 +13391,7 @@ if(zone === 'posts'){
       </label>
     </div>
 
-    <!-- ═══ تبويب: التخطيط ═══ -->
+    <!-- التخطيط -->
     <div class="cust-field" data-subtab="layout">
       <label>تخطيط المنشور</label>
       <div class="compact-chips">
@@ -12548,16 +13421,14 @@ if(zone === 'posts'){
       <input type="range" class="crop-slider" id="postBorderWidthSlider" min="0" max="4" value="${cust.postBorderWidth}">
     </div>
 
-    <!-- ═══ تبويب: الألوان ═══ -->
+    <!-- الألوان -->
     <div class="cust-field" data-subtab="colors">
       <label>لون خلفية المنشور</label>
       <div class="color-strip">
         <button class="color-dot ${!cust.postBgColor?'active':''}"
                 style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
                 data-cust="postBgColor" data-val="" title="افتراضي"></button>
-        ${NAME_COLOR_PRESETS.slice(0,20).map(c =>
-          `<button class="color-dot ${cust.postBgColor===c?'active':''}" style="background:${c}" data-cust="postBgColor" data-val="${c}"></button>`
-        ).join('')}
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.postBgColor===c?'active':''}" style="background:${c}" data-cust="postBgColor" data-val="${c}"></button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="colors">
@@ -12570,9 +13441,7 @@ if(zone === 'posts'){
         <button class="color-dot ${!cust.postBorderColor?'active':''}"
                 style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
                 data-cust="postBorderColor" data-val="" title="افتراضي"></button>
-        ${NAME_COLOR_PRESETS.slice(0,20).map(c =>
-          `<button class="color-dot ${cust.postBorderColor===c?'active':''}" style="background:${c}" data-cust="postBorderColor" data-val="${c}"></button>`
-        ).join('')}
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.postBorderColor===c?'active':''}" style="background:${c}" data-cust="postBorderColor" data-val="${c}"></button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="colors">
@@ -12581,9 +13450,7 @@ if(zone === 'posts'){
         <button class="color-dot ${!cust.postNameColor?'active':''}"
                 style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
                 data-cust="postNameColor" data-val="" title="افتراضي"></button>
-        ${NAME_COLOR_PRESETS.slice(0,20).map(c =>
-          `<button class="color-dot ${cust.postNameColor===c?'active':''}" style="background:${c}" data-cust="postNameColor" data-val="${c}"></button>`
-        ).join('')}
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.postNameColor===c?'active':''}" style="background:${c}" data-cust="postNameColor" data-val="${c}"></button>`).join('')}
       </div>
     </div>
     <div class="cust-field" data-subtab="colors">
@@ -12592,13 +13459,11 @@ if(zone === 'posts'){
         <button class="color-dot ${!cust.postTextColor?'active':''}"
                 style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
                 data-cust="postTextColor" data-val="" title="افتراضي"></button>
-        ${NAME_COLOR_PRESETS.slice(0,20).map(c =>
-          `<button class="color-dot ${cust.postTextColor===c?'active':''}" style="background:${c}" data-cust="postTextColor" data-val="${c}"></button>`
-        ).join('')}
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.postTextColor===c?'active':''}" style="background:${c}" data-cust="postTextColor" data-val="${c}"></button>`).join('')}
       </div>
     </div>
 
-    <!-- ═══ تبويب: التوهج ═══ -->
+    <!-- التوهج -->
     <div class="cust-field" data-subtab="glow">
       <label>توهج بطاقة المنشور</label>
       <div class="compact-chips">
@@ -12608,7 +13473,7 @@ if(zone === 'posts'){
       </div>
     </div>
     <div class="info-hint">
-      💡 هذه التخصيصات تُطبَّق على <b>منشوراتك</b> التي تظهر في الصفحة الرئيسية وملفك
+      💡 هذه التخصيصات تُطبَّق على <b>منشوراتك</b> في الصفحة الرئيسية وملفك
     </div>
   `;
 }
@@ -12616,636 +13481,508 @@ if(zone === 'posts'){
   /* ══════════════════════════════════════════════════════════
      🖼️ الغلاف — 3 تبويبات: الصورة / النمط / التأثير
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'cover'){
-    return `
-      <!-- ═══ تبويب: الصورة ═══ -->
-      <div class="cust-field" data-subtab="image">
-        <label>الصورة</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" data-change-image="cover">${ic('camera','xs')} ${p.coverUrl?'تغيير':'إضافة'}</button>
-          ${p.coverUrl ? `<button class="btn btn-ghost btn-sm" data-recrop-cover="1">${ic('edit','xs')} اقتصاص</button><button class="btn btn-ghost btn-sm" data-delete-image="cover">${ic('trash','xs')} حذف</button>` : ''}
-        </div>
+if(zone === 'cover'){
+  const patternSizes = [8, 12, 16, 20, 24, 32, 40, 56];
+  return `
+    <!-- ═══ تبويب: الصورة ═══ -->
+    <div class="cust-field" data-subtab="image">
+      <label>الصورة</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" data-change-image="cover">${ic('camera','xs')} ${p.coverUrl?'تغيير':'إضافة'}</button>
+        ${p.coverUrl ? `<button class="btn btn-ghost btn-sm" data-recrop-cover="1">${ic('edit','xs')} اقتصاص</button><button class="btn btn-ghost btn-sm" data-delete-image="cover">${ic('trash','xs')} حذف</button>` : ''}
       </div>
-      <div class="cust-field" data-subtab="image">
-        <label>التدرج الاحتياطي (بدون صورة)</label>
-        <div class="color-strip">
-          ${COVER_PRESETS.map(cp => `<button class="cover-preset-btn ${cust.coverPreset===cp.id?'active':''}" data-cust="coverPreset" data-val="${cp.id}" style="background:${cp.css}" title="${cp.name}"></button>`).join('')}
-        </div>
+    </div>
+    <div class="cust-field" data-subtab="image">
+      <label>التدرج الاحتياطي</label>
+      <div class="color-strip">
+        ${COVER_PRESETS.map(cp => `<button class="cover-preset-btn ${cust.coverPreset===cp.id?'active':''}" data-cust="coverPreset" data-val="${cp.id}" style="background:${cp.css}" title="${cp.name}"></button>`).join('')}
       </div>
-      ${p.coverUrl ? `
-        <div class="cust-field" data-subtab="image"><label>الضبابية <span class="range-val" id="coverBlurVal">${cust.coverBlur}px</span></label><input type="range" class="crop-slider" id="coverBlurSlider" min="0" max="15" value="${cust.coverBlur}"></div>
-        <div class="cust-field" data-subtab="image"><label>الزوم <span class="range-val" id="coverZoomVal">${cust.coverZoom}%</span></label><input type="range" class="crop-slider" id="coverZoomSlider" min="50" max="200" value="${cust.coverZoom}"></div>
-        <div class="cust-field" data-subtab="image"><label>السطوع <span class="range-val" id="coverBrightnessVal">${cust.coverBrightnessNew}%</span></label><input type="range" class="crop-slider" id="coverBrightnessSlider" min="30" max="180" value="${cust.coverBrightnessNew}"></div>
-        <div class="cust-field" data-subtab="image"><label>التباين <span class="range-val" id="coverContrastVal">${cust.coverContrast}%</span></label><input type="range" class="crop-slider" id="coverContrastSlider" min="50" max="200" value="${cust.coverContrast}"></div>
-        <div class="cust-field" data-subtab="image"><label>التشبع <span class="range-val" id="coverSaturationVal">${cust.coverSaturation}%</span></label><input type="range" class="crop-slider" id="coverSaturationSlider" min="0" max="200" value="${cust.coverSaturation}"></div>
-        <div class="cust-field" data-subtab="image"><label>درجة اللون <span class="range-val" id="coverHueVal">${cust.coverHue}°</span></label><input type="range" class="crop-slider" id="coverHueSlider" min="-180" max="180" value="${cust.coverHue}"></div>
-        <div class="cust-field" data-subtab="image"><label>الشفافية <span class="range-val" id="coverOpacityVal">${cust.coverOpacity}%</span></label><input type="range" class="crop-slider" id="coverOpacitySlider" min="20" max="100" value="${cust.coverOpacity}"></div>
-      ` : ''}
+    </div>
+    ${p.coverUrl ? `
+      <div class="cust-field" data-subtab="image"><label>الضبابية <span class="range-val" id="coverBlurVal">${cust.coverBlur}px</span></label><input type="range" class="crop-slider" id="coverBlurSlider" min="0" max="15" value="${cust.coverBlur}"></div>
+      <div class="cust-field" data-subtab="image"><label>الزوم <span class="range-val" id="coverZoomVal">${cust.coverZoom}%</span></label><input type="range" class="crop-slider" id="coverZoomSlider" min="50" max="200" value="${cust.coverZoom}"></div>
+      <div class="cust-field" data-subtab="image"><label>السطوع <span class="range-val" id="coverBrightnessVal">${cust.coverBrightness}%</span></label><input type="range" class="crop-slider" id="coverBrightnessSlider" min="30" max="180" value="${cust.coverBrightness}"></div>
+      <div class="cust-field" data-subtab="image"><label>التباين <span class="range-val" id="coverContrastVal">${cust.coverContrast}%</span></label><input type="range" class="crop-slider" id="coverContrastSlider" min="50" max="200" value="${cust.coverContrast}"></div>
+      <div class="cust-field" data-subtab="image"><label>التشبع <span class="range-val" id="coverSaturationVal">${cust.coverSaturation}%</span></label><input type="range" class="crop-slider" id="coverSaturationSlider" min="0" max="200" value="${cust.coverSaturation}"></div>
+      <div class="cust-field" data-subtab="image"><label>درجة اللون <span class="range-val" id="coverHueVal">${cust.coverHue}°</span></label><input type="range" class="crop-slider" id="coverHueSlider" min="-180" max="180" value="${cust.coverHue}"></div>
+      <div class="cust-field" data-subtab="image"><label>الشفافية <span class="range-val" id="coverOpacityVal">${cust.coverOpacity}%</span></label><input type="range" class="crop-slider" id="coverOpacitySlider" min="20" max="100" value="${cust.coverOpacity}"></div>
+    ` : ''}
 
-      <!-- ═══ تبويب: النمط ═══ -->
-      <div class="cust-field" data-subtab="style"><label>النمط</label><div class="compact-chips">${Object.entries(COVER_PATTERNS).map(([k,v]) => `<button class="cchip ${cust.coverPattern===k?'active':''}" data-cust="coverPattern" data-val="${k}">${v.emoji} ${v.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="style"><label>لون النمط</label><div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.coverPatternColor===c?'active':''}" style="background:${c}" data-cust="coverPatternColor" data-val="${c}"></button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="style"><label>الطبقة الفوقية</label><div class="compact-chips">${Object.entries(COVER_OVERLAYS).map(([k,v]) => `<button class="cchip ${cust.coverOverlayStyle===k?'active':''}" data-cust="coverOverlayStyle" data-val="${k}">${v.emoji} ${v.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="style"><label>الحواف <span class="range-val" id="coverVignetteVal">${cust.coverVignette}%</span></label><input type="range" class="crop-slider" id="coverVignetteSlider" min="0" max="100" value="${cust.coverVignette}"></div>
-      <div class="cust-field" data-subtab="style"><label>استدارة الغلاف <span class="range-val" id="coverRadiusVal">${cust.coverRadius}px</span></label><input type="range" class="crop-slider" id="coverRadiusSlider" min="0" max="40" value="${cust.coverRadius}"></div>
+    <!-- ═══ تبويب: النمط ═══ -->
+    <div class="cust-field" data-subtab="style"><label>النمط</label><div class="compact-chips">${Object.entries(COVER_PATTERNS).map(([k,v]) => `<button class="cchip ${cust.coverPattern===k?'active':''}" data-cust="coverPattern" data-val="${k}">${v.emoji} ${v.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="style"><label>لون النمط</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.coverPatternColor===c?'active':''}" style="background:${c}" data-cust="coverPatternColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="style"><label>حجم النمط <span class="range-val" id="coverPatternSizeVal">${cust.coverPatternSize}px</span></label><input type="range" class="crop-slider" id="coverPatternSizeSlider" min="8" max="56" step="4" value="${cust.coverPatternSize}"></div>
+    <div class="cust-field" data-subtab="style"><label>شفافية النمط <span class="range-val" id="coverPatternOpacityVal">${cust.coverPatternOpacity}%</span></label><input type="range" class="crop-slider" id="coverPatternOpacitySlider" min="0" max="100" value="${cust.coverPatternOpacity}"></div>
+    <div class="cust-field" data-subtab="style"><label>الطبقة الفوقية</label><div class="compact-chips">${Object.entries(COVER_OVERLAYS).map(([k,v]) => `<button class="cchip ${cust.coverOverlayStyle===k?'active':''}" data-cust="coverOverlayStyle" data-val="${k}">${v.emoji} ${v.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="style"><label>الحواف <span class="range-val" id="coverVignetteVal">${cust.coverVignette}%</span></label><input type="range" class="crop-slider" id="coverVignetteSlider" min="0" max="100" value="${cust.coverVignette}"></div>
+    <div class="cust-field" data-subtab="style"><label>الاستدارة <span class="range-val" id="coverRadiusVal">${cust.coverRadius}px</span></label><input type="range" class="crop-slider" id="coverRadiusSlider" min="0" max="40" value="${cust.coverRadius}"></div>
+    <div class="cust-field" data-subtab="style">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="coverOverlapChk" ${cust.coverOverlap?'checked':''} style="width:auto">
+        <span>تداخل الغلاف مع الثيم (يصل أسفل الصورة الشخصية)</span>
+      </label>
+    </div>
 
-      <!-- ═══ تبويب: التأثير ═══ -->
-      <div class="cust-field" data-subtab="effect">
-        <label>تأثير متحرك ${!canUseBannerEffect(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canUseBannerEffect(p) ? `<div class="compact-chips">${Object.entries(BANNER_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.bannerEffect===k?'active':''}" data-cust="bannerEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      <div class="cust-field" data-subtab="effect">
-        <label>نوع الحركة ${!canUseBannerEffect(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canUseBannerEffect(p) ? `<div class="compact-chips">${[['none','بدون'],['pan','تحريك'],['zoom','تكبير/تصغير'],['pulse','نبض'],['sway','تمايل']].map(([k,l]) => `<button class="cchip ${cust.coverAnimType===k?'active':''}" data-cust="coverAnimType" data-val="${k}">${l}</button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-    `;
-  }
+    <!-- ═══ تبويب: التأثير ═══ -->
+    <div class="cust-field" data-subtab="effect"><label>تأثير متحرك</label><div class="compact-chips">${Object.entries(COVER_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.bannerEffect===k?'active':''}" data-cust="bannerEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="effect"><label>لون التأثير</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.coverEffectColor===c?'active':''}" style="background:${c}" data-cust="coverEffectColor" data-val="${c}"></button>`).join('')}</div></div>
+
+    <!-- ═══ تبويب: الحركة ═══ -->
+    <div class="cust-field" data-subtab="anim"><label>نوع الحركة</label><div class="compact-chips">${Object.entries(COVER_ANIMATIONS).map(([k,l]) => `<button class="cchip ${cust.coverAnimType===k?'active':''}" data-cust="coverAnimType" data-val="${k}">${l.emoji} ${l.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="anim"><label>سرعة الحركة</label><div class="compact-chips">${Object.entries(AVATAR_MOVEMENT_SPEEDS).map(([k,s]) => `<button class="cchip ${cust.coverAnimSpeed===k?'active':''}" data-cust="coverAnimSpeed" data-val="${k}">${s.label}</button>`).join('')}</div></div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      👤 الصورة الشخصية — 4 تبويبات: الشكل / الإطار / التأثيرات / الزخرفة
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'avatar'){
-    return `
-      <!-- ═══ تبويب: الشكل ═══ -->
-      <div class="cust-field" data-subtab="shape">
-        <label>الصورة</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" data-change-image="avatar">${ic('camera','xs')} ${p.avatarUrl?'تغيير':'إضافة'}</button>
-          ${p.avatarUrl ? `<button class="btn btn-ghost btn-sm" data-delete-image="avatar">${ic('trash','xs')} حذف</button>` : ''}
-        </div>
+if(zone === 'avatar'){
+  return `
+    <!-- الشكل -->
+    <div class="cust-field" data-subtab="shape">
+      <label>الصورة</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" data-change-image="avatar">${ic('camera','xs')} ${p.avatarUrl?'تغيير':'إضافة'}</button>
+        ${p.avatarUrl ? `<button class="btn btn-ghost btn-sm" data-delete-image="avatar">${ic('trash','xs')} حذف</button>` : ''}
       </div>
-      <div class="cust-field" data-subtab="shape">
-        <label>الشكل ${!canCustomizeShape(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeShape(p) ? `<div class="shape-picker-row">${Object.entries(AVATAR_SHAPES).map(([k,s]) => `<button class="shape-btn ${cust.avatarShape===k?'active':''}" data-cust="avatarShape" data-val="${k}" title="${s.label}"><div style="width:32px;height:32px;background:var(--grad);${s.clip?`clip-path:${s.clip};border-radius:0;`:`border-radius:${s.radius};`}"></div></button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      <div class="cust-field" data-subtab="shape">
-        <label>حجم الصورة <span class="range-val" id="avatarSizeVal">${cust.avatarSize}px</span></label>
-        <input type="range" class="crop-slider" id="avatarSizeSlider" min="60" max="140" value="${cust.avatarSize}">
-      </div>
-      <div class="cust-field" data-subtab="shape">
-        <label>نمط الإطار ${!canCustomizeBorder(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeBorder(p) ? `<div class="compact-chips">${Object.entries(AVATAR_BORDERS).map(([k,b]) => `<button class="cchip ${cust.avatarBorder===k?'active':''}" data-cust="avatarBorder" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      <div class="cust-field" data-subtab="shape">
-        <label>نمط خط الحدود</label>
-        <div class="compact-chips">
-          ${[['solid','صلب'],['dashed','متقطع'],['dotted','منقط'],['double','مزدوج'],['none','بدون']].map(([k,l]) => `<button class="cchip ${cust.avatarBorderStyle===k?'active':''}" data-cust="avatarBorderStyle" data-val="${k}">${l}</button>`).join('')}
-        </div>
-      </div>
+    </div>
+    <div class="cust-field" data-subtab="shape"><label>الشكل</label><div class="shape-picker-row">${Object.entries(AVATAR_SHAPES).map(([k,s]) => `<button class="shape-btn ${cust.avatarShape===k?'active':''}" data-cust="avatarShape" data-val="${k}" title="${s.label}"><div style="width:32px;height:32px;background:linear-gradient(135deg,${cust.frameColor1},${cust.frameColor2});${s.clip?`clip-path:${s.clip};border-radius:0;`:`border-radius:${s.radius};`}"></div></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="shape"><label>حجم الصورة <span class="range-val" id="avatarSizeVal">${cust.avatarSize}px</span></label><input type="range" class="crop-slider" id="avatarSizeSlider" min="60" max="140" value="${cust.avatarSize}"></div>
 
-      <!-- ═══ تبويب: الإطار ═══ -->
-      <div class="cust-field" data-subtab="frame">
-        <label>الإطار ${!canUseFrame(p, frameId)?'<span class="lock-hint">🔒</span>':''}</label>
-        <div class="frame-picker-row">
-          ${Object.entries(FRAME_STYLES).map(([k,f]) => {
-            const canUse = canUseFrame(p, k);
-            return `<button class="frame-btn ${frameId===k?'active':''} ${!canUse?'locked':''}" ${canUse?`data-set-frame="${k}"`:`data-buy-frame="${k}"`} title="${f.name}"><div style="width:30px;height:30px;border-radius:50%;background:var(--grad);position:relative;" class="${f.class||''}"><span style="position:absolute;inset:0;display:grid;place-items:center;font-weight:900;color:#fff;font-size:12px">${(p.name||'?').charAt(0)}</span></div>${!canUse ? `<span class="frame-lock-mini">${ic('lock','xs')}</span>` : ''}</button>`;
-          }).join('')}
-        </div>
-      </div>
-      <div class="cust-field" data-subtab="frame">
-        <label>اللون الأول للإطار</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.frameColor1===c?'active':''}" style="background:${c}" data-cust="frameColor1" data-val="${c}"></button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="frame">
-        <label>اللون الثاني للإطار</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.frameColor2===c?'active':''}" style="background:${c}" data-cust="frameColor2" data-val="${c}"></button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="frame">
-        <label>سماكة الإطار <span class="range-val" id="frameThicknessVal">${cust.frameThickness}px</span></label>
-        <input type="range" class="crop-slider" id="frameThicknessSlider" min="1" max="12" value="${cust.frameThickness}">
-      </div>
-      <div class="cust-field" data-subtab="frame">
-        <label>شدة التوهج <span class="range-val" id="frameGlowVal">${cust.frameGlowIntensity}</span></label>
-        <input type="range" class="crop-slider" id="frameGlowSlider" min="0" max="100" value="${cust.frameGlowIntensity}">
-      </div>
+    <div class="cust-field" data-subtab="shape"><label>نمط الإطار</label><div class="compact-chips">${Object.entries(AVATAR_BORDERS).map(([k,b]) => `<button class="cchip ${cust.avatarBorder===k?'active':''}" data-cust="avatarBorder" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="shape"><label>شكل خط الحدود</label><div class="compact-chips">${[['solid','صلب'],['dashed','متقطع'],['dotted','منقط'],['double','مزدوج'],['groove','محزوز'],['ridge','بارز'],['none','بدون']].map(([k,l]) => `<button class="cchip ${cust.avatarBorderStyle===k?'active':''}" data-cust="avatarBorderStyle" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="shape"><label>سماكة الحدود <span class="range-val" id="avatarBorderWidthVal">${cust.avatarBorderWidth}px</span></label><input type="range" class="crop-slider" id="avatarBorderWidthSlider" min="1" max="12" value="${cust.avatarBorderWidth}"></div>
 
-      <!-- ═══ تبويب: التأثيرات ═══ -->
-      <div class="cust-field" data-subtab="effects">
-        <label>الدوران <span class="range-val" id="avatarRotationVal">${cust.avatarRotation}°</span></label>
-        <input type="range" class="crop-slider" id="avatarRotationSlider" min="0" max="360" value="${cust.avatarRotation}">
+    <!-- الإطار -->
+    <div class="cust-field" data-subtab="frame">
+      <label>الإطار المتحرك</label>
+      <div class="frame-picker-row">
+        ${Object.entries(FRAME_STYLES).map(([k,f]) => `
+          <button class="frame-btn ${frameId===k?'active':''}" data-set-frame="${k}" title="${f.name}">
+            <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,${cust.frameColor1},${cust.frameColor2});position:relative;" class="${f.class||''}">
+              <span style="position:absolute;inset:0;display:grid;place-items:center;font-weight:900;color:#fff;font-size:12px">${(p.name||'?').charAt(0)}</span>
+            </div>
+          </button>
+        `).join('')}
       </div>
-      <div class="cust-field" data-subtab="effects">
-        <label>الحجم <span class="range-val" id="avatarScaleVal">${Math.round(cust.avatarScale*100)}%</span></label>
-        <input type="range" class="crop-slider" id="avatarScaleSlider" min="70" max="130" value="${Math.round(cust.avatarScale*100)}">
-      </div>
-      <div class="cust-field" data-subtab="effects">
-        <label>إزاحة أفقية <span class="range-val" id="avatarOffsetXVal">${cust.avatarOffsetX}px</span></label>
-        <input type="range" class="crop-slider" id="avatarOffsetXSlider" min="-20" max="20" value="${cust.avatarOffsetX}">
-      </div>
-      <div class="cust-field" data-subtab="effects">
-        <label>إزاحة عمودية <span class="range-val" id="avatarOffsetYVal">${cust.avatarOffsetY}px</span></label>
-        <input type="range" class="crop-slider" id="avatarOffsetYSlider" min="-20" max="20" value="${cust.avatarOffsetY}">
-      </div>
-      <div class="cust-field" data-subtab="effects">
-        <label>الفلتر ${!canCustomizeShape(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeShape(p) ? `<div class="compact-chips">${Object.entries(AVATAR_FILTERS_EXTENDED).map(([k,f]) => `<button class="cchip ${cust.avatarFilter===k?'active':''}" data-cust="avatarFilter" data-val="${k}">${f.emoji} ${f.label}</button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      ${['solid','glow'].includes(cust.avatarBorder) && canCustomizeBorder(p) ? `
-        <div class="cust-field" data-subtab="effects"><label>سماكة الحدود <span class="range-val" id="avatarBorderWidthVal">${cust.avatarBorderWidth}px</span></label><input type="range" class="crop-slider" id="avatarBorderWidthSlider" min="1" max="10" value="${cust.avatarBorderWidth}"></div>
-        <div class="cust-field" data-subtab="effects"><label>لون الحدود</label><div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.avatarBorderColor===c?'active':''}" style="background:${c}" data-cust="avatarBorderColor" data-val="${c}"></button>`).join('')}</div></div>
-      ` : ''}
-      <div class="cust-field" data-subtab="effects">
-        <label>لون التوهج</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.avatarGlowColor===c?'active':''}" style="background:${c}" data-cust="avatarGlowColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="effects">
-        <label>شدة التوهج <span class="range-val" id="avatarGlowIntensityVal">${cust.avatarGlowIntensity}</span></label>
-        <input type="range" class="crop-slider" id="avatarGlowIntensitySlider" min="0" max="100" value="${cust.avatarGlowIntensity}">
-      </div>
-      <div class="cust-field" data-subtab="effects">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="avatarBreathingChk" ${cust.avatarBreathing?'checked':''} style="width:auto">
-          <span>تنفس (حركة مستمرة)</span>
-        </label>
-      </div>
+    </div>
+    <div class="cust-field" data-subtab="frame"><label>لون الإطار الأول</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.frameColor1===c?'active':''}" style="background:${c}" data-cust="frameColor1" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="frame"><label>لون الإطار الثاني</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.frameColor2===c?'active':''}" style="background:${c}" data-cust="frameColor2" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="frame"><label>سماكة الإطار <span class="range-val" id="frameThicknessVal">${cust.frameThickness}px</span></label><input type="range" class="crop-slider" id="frameThicknessSlider" min="1" max="12" value="${cust.frameThickness}"></div>
 
-      <!-- ═══ تبويب: الزخرفة ═══ -->
-      <div class="cust-field" data-subtab="decoration">
-        <label>الزخرفة</label>
-        <div class="compact-chips">${Object.entries(AVATAR_DECORATIONS).map(([k,d]) => `<button class="cchip ${cust.avatarDecoration===k?'active':''}" data-cust="avatarDecoration" data-val="${k}">${d.emoji} ${d.label}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="decoration">
-        <label>لون الزخرفة</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.avatarDecorationColor===c?'active':''}" style="background:${c}" data-cust="avatarDecorationColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="decoration">
-        <label>نمط الخلفية</label>
-        <div class="compact-chips">${Object.entries(AVATAR_BG_PATTERNS).map(([k,b]) => `<button class="cchip ${cust.avatarBgPattern===k?'active':''}" data-cust="avatarBgPattern" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="decoration">
-        <label>لون الخلفية</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.avatarBgColor===c?'active':''}" style="background:${c}" data-cust="avatarBgColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
-    `;
-  }
+    <!-- التأثيرات -->
+    <div class="cust-field" data-subtab="effects"><label>الدوران <span class="range-val" id="avatarRotationVal">${cust.avatarRotation}°</span></label><input type="range" class="crop-slider" id="avatarRotationSlider" min="0" max="360" value="${cust.avatarRotation}"></div>
+    <div class="cust-field" data-subtab="effects"><label>الحجم <span class="range-val" id="avatarScaleVal">${Math.round(cust.avatarScale*100)}%</span></label><input type="range" class="crop-slider" id="avatarScaleSlider" min="70" max="130" value="${Math.round(cust.avatarScale*100)}"></div>
+    <div class="cust-field" data-subtab="effects"><label>إزاحة أفقية <span class="range-val" id="avatarOffsetXVal">${cust.avatarOffsetX}px</span></label><input type="range" class="crop-slider" id="avatarOffsetXSlider" min="-20" max="20" value="${cust.avatarOffsetX}"></div>
+    <div class="cust-field" data-subtab="effects"><label>إزاحة عمودية <span class="range-val" id="avatarOffsetYVal">${cust.avatarOffsetY}px</span></label><input type="range" class="crop-slider" id="avatarOffsetYSlider" min="-20" max="20" value="${cust.avatarOffsetY}"></div>
+    <div class="cust-field" data-subtab="effects"><label>الفلتر</label><div class="compact-chips">${Object.entries(AVATAR_FILTERS_EXTENDED).map(([k,f]) => `<button class="cchip ${cust.avatarFilter===k?'active':''}" data-cust="avatarFilter" data-val="${k}">${f.emoji} ${f.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="effects"><label>لون التوهج</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.avatarGlowColor===c?'active':''}" style="background:${c}" data-cust="avatarGlowColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="effects"><label>شدة التوهج <span class="range-val" id="avatarGlowIntensityVal">${cust.avatarGlowIntensity}</span></label><input type="range" class="crop-slider" id="avatarGlowIntensitySlider" min="0" max="100" value="${cust.avatarGlowIntensity}"></div>
+
+    <!-- ★ الحركة -->
+    <div class="cust-field" data-subtab="movement"><label>نوع الحركة</label><div class="compact-chips">${Object.entries(AVATAR_MOVEMENTS).map(([k,m]) => `<button class="cchip ${cust.avatarMovement===k?'active':''}" data-cust="avatarMovement" data-val="${k}">${m.emoji} ${m.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="movement"><label>سرعة الحركة</label><div class="compact-chips">${Object.entries(AVATAR_MOVEMENT_SPEEDS).map(([k,s]) => `<button class="cchip ${cust.avatarMovementSpeed===k?'active':''}" data-cust="avatarMovementSpeed" data-val="${k}">${s.label}</button>`).join('')}</div></div>
+
+    <!-- الزخرفة -->
+    <div class="cust-field" data-subtab="decoration"><label>الزخرفة</label><div class="compact-chips">${Object.entries(AVATAR_DECORATIONS).map(([k,d]) => `<button class="cchip ${cust.avatarDecoration===k?'active':''}" data-cust="avatarDecoration" data-val="${k}">${d.emoji || 'بدون'} ${d.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="decoration"><label>لون الزخرفة (لا يؤثر على الإيموجي)</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.avatarDecorationColor===c?'active':''}" style="background:${c}" data-cust="avatarDecorationColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="decoration"><label>موضع الزخرفة</label><div class="compact-chips">${Object.entries(DECORATION_POSITIONS).map(([k,pos]) => `<button class="cchip ${cust.avatarDecorationPosition===k?'active':''}" data-cust="avatarDecorationPosition" data-val="${k}">${pos.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="decoration"><label>حجم الزخرفة <span class="range-val" id="avatarDecorationSizeVal">${cust.avatarDecorationSize}%</span></label><input type="range" class="crop-slider" id="avatarDecorationSizeSlider" min="50" max="200" value="${cust.avatarDecorationSize}"></div>
+    <div class="cust-field" data-subtab="decoration"><label>نمط خلفية الصورة</label><div class="compact-chips">${Object.entries(AVATAR_BG_PATTERNS).map(([k,b]) => `<button class="cchip ${cust.avatarBgPattern===k?'active':''}" data-cust="avatarBgPattern" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="decoration"><label>لون خلفية الصورة</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.avatarBgColor===c?'active':''}" style="background:${c}" data-cust="avatarBgColor" data-val="${c}"></button>`).join('')}</div></div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      ✏️ الاسم — 4 تبويبات: اللون / الخط / التأثير / الشارة
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'name'){
-    return `
-      <!-- ═══ تبويب: اللون ═══ -->
-      <div class="cust-field" data-subtab="color">
-        <label>اللون ${!canCustomizeNameColor(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeNameColor(p) ? `<div class="color-strip">${NAME_COLOR_PRESETS.map(c => `<button class="color-dot ${cust.nameColor===c?'active':''}" style="background:${c}" data-cust="nameColor" data-val="${c}"></button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      <div class="cust-field" data-subtab="color">
-        <label>التدرج ${!canCustomizeNameColor(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeNameColor(p) ? `<div class="compact-chips">${Object.entries(NAME_GRADIENTS).map(([k,g]) => `<button class="cchip ${cust.nameGradient2===k?'active':''}" data-cust="nameGradient2" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div><div class="info-hint">⚠️ عند اختيار تدرج، يُطبَّق بدل اللون</div>` : ''}
-      </div>
-      <div class="cust-field" data-subtab="color">
-        <label>لون الظل</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.nameShadowColor===c?'active':''}" style="background:${c}" data-cust="nameShadowColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
+if(zone === 'name'){
+  return `
+    <!-- اللون -->
+    <div class="cust-field" data-subtab="color"><label>اللون</label><div class="color-strip">${NAME_COLOR_PRESETS.map(c => `<button class="color-dot ${cust.nameColor===c?'active':''}" style="background:${c}" data-cust="nameColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="color"><label>التدرج</label><div class="compact-chips">${Object.entries(NAME_GRADIENTS).map(([k,g]) => `<button class="cchip ${cust.nameGradient2===k?'active':''}" data-cust="nameGradient2" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div><div class="info-hint">⚠️ عند اختيار تدرج، يُطبَّق بدل اللون</div></div>
+<div class="cust-field" data-subtab="color">
+  <label>لون التأثير (توهج/ظل)</label>
+  <div class="color-strip">
+    ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.nameEffectColor===c?'active':''}" style="background:${c}" data-cust="nameEffectColor" data-val="${c}"></button>`).join('')}
+  </div>
+  <div class="info-hint">💡 هذا اللون يُطبَّق على جميع تأثيرات الاسم (توهج، ظل، نيون، إلخ)</div>
+</div>
 
-      <!-- ═══ تبويب: الخط ═══ -->
-      <div class="cust-field" data-subtab="font"><label>سماكة الخط</label><div class="compact-chips">${Object.entries(FONT_WEIGHTS).map(([k,w]) => `<button class="cchip ${cust.nameWeight===k?'active':''}" data-cust="nameWeight" data-val="${k}" style="font-weight:${w.value}">${w.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="font"><label>حجم الخط</label><div class="compact-chips">${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) => `<button class="cchip ${cust.nameSize===v?'active':''}" data-cust="nameSize" data-val="${v}">${l}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="font"><label>الخط</label><div class="compact-chips">${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.nameFont===k?'active':''}" data-cust="nameFont" data-val="${k}" style="font-family:${f.value}">${f.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="font">
-        <label>نمط الخط</label>
-        <div class="compact-chips">${[['normal','عادي'],['italic','مائل'],['oblique','مائل 2']].map(([k,l]) => `<button class="cchip ${cust.nameFontStyle===k?'active':''}" data-cust="nameFontStyle" data-val="${k}">${l}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="font">
-        <label>حالة الأحرف</label>
-        <div class="compact-chips">${[['none','عادي'],['uppercase','كبير'],['lowercase','صغير'],['capitalize','أول حرف']].map(([k,l]) => `<button class="cchip ${cust.nameTransform===k?'active':''}" data-cust="nameTransform" data-val="${k}">${l}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="font">
-        <label>تحت الخط</label>
-        <div class="compact-chips">${[['none','بدون'],['single','خط'],['double','مزدوج'],['dotted','منقط'],['wavy','مموج']].map(([v,l]) => `<button class="cchip ${cust.nameUnderline===v?'active':''}" data-cust="nameUnderline" data-val="${v}">${l}</button>`).join('')}</div>
-        ${cust.nameUnderline !== 'none' ? `<div class="color-strip" style="margin-top:6px">${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.nameUnderlineColor===c?'active':''}" style="background:${c}" data-cust="nameUnderlineColor" data-val="${c}"></button>`).join('')}</div>` : ''}
-      </div>
-      <div class="cust-field" data-subtab="font">
-        <label>تباعد الحروف <span class="range-val" id="nameLetterSpacingVal">${cust.nameLetterSpacing}px</span></label>
-        <input type="range" class="crop-slider" id="nameLetterSpacingSlider" min="-2" max="6" step="0.5" value="${cust.nameLetterSpacing}">
-      </div>
-      <div class="cust-field" data-subtab="font">
-        <label>ارتفاع السطر <span class="range-val" id="nameLineHeightVal">${cust.nameLineHeight}</span></label>
-        <input type="range" class="crop-slider" id="nameLineHeightSlider" min="1" max="2.5" step="0.1" value="${cust.nameLineHeight}">
-      </div>
+    <!-- الخط -->
+    <div class="cust-field" data-subtab="font"><label>السماكة</label><div class="compact-chips">${Object.entries(FONT_WEIGHTS).map(([k,w]) => `<button class="cchip ${cust.nameWeight===k?'active':''}" data-cust="nameWeight" data-val="${k}" style="font-weight:${w.value}">${w.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="font"><label>الحجم</label><div class="compact-chips">${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) => `<button class="cchip ${cust.nameSize===v?'active':''}" data-cust="nameSize" data-val="${v}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="font"><label>الخط <span class="info-hint" style="display:inline-block;padding:2px 6px">ar+en = يدعم العربية والإنجليزية</span></label><div class="compact-chips">${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.nameFont===k?'active':''}" data-cust="nameFont" data-val="${k}" style="font-family:${f.value}">${f.label} <small style="opacity:.6;font-size:9px">${f.lang}</small></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="font"><label>نمط الخط</label><div class="compact-chips">${[['normal','عادي'],['italic','مائل'],['oblique','مائل 2']].map(([k,l]) => `<button class="cchip ${cust.nameFontStyle===k?'active':''}" data-cust="nameFontStyle" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="font"><label>حالة الأحرف</label><div class="compact-chips">${[['none','عادي'],['uppercase','كبير'],['lowercase','صغير'],['capitalize','أول حرف']].map(([k,l]) => `<button class="cchip ${cust.nameTransform===k?'active':''}" data-cust="nameTransform" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="font"><label>تحت الخط</label><div class="compact-chips">${[['none','بدون'],['single','خط'],['double','مزدوج'],['dotted','منقط'],['wavy','مموج']].map(([v,l]) => `<button class="cchip ${cust.nameUnderline===v?'active':''}" data-cust="nameUnderline" data-val="${v}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="font"><label>تباعد الحروف <span class="range-val" id="nameLetterSpacingVal">${cust.nameLetterSpacing}px</span></label><input type="range" class="crop-slider" id="nameLetterSpacingSlider" min="-2" max="6" step="0.5" value="${cust.nameLetterSpacing}"></div>
+    <div class="cust-field" data-subtab="font"><label>ارتفاع السطر <span class="range-val" id="nameLineHeightVal">${cust.nameLineHeight}</span></label><input type="range" class="crop-slider" id="nameLineHeightSlider" min="1" max="2.5" step="0.1" value="${cust.nameLineHeight}"></div>
 
-      <!-- ═══ تبويب: التأثير ═══ -->
-      <div class="cust-field" data-subtab="effect">
-        <label>التأثير ${!canCustomizeNameColor(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeNameColor(p) ? `<div class="compact-chips">${Object.entries(TEXT_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.nameEffect===k?'active':''}" data-cust="nameEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div>` : ''}
-      </div>
-      <div class="cust-field" data-subtab="effect">
-        <label>الحركة ${!canCustomizeNameColor(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeNameColor(p) ? `<div class="compact-chips">${Object.entries(NAME_ANIMATIONS).map(([k,a]) => `<button class="cchip ${cust.nameAnimation===k?'active':''}" data-cust="nameAnimation" data-val="${k}">${a.emoji} ${a.label}</button>`).join('')}</div>` : ''}
-      </div>
+    <!-- التأثير -->
+    <div class="cust-field" data-subtab="effect"><label>التأثير</label><div class="compact-chips">${Object.entries(TEXT_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.nameEffect===k?'active':''}" data-cust="nameEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="effect"><label>لون التأثير</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.nameEffectColor===c?'active':''}" style="background:${c}" data-cust="nameEffectColor" data-val="${c}"></button>`).join('')}</div></div>
 
-      <!-- ═══ تبويب: الشارة ═══ -->
-      <div class="cust-field" data-subtab="badge">
-        <label>الشارة ${!canCustomizeTitleColor(p)?'<span class="lock-hint">🔒 بلس دبل</span>':''}</label>
-        ${canCustomizeTitleColor(p) ? `<div class="badge-picker-row">${Object.entries(NAME_BADGES).map(([k,b]) => `<button class="badge-btn ${cust.nameBadge===k?'active':''}" data-cust="nameBadge" data-val="${k}">${k==='none'?ic('close','xs'):b.emoji}</button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus2">${ic('lock','sm')} بلس دبل</div>`}
-      </div>
-    `;
-  }
+    <!-- ★ الحركة -->
+    <div class="cust-field" data-subtab="animation"><label>الحركة</label><div class="compact-chips">${Object.entries(NAME_ANIMATIONS).map(([k,a]) => `<button class="cchip ${cust.nameAnimation===k?'active':''}" data-cust="nameAnimation" data-val="${k}">${a.emoji} ${a.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="animation"><label>سرعة الحركة</label><div class="compact-chips">${Object.entries(NAME_ANIMATION_SPEEDS).map(([k,s]) => `<button class="cchip ${cust.nameAnimationSpeed===k?'active':''}" data-cust="nameAnimationSpeed" data-val="${k}">${s.label}</button>`).join('')}</div></div>
+
+    <!-- الشارة -->
+    <div class="cust-field" data-subtab="badge"><label>الشارة بجانب الاسم</label><div class="badge-picker-row">${Object.entries(NAME_BADGES).map(([k,b]) => `<button class="badge-btn ${cust.nameBadge===k?'active':''}" data-cust="nameBadge" data-val="${k}">${k==='none'?'✖':b.emoji}</button>`).join('')}</div></div>
+<div class="cust-field" data-subtab="badge">
+  <label>لون الشارة</label>
+  <div class="color-strip">
+    <button class="color-dot ${!cust.nameBadgeColor || cust.nameBadgeColor==='original'?'active':''}"
+            style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
+            data-cust="nameBadgeColor" data-val="original"
+            title="اللون الأصلي للإيموجي">🎨</button>
+    ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.nameBadgeColor===c?'active':''}" style="background:${c}" data-cust="nameBadgeColor" data-val="${c}"></button>`).join('')}
+  </div>
+  <div class="info-hint">💡 اختر "🎨" لاستخدام لون الإيموجي الطبيعي، أو اختر لوناً لتلوينه</div>
+</div>
+    <div class="cust-field" data-subtab="badge"><label>تأثير الشارة</label><div class="compact-chips">${[['inherit','مثل الاسم'],['none','بدون'],['glow','توهج']].map(([k,l]) => `<button class="cchip ${cust.nameBadgeEffect===k?'active':''}" data-cust="nameBadgeEffect" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="info-hint">💡 تخصيصات الاسم لا تُطبَّق على شارة المشرف ولا شارات الإنجازات</div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      @ اسم المستخدم — 3 تبويبات: اللون / الخط / التأثير
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'username'){
-    return `
-      <!-- ═══ تبويب: اللون ═══ -->
-      <div class="cust-field" data-subtab="color">
-        <label>اللون ${!canCustomizeUsernameColor(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeUsernameColor(p) ? `<div class="color-strip">${NAME_COLOR_PRESETS.map(c => `<button class="color-dot ${cust.usernameColor===c?'active':''}" style="background:${c}" data-cust="usernameColor" data-val="${c}"></button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
+if(zone === 'username'){
+  return `
+    <!-- اللون -->
+    <div class="cust-field" data-subtab="color">
+      <label>اللون</label>
+      <div class="color-strip">
+        ${NAME_COLOR_PRESETS.map(c => `<button class="color-dot ${cust.usernameColor===c?'active':''}" style="background:${c}" data-cust="usernameColor" data-val="${c}"></button>`).join('')}
       </div>
-      <div class="cust-field" data-subtab="color">
-        <label>التدرج</label>
-        <div class="compact-chips">${Object.entries(NAME_GRADIENTS).map(([k,g]) => `<button class="cchip ${cust.usernameGradient===k?'active':''}" data-cust="usernameGradient" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div>
+    </div>
+    <div class="cust-field" data-subtab="color">
+      <label>التدرج</label>
+      <div class="compact-chips">
+        ${Object.entries(NAME_GRADIENTS).map(([k,g]) => `<button class="cchip ${cust.usernameGradient===k?'active':''}" data-cust="usernameGradient" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}
       </div>
-      <div class="cust-field" data-subtab="color">
-        <label>الشفافية <span class="range-val" id="usernameOpacityVal">${cust.usernameOpacity}%</span></label>
-        <input type="range" class="crop-slider" id="usernameOpacitySlider" min="20" max="100" value="${cust.usernameOpacity}">
-      </div>
+      <div class="info-hint">⚠️ عند اختيار تدرج، يُطبَّق بدل اللون</div>
+    </div>
+    <div class="cust-field" data-subtab="color">
+      <label>الشفافية <span class="range-val" id="usernameOpacityVal">${cust.usernameOpacity}%</span></label>
+      <input type="range" class="crop-slider" id="usernameOpacitySlider" min="20" max="100" value="${cust.usernameOpacity}">
+    </div>
 
-      <!-- ═══ تبويب: الخط ═══ -->
-      <div class="cust-field" data-subtab="font"><label>السماكة</label><div class="compact-chips">${Object.entries(FONT_WEIGHTS).map(([k,w]) => `<button class="cchip ${cust.usernameWeight===k?'active':''}" data-cust="usernameWeight" data-val="${k}" style="font-weight:${w.value}">${w.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="font"><label>الحجم</label><div class="compact-chips">${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) => `<button class="cchip ${cust.usernameSize===v?'active':''}" data-cust="usernameSize" data-val="${v}">${l}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="font"><label>الخط</label><div class="compact-chips">${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.usernameFont===k?'active':''}" data-cust="usernameFont" data-val="${k}" style="font-family:${f.value}">${f.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="font">
-        <label>تباعد الحروف <span class="range-val" id="usernameLetterSpacingVal">${cust.usernameLetterSpacing}px</span></label>
-        <input type="range" class="crop-slider" id="usernameLetterSpacingSlider" min="-1" max="5" step="0.5" value="${cust.usernameLetterSpacing}">
+    <!-- الخط -->
+    <div class="cust-field" data-subtab="font">
+      <label>السماكة</label>
+      <div class="compact-chips">
+        ${Object.entries(FONT_WEIGHTS).map(([k,w]) => `<button class="cchip ${cust.usernameWeight===k?'active':''}" data-cust="usernameWeight" data-val="${k}" style="font-weight:${w.value}">${w.label}</button>`).join('')}
       </div>
-      <div class="cust-field" data-subtab="font">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="usernameShowAtChk" ${cust.usernameShowAt?'checked':''} style="width:auto">
-          <span>إظهار علامة @ قبل الاسم</span>
-        </label>
+    </div>
+    <div class="cust-field" data-subtab="font">
+      <label>الحجم</label>
+      <div class="compact-chips">
+        ${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) => `<button class="cchip ${cust.usernameSize===v?'active':''}" data-cust="usernameSize" data-val="${v}">${l}</button>`).join('')}
       </div>
-      <div class="cust-field" data-subtab="font">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="usernameItalicChk" ${cust.usernameItalic?'checked':''} style="width:auto">
-          <span>مائل</span>
-        </label>
+    </div>
+    <div class="cust-field" data-subtab="font">
+      <label>الخط</label>
+      <div class="compact-chips">
+        ${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.usernameFont===k?'active':''}" data-cust="usernameFont" data-val="${k}" style="font-family:${f.value}">${f.label} <small style="opacity:.6;font-size:9px">${f.lang}</small></button>`).join('')}
       </div>
+    </div>
+    <div class="cust-field" data-subtab="font">
+      <label>تباعد الحروف <span class="range-val" id="usernameLetterSpacingVal">${cust.usernameLetterSpacing}px</span></label>
+      <input type="range" class="crop-slider" id="usernameLetterSpacingSlider" min="-1" max="5" step="0.5" value="${cust.usernameLetterSpacing}">
+    </div>
+    <div class="cust-field" data-subtab="font">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="usernameShowAtChk" ${cust.usernameShowAt?'checked':''} style="width:auto">
+        <span>إظهار علامة @ قبل الاسم</span>
+      </label>
+    </div>
+    <div class="cust-field" data-subtab="font">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="usernameItalicChk" ${cust.usernameItalic?'checked':''} style="width:auto">
+        <span>مائل</span>
+      </label>
+    </div>
 
-      <!-- ═══ تبويب: التأثير ═══ -->
-      <div class="cust-field" data-subtab="effect"><label>التأثير</label><div class="compact-chips">${Object.entries(TEXT_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.usernameEffect===k?'active':''}" data-cust="usernameEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="effect"><label>الحركة</label><div class="compact-chips">${Object.entries(NAME_ANIMATIONS).map(([k,a]) => `<button class="cchip ${cust.usernameAnimation===k?'active':''}" data-cust="usernameAnimation" data-val="${k}">${a.emoji} ${a.label}</button>`).join('')}</div></div>
-    `;
-  }
+    <!-- التأثير -->
+    <div class="cust-field" data-subtab="effect">
+      <label>التأثير</label>
+      <div class="compact-chips">
+        ${Object.entries(TEXT_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.usernameEffect===k?'active':''}" data-cust="usernameEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="cust-field" data-subtab="effect">
+      <label>الحركة</label>
+      <div class="compact-chips">
+        ${Object.entries(NAME_ANIMATIONS).map(([k,a]) => `<button class="cchip ${cust.usernameAnimation===k?'active':''}" data-cust="usernameAnimation" data-val="${k}">${a.emoji} ${a.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="cust-field" data-subtab="effect">
+      <label>سرعة الحركة</label>
+      <div class="compact-chips">
+        ${Object.entries(NAME_ANIMATION_SPEEDS).map(([k,s]) => `<button class="cchip ${cust.usernameAnimationSpeed===k?'active':''}" data-cust="usernameAnimationSpeed" data-val="${k}">${s.label}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      📝 النبذة — 4 تبويبات: النمط / اللون / التنسيق / الأيقونة
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'bio'){
-    return `
-      <!-- ═══ تبويب: النمط ═══ -->
-      <div class="cust-field" data-subtab="style">
-        <label>النمط</label>
-        <div class="compact-chips">${Object.entries(BIO_STYLES_EXTENDED).map(([k,b]) => `<button class="cchip ${cust.bioStyle===k?'active':''}" data-cust="bioStyle" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div>
-      </div>
+if(zone === 'bio'){
+  /* ✅ أنماط النبذة المعتمدة فقط */
+  const bioStyles = {
+    plain:      { label:'عادي',    emoji:'📄' },
+    quote:      { label:'اقتباس',  emoji:'💬' },
+    quote_box:  { label:'اقتباس صندوق', emoji:'💬' },
+    italic:     { label:'مائل',    emoji:'✍️' },
+    glow:       { label:'متوهج',   emoji:'✨' },
+    card:       { label:'بطاقة',   emoji:'🃏' },
+    dashed:     { label:'متقطع',   emoji:'▨' },
+    underline:  { label:'تحته خط', emoji:'▁' },
+    code:       { label:'كود',     emoji:'</>' },
+    ribbon:     { label:'شريط',    emoji:'🎀' },
+    highlight:  { label:'مُبرَز',  emoji:'🖍️' },
+    // ✅ حُذف: typewriter, gradient (سببا التضارب)
+  };
+  return `
+    <div class="cust-field" data-subtab="style"><label>النمط</label><div class="compact-chips">${Object.entries(bioStyles).map(([k,b]) => `<button class="cchip ${cust.bioStyle===k?'active':''}" data-cust="bioStyle" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div></div>
 
-      <!-- ═══ تبويب: اللون ═══ -->
-      <div class="cust-field" data-subtab="color">
-        <label>لون النص</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,30).map(c => `<button class="color-dot ${cust.bioColor===c?'active':''}" style="background:${c}" data-cust="bioColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="color">
-        <label>تدرج النص</label>
-        <div class="compact-chips">${Object.entries(NAME_GRADIENTS).map(([k,g]) => `<button class="cchip ${cust.bioGradient===k?'active':''}" data-cust="bioGradient" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="color">
-        <label>تأثير النص</label>
-        <div class="compact-chips">${Object.entries(TEXT_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.bioEffect===k?'active':''}" data-cust="bioEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="color">
-        <label>لون الحدود</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.bioBorderColor===c?'active':''}" style="background:${c}" data-cust="bioBorderColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
+    <div class="cust-field" data-subtab="color"><label>لون النص</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.bioColor===c?'active':''}" style="background:${c}" data-cust="bioColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="color"><label>تدرج النص (يُطبَّق بدل اللون — وليس مع النمط)</label><div class="compact-chips">${Object.entries(NAME_GRADIENTS).map(([k,g]) => `<button class="cchip ${cust.bioGradient===k?'active':''}" data-cust="bioGradient" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="color"><label>تأثير النص</label><div class="compact-chips">${Object.entries(TEXT_EFFECTS).map(([k,e]) => `<button class="cchip ${cust.bioEffect===k?'active':''}" data-cust="bioEffect" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="color"><label>لون الإطار</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.bioBorderColor===c?'active':''}" style="background:${c}" data-cust="bioBorderColor" data-val="${c}"></button>`).join('')}</div></div>
 
-      <!-- ═══ تبويب: التنسيق ═══ -->
-      <div class="cust-field" data-subtab="layout"><label>الحجم</label><div class="compact-chips">${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) => `<button class="cchip ${cust.bioFontSize===v?'active':''}" data-cust="bioFontSize" data-val="${v}">${l}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="layout"><label>السماكة</label><div class="compact-chips">${Object.entries(FONT_WEIGHTS).map(([k,w]) => `<button class="cchip ${cust.bioFontWeight===k?'active':''}" data-cust="bioFontWeight" data-val="${k}" style="font-weight:${w.value}">${w.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="layout"><label>الخط</label><div class="compact-chips">${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.bioFontFamily===k?'active':''}" data-cust="bioFontFamily" data-val="${k}" style="font-family:${f.value}">${f.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="layout"><label>المحاذاة</label><div class="compact-chips">${[['right','يمين'],['center','وسط'],['left','يسار']].map(([v,l]) => `<button class="cchip ${cust.bioAlign===v?'active':''}" data-cust="bioAlign" data-val="${v}">${l}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="layout">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="bioItalicChk" ${cust.bioItalic?'checked':''} style="width:auto">
-          <span>مائل</span>
-        </label>
-      </div>
-      <div class="cust-field" data-subtab="layout">
-        <label>لون الخلفية</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.bioBg===c?'active':''}" style="background:${c}" data-cust="bioBg" data-val="${c}"></button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="layout">
-        <label>شفافية الخلفية <span class="range-val" id="bioBgOpacityVal">${cust.bioBgOpacity}%</span></label>
-        <input type="range" class="crop-slider" id="bioBgOpacitySlider" min="0" max="100" value="${cust.bioBgOpacity}">
-      </div>
-      <div class="cust-field" data-subtab="layout">
-        <label>سماكة الإطار <span class="range-val" id="bioBorderWidthVal">${cust.bioBorderWidth}px</span></label>
-        <input type="range" class="crop-slider" id="bioBorderWidthSlider" min="0" max="10" value="${cust.bioBorderWidth}">
-      </div>
-      <div class="cust-field" data-subtab="layout">
-        <label>ارتفاع السطر <span class="range-val" id="bioLineHeightVal">${cust.bioLineHeight}</span></label>
-        <input type="range" class="crop-slider" id="bioLineHeightSlider" min="1.2" max="2.5" step="0.1" value="${cust.bioLineHeight}">
-      </div>
-      <div class="cust-field" data-subtab="layout">
-        <label>تباعد الحروف <span class="range-val" id="bioLetterSpacingVal">${cust.bioLetterSpacing}px</span></label>
-        <input type="range" class="crop-slider" id="bioLetterSpacingSlider" min="-1" max="4" step="0.5" value="${cust.bioLetterSpacing}">
-      </div>
-      <div class="cust-field" data-subtab="layout">
-        <label>العرض الأقصى <span class="range-val" id="bioMaxWidthVal">${cust.bioMaxWidth}%</span></label>
-        <input type="range" class="crop-slider" id="bioMaxWidthSlider" min="50" max="100" value="${cust.bioMaxWidth}">
-      </div>
+    <div class="cust-field" data-subtab="layout"><label>الحجم</label><div class="compact-chips">${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([v,l]) => `<button class="cchip ${cust.bioFontSize===v?'active':''}" data-cust="bioFontSize" data-val="${v}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="layout"><label>المحاذاة</label><div class="compact-chips">${[['right','يمين'],['center','وسط'],['left','يسار']].map(([v,l]) => `<button class="cchip ${cust.bioAlign===v?'active':''}" data-cust="bioAlign" data-val="${v}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="layout"><label>الخط</label><div class="compact-chips">${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.bioFontFamily===k?'active':''}" data-cust="bioFontFamily" data-val="${k}" style="font-family:${f.value}">${f.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="layout"><label>ارتفاع السطر <span class="range-val" id="bioLineHeightVal">${cust.bioLineHeight}</span></label><input type="range" class="crop-slider" id="bioLineHeightSlider" min="1.2" max="2.5" step="0.1" value="${cust.bioLineHeight}"></div>
+    <div class="cust-field" data-subtab="layout"><label>شفافية الخلفية <span class="range-val" id="bioBgOpacityVal">${cust.bioBgOpacity}%</span></label><input type="range" class="crop-slider" id="bioBgOpacitySlider" min="0" max="100" value="${cust.bioBgOpacity}"></div>
+    <div class="cust-field" data-subtab="layout"><label>سماكة الإطار <span class="range-val" id="bioBorderWidthVal">${cust.bioBorderWidth}px</span></label><input type="range" class="crop-slider" id="bioBorderWidthSlider" min="0" max="10" value="${cust.bioBorderWidth}"></div>
 
-      <!-- ═══ تبويب: الأيقونة ═══ -->
-      <div class="cust-field" data-subtab="icon">
-        <label>أيقونة قبل النبذة</label>
-        <div class="compact-chips">${['','💫','✨','🔥','💎','⭐','🎯','📌','💡','🚀','⚡','🎨','🌈','💜'].map(e => `<button class="cchip ${cust.bioIcon===e?'active':''}" data-cust="bioIcon" data-val="${e}">${e || 'بدون'}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="icon">
-        <label>لون الأيقونة</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.bioIconColor===c?'active':''}" style="background:${c}" data-cust="bioIconColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="icon">
-        <label>نص النبذة</label>
-        <button class="btn btn-ghost btn-sm" style="width:100%" data-action="edit-profile">${ic('edit','xs')} فتح محرر النبذة</button>
-      </div>
-    `;
-  }
+    <div class="cust-field" data-subtab="icon"><label>أيقونة قبل النبذة</label><div class="compact-chips">${['','💫','✨','🔥','💎','⭐','🎯','📌','💡','🚀','⚡','🎨','🌈','💜'].map(e => `<button class="cchip ${cust.bioIcon===e?'active':''}" data-cust="bioIcon" data-val="${e}">${e || 'بدون'}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="icon"><label>لون الأيقونة (اتركه فارغاً ليظهر الإيموجي بلونه الأصلي)</label><div class="color-strip"><button class="color-dot ${!cust.bioIconColor?'active':''}" style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)" data-cust="bioIconColor" data-val="" title="بدون تلوين"></button>${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.bioIconColor===c?'active':''}" style="background:${c}" data-cust="bioIconColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="icon"><label>نص النبذة</label><button class="btn btn-ghost btn-sm" style="width:100%" data-action="edit-profile">${ic('edit','xs')} فتح محرر النبذة</button></div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      🎨 الثيم — 4 تبويبات: الثيم / التخطيط / اللون المميز / الموسيقى
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'body'){
-    return `
-      <!-- ═══ تبويب: الثيم ═══ -->
-      <div class="cust-field" data-subtab="theme">
-        <label>الثيم ${!canCustomizeTheme(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canCustomizeTheme(p) ? `<div class="theme-picker-row">${Object.entries(THEMES_EXTENDED).map(([k,t]) => `<button class="theme-btn ${themeId===k?'active':''}" data-set-theme="${k}"><div class="theme-swatch" style="background:linear-gradient(${cust.themeGradientAngle}deg,${t.colors[0]},${t.colors[1]})"></div><div class="theme-btn-name">${t.name}</div></button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      <div class="cust-field" data-subtab="theme"><label>زاوية التدرج <span class="range-val" id="themeAngleVal">${cust.themeGradientAngle}°</span></label><input type="range" class="crop-slider" id="themeGradientAngleSlider" min="0" max="360" step="15" value="${cust.themeGradientAngle}"></div>
-      <div class="cust-field" data-subtab="theme"><label>شفافية الثيم <span class="range-val" id="themeOpacityVal">${cust.themeOpacity}%</span></label><input type="range" class="crop-slider" id="themeOpacitySlider" min="0" max="100" value="${cust.themeOpacity}"></div>
-      <div class="cust-field" data-subtab="theme">
-        <label>درجة اللون <span class="range-val" id="themeHueVal">${cust.themeHue}°</span></label>
-        <input type="range" class="crop-slider" id="themeHueSlider" min="-180" max="180" value="${cust.themeHue}">
-      </div>
-      <div class="cust-field" data-subtab="theme">
-        <label>التشبع <span class="range-val" id="themeSaturationVal">${cust.themeSaturation}%</span></label>
-        <input type="range" class="crop-slider" id="themeSaturationSlider" min="30" max="200" value="${cust.themeSaturation}">
-      </div>
-      <div class="cust-field" data-subtab="theme">
-        <label>السطوع <span class="range-val" id="themeBrightnessVal">${cust.themeBrightness}%</span></label>
-        <input type="range" class="crop-slider" id="themeBrightnessSlider" min="30" max="180" value="${cust.themeBrightness}">
-      </div>
-      <div class="cust-field" data-subtab="theme">
-        <label>الضبابية <span class="range-val" id="themeBlurVal">${cust.themeBlur}px</span></label>
-        <input type="range" class="crop-slider" id="themeBlurSlider" min="0" max="20" value="${cust.themeBlur}">
-      </div>
-      <div class="cust-field" data-subtab="theme"><label>نمط الثيم</label><div class="compact-chips">${Object.entries(BG_PATTERNS).map(([k,b]) => `<button class="cchip ${cust.themePattern===k?'active':''}" data-cust="themePattern" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="theme"><label>توهج الثيم</label><div class="compact-chips">${Object.entries(CARD_GLOWS).map(([k,g]) => `<button class="cchip ${cust.themeGlow===k?'active':''}" data-cust="themeGlow" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div></div>
+if(zone === 'body'){
+  return `
+    <div class="cust-field" data-subtab="theme"><label>الثيم</label><div class="theme-picker-row">${Object.entries(THEMES_EXTENDED).map(([k,t]) => `<button class="theme-btn ${themeId===k?'active':''}" data-set-theme="${k}"><div class="theme-swatch" style="background:linear-gradient(${cust.themeGradientAngle}deg,${t.colors[0]},${t.colors[1]})"></div><div class="theme-btn-name">${t.name}</div></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="theme"><label>زاوية التدرج <span class="range-val" id="themeAngleVal">${cust.themeGradientAngle}°</span></label><input type="range" class="crop-slider" id="themeGradientAngleSlider" min="0" max="360" step="15" value="${cust.themeGradientAngle}"></div>
+    <div class="cust-field" data-subtab="theme"><label>الشفافية <span class="range-val" id="themeOpacityVal">${cust.themeOpacity}%</span></label><input type="range" class="crop-slider" id="themeOpacitySlider" min="20" max="100" value="${cust.themeOpacity}"><div class="info-hint">💡 الحد الأدنى 20% — لضمان رؤية الثيم</div></div>
+    <div class="cust-field" data-subtab="theme"><label>درجة اللون <span class="range-val" id="themeHueVal">${cust.themeHue}°</span></label><input type="range" class="crop-slider" id="themeHueSlider" min="-180" max="180" value="${cust.themeHue}"></div>
+    <div class="cust-field" data-subtab="theme"><label>التشبع <span class="range-val" id="themeSaturationVal">${cust.themeSaturation}%</span></label><input type="range" class="crop-slider" id="themeSaturationSlider" min="30" max="200" value="${cust.themeSaturation}"></div>
+    <div class="cust-field" data-subtab="theme"><label>السطوع <span class="range-val" id="themeBrightnessVal">${cust.themeBrightness}%</span></label><input type="range" class="crop-slider" id="themeBrightnessSlider" min="30" max="180" value="${cust.themeBrightness}"></div>
+    <div class="cust-field" data-subtab="theme"><label>الضبابية <span class="range-val" id="themeBlurVal">${cust.themeBlur}px</span></label><input type="range" class="crop-slider" id="themeBlurSlider" min="0" max="20" value="${cust.themeBlur}"></div>
 
-      <!-- ═══ تبويب: التخطيط ═══ -->
-      <div class="cust-field" data-subtab="layout">
-        <label>التخطيط ${!canUseLayoutCustomization(p)?'<span class="lock-hint">🔒 بلس دبل</span>':''}</label>
-        ${canUseLayoutCustomization(p) ? `<div class="compact-chips">${Object.entries(PROFILE_LAYOUTS_EXTENDED).map(([k,l]) => `<button class="cchip ${cust.profileLayout===k?'active':''}" data-cust="profileLayout" data-val="${k}">${l.label}</button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus2">${ic('lock','sm')} بلس دبل</div>`}
-      </div>
+    <!-- ★ نمط الثيم (مدموج مع بطاقة bgPattern سابقاً) -->
+    <div class="cust-field" data-subtab="theme"><label>نمط الثيم</label><div class="compact-chips">${Object.entries(THEME_PATTERNS).map(([k,b]) => `<button class="cchip ${cust.themePattern===k?'active':''}" data-cust="themePattern" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="theme"><label>لون النمط</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.themePatternColor===c?'active':''}" style="background:${c}" data-cust="themePatternColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="theme"><label>حجم النمط <span class="range-val" id="themePatternSizeVal">${cust.themePatternSize}px</span></label><input type="range" class="crop-slider" id="themePatternSizeSlider" min="8" max="56" step="4" value="${cust.themePatternSize}"></div>
+    <div class="cust-field" data-subtab="theme"><label>شفافية النمط <span class="range-val" id="themePatternOpacityVal">${cust.themePatternOpacity}%</span></label><input type="range" class="crop-slider" id="themePatternOpacitySlider" min="0" max="100" value="${cust.themePatternOpacity}"></div>
 
-      <!-- ═══ تبويب: اللون المميز ═══ -->
-      <div class="cust-field" data-subtab="accent">
-        <label>اللون المميز ${sub.features.maxCustomColors===0?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${sub.features.maxCustomColors > 0 ? `<div class="info-hint">💡 اللون المميز = لون الأزرار والحدود والتفاصيل</div><div class="color-strip" style="margin-top:6px">${ACCENT_COLORS_EXTENDED.map(c => `<button class="color-dot ${cust.accentColor===c?'active':''}" style="background:${c}" data-cust="accentColor" data-val="${c}"></button>`).join('')}</div>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      <div class="cust-field" data-subtab="accent">
-        <label>اللون المميز الثاني (للتدرج)</label>
-        <div class="color-strip">
-          <button class="color-dot ${!cust.accentColor2?'active':''}"
-                  style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
-                  data-cust="accentColor2" data-val="" title="بدون"></button>
-          ${ACCENT_COLORS_EXTENDED.map(c => `<button class="color-dot ${cust.accentColor2===c?'active':''}" style="background:${c}" data-cust="accentColor2" data-val="${c}"></button>`).join('')}
-        </div>
-      </div>
+    <!-- ★ توهج الثيم -->
+    <div class="cust-field" data-subtab="theme"><label>توهج الثيم</label><div class="compact-chips">${Object.entries(THEME_GLOWS).map(([k,g]) => `<button class="cchip ${cust.themeGlow===k?'active':''}" data-cust="themeGlow" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="theme"><label>لون التوهج</label><div class="color-strip">${THEME_GLOW_COLORS.map(c => `<button class="color-dot ${cust.themeGlowColor===c?'active':''}" style="background:${c}" data-cust="themeGlowColor" data-val="${c}"></button>`).join('')}</div></div>
 
-      <!-- ═══ تبويب: الموسيقى ═══ -->
-      <div class="cust-field" data-subtab="music">
-        <label>موسيقى الملف ${!canUseMusic(p)?'<span class="lock-hint">🔒 بلس</span>':''}</label>
-        ${canUseMusic(p) ? `<input class="input" id="musicUrlInput" value="${esc(cust.musicUrl)}" placeholder="https://..." maxlength="200" style="margin-bottom:8px"><button class="btn btn-primary btn-sm" style="width:100%" id="saveMusicBtn">${ic('check','xs')} حفظ</button>` : `<div class="locked-feature" data-action="upsell-plus">${ic('lock','sm')} بلس</div>`}
-      </div>
-      <div class="cust-field" data-subtab="music">
-        <label>مستوى الصوت <span class="range-val" id="musicVolumeVal">${cust.musicVolume}%</span></label>
-        <input type="range" class="crop-slider" id="musicVolumeSlider" min="0" max="100" value="${cust.musicVolume}">
-      </div>
-      <div class="cust-field" data-subtab="music">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="musicAutoplayChk" ${cust.musicAutoplay?'checked':''} style="width:auto">
-          <span>تشغيل تلقائي</span>
-        </label>
-      </div>
-    `;
-  }
+    <div class="cust-field" data-subtab="layout"><label>التخطيط</label><div class="compact-chips">${Object.entries(PROFILE_LAYOUTS_EXTENDED).map(([k,l]) => `<button class="cchip ${cust.profileLayout===k?'active':''}" data-cust="profileLayout" data-val="${k}">${l.label}</button>`).join('')}</div></div>
+
+    <div class="cust-field" data-subtab="accent"><label>اللون المميز</label><div class="color-strip">${ACCENT_COLORS_EXTENDED.map(c => `<button class="color-dot ${cust.accentColor===c?'active':''}" style="background:${c}" data-cust="accentColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="accent"><label>اللون المميز الثاني</label><div class="color-strip"><button class="color-dot ${!cust.accentColor2?'active':''}" style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)" data-cust="accentColor2" data-val="" title="بدون"></button>${ACCENT_COLORS_EXTENDED.map(c => `<button class="color-dot ${cust.accentColor2===c?'active':''}" style="background:${c}" data-cust="accentColor2" data-val="${c}"></button>`).join('')}</div></div>
+
+    <div class="cust-field" data-subtab="music"><label>رابط موسيقى الملف</label><input class="input" id="musicUrlInput" value="${esc(cust.musicUrl)}" placeholder="https://..." maxlength="200" style="margin-bottom:8px"><button class="btn btn-primary btn-sm" style="width:100%" id="saveMusicBtn">${ic('check','xs')} حفظ</button></div>
+    <div class="cust-field" data-subtab="music"><label>مستوى الصوت <span class="range-val" id="musicVolumeVal">${cust.musicVolume}%</span></label><input type="range" class="crop-slider" id="musicVolumeSlider" min="0" max="100" value="${cust.musicVolume}"></div>
+    <div class="cust-field" data-subtab="music"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="musicAutoplayChk" ${cust.musicAutoplay?'checked':''} style="width:auto"><span>تشغيل تلقائي</span></label></div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      🃏 البطاقة — 4 تبويبات: الحدود / الظل والتوهج / التأثيرات / الخلفية
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'card'){
-    return `
-      <!-- ═══ تبويب: الحدود ═══ -->
-      <div class="cust-field" data-subtab="border"><label>لون الحدود</label><div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.cardBorderColor===c?'active':''}" style="background:${c}" data-cust="cardBorderColor" data-val="${c}"></button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="border"><label>سماكة الحدود <span class="range-val" id="cardBorderWidthVal">${cust.cardBorderWidth}px</span></label><input type="range" class="crop-slider" id="cardBorderWidthSlider" min="0" max="6" value="${cust.cardBorderWidth}"></div>
-      <div class="cust-field" data-subtab="border"><label>نمط الحدود</label><div class="compact-chips">${Object.entries(CARD_BORDER_STYLES).map(([k,s]) => `<button class="cchip ${cust.cardBorderStyle===k?'active':''}" data-cust="cardBorderStyle" data-val="${k}">${s.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="border"><label>الزوايا</label><div class="compact-chips">${Object.entries(CARD_CORNERS).map(([k,c]) => `<button class="cchip ${cust.cardCorner===k?'active':''}" data-cust="cardCorner" data-val="${k}">${c.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="border">
-        <label>الحشوة الداخلية <span class="range-val" id="cardPaddingVal">${cust.cardPadding}px</span></label>
-        <input type="range" class="crop-slider" id="cardPaddingSlider" min="0" max="30" value="${cust.cardPadding}">
-      </div>
-      <div class="cust-field" data-subtab="border">
-        <label>التدوير <span class="range-val" id="cardRotateVal">${cust.cardRotate}°</span></label>
-        <input type="range" class="crop-slider" id="cardRotateSlider" min="-15" max="15" value="${cust.cardRotate}">
-      </div>
+if(zone === 'card'){
+  return `
+    <div class="cust-field" data-subtab="border"><label>لون الحدود</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.cardBorderColor===c?'active':''}" style="background:${c}" data-cust="cardBorderColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="border"><label>سماكة الحدود <span class="range-val" id="cardBorderWidthVal">${cust.cardBorderWidth}px</span></label><input type="range" class="crop-slider" id="cardBorderWidthSlider" min="0" max="6" value="${cust.cardBorderWidth}"></div>
+    <div class="cust-field" data-subtab="border"><label>نمط الحدود</label><div class="compact-chips">${Object.entries(CARD_BORDER_STYLES).map(([k,s]) => `<button class="cchip ${cust.cardBorderStyle===k?'active':''}" data-cust="cardBorderStyle" data-val="${k}">${s.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="border"><label>الزوايا</label><div class="compact-chips">${Object.entries(CARD_CORNERS).map(([k,c]) => `<button class="cchip ${cust.cardCorner===k?'active':''}" data-cust="cardCorner" data-val="${k}">${c.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="border"><label>الحشوة الداخلية <span class="range-val" id="cardPaddingVal">${cust.cardPadding}px</span></label><input type="range" class="crop-slider" id="cardPaddingSlider" min="0" max="30" value="${cust.cardPadding}"></div>
+    <div class="cust-field" data-subtab="border"><label>التدوير <span class="range-val" id="cardRotateVal">${cust.cardRotate}°</span></label><input type="range" class="crop-slider" id="cardRotateSlider" min="-15" max="15" value="${cust.cardRotate}"></div>
 
-      <!-- ═══ تبويب: الظل والتوهج ═══ -->
-      <div class="cust-field" data-subtab="shadow"><label>توهج البطاقة</label><div class="compact-chips">${Object.entries(CARD_GLOWS).map(([k,g]) => `<button class="cchip ${cust.cardGlow===k?'active':''}" data-cust="cardGlow" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="shadow"><label>الظل</label><div class="compact-chips">${Object.entries(CARD_SHADOWS).map(([k,s]) => `<button class="cchip ${cust.cardShadow===k?'active':''}" data-cust="cardShadow" data-val="${k}">${s.emoji} ${s.label}</button>`).join('')}</div></div>
+    <!-- الظل والتوهج -->
+    <div class="cust-field" data-subtab="shadow"><label>توهج البطاقة</label><div class="compact-chips">${Object.entries(CARD_GLOWS).map(([k,g]) => `<button class="cchip ${cust.cardGlow===k?'active':''}" data-cust="cardGlow" data-val="${k}">${g.emoji} ${g.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="shadow"><label>لون التوهج</label><div class="color-strip">${CARD_GLOW_COLORS.map(c => `<button class="color-dot ${cust.cardGlowColor===c?'active':''}" style="background:${c}" data-cust="cardGlowColor" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="shadow"><label>حجم الظل</label><div class="compact-chips">${Object.entries(CARD_SHADOWS).map(([k,s]) => `<button class="cchip ${cust.cardShadow===k?'active':''}" data-cust="cardShadow" data-val="${k}">${s.emoji} ${s.label}</button>`).join('')}</div></div>
 
-      <!-- ═══ تبويب: التأثيرات ═══ -->
-      <div class="cust-field" data-subtab="effect"><label>تأثير التمرير</label><div class="compact-chips">${Object.entries(CARD_HOVER_EFFECTS).map(([k,h]) => `<button class="cchip ${cust.cardHoverEffect===k?'active':''}" data-cust="cardHoverEffect" data-val="${k}">${h.emoji} ${h.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="effect"><label>تأثير الدخول</label><div class="compact-chips">${Object.entries(ENTRANCE_ANIMATIONS).map(([k,e]) => `<button class="cchip ${cust.cardEntrance===k?'active':''}" data-cust="cardEntrance" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div></div>
+    <!-- التأثيرات -->
+    <div class="cust-field" data-subtab="effect"><label>تأثير التمرير</label><div class="compact-chips">${Object.entries(CARD_HOVER_EFFECTS).map(([k,h]) => `<button class="cchip ${cust.cardHoverEffect===k?'active':''}" data-cust="cardHoverEffect" data-val="${k}">${h.emoji} ${h.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="effect"><label>تأثير الضغط</label><div class="compact-chips">${Object.entries(CARD_PRESS_EFFECTS).map(([k,p]) => `<button class="cchip ${cust.cardPressEffect===k?'active':''}" data-cust="cardPressEffect" data-val="${k}">${p.emoji} ${p.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="effect"><label>تأثير الدخول</label><div class="compact-chips">${Object.entries(ENTRANCE_ANIMATIONS).map(([k,e]) => `<button class="cchip ${cust.cardEntrance===k?'active':''}" data-cust="cardEntrance" data-val="${k}">${e.emoji} ${e.label}</button>`).join('')}</div></div>
 
-      <!-- ═══ تبويب: الخلفية ═══ -->
-      <div class="cust-field" data-subtab="pattern"><label>شفافية البطاقة <span class="range-val" id="cardOpacityVal">${cust.cardOpacity}%</span></label><input type="range" class="crop-slider" id="cardOpacitySlider" min="30" max="100" value="${cust.cardOpacity}"></div>
-      <div class="cust-field" data-subtab="pattern"><label>ضبابية الخلفية <span class="range-val" id="cardBlurVal">${cust.cardBackdropBlur}px</span></label><input type="range" class="crop-slider" id="cardBackdropBlurSlider" min="0" max="30" value="${cust.cardBackdropBlur}"></div>
-      <div class="cust-field" data-subtab="pattern"><label>نمط الخلفية</label><div class="compact-chips">${Object.entries(BG_PATTERNS).map(([k,b]) => `<button class="cchip ${cust.bgPattern===k?'active':''}" data-cust="bgPattern" data-val="${k}">${b.emoji} ${b.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="pattern">
-        <label>وضع الدمج</label>
-        <div class="compact-chips">${[['normal','عادي'],['multiply','ضرب'],['screen','شاشة'],['overlay','تراكب'],['soft-light','خفيف']].map(([k,l]) => `<button class="cchip ${cust.cardBlendMode===k?'active':''}" data-cust="cardBlendMode" data-val="${k}">${l}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="pattern">
-        <label>العرض الأقصى <span class="range-val" id="cardMaxWidthVal">${cust.cardMaxWidth}%</span></label>
-        <input type="range" class="crop-slider" id="cardMaxWidthSlider" min="60" max="100" value="${cust.cardMaxWidth}">
-      </div>
-    `;
-  }
+    <div class="cust-field" data-subtab="pattern"><label>شفافية البطاقة <span class="range-val" id="cardOpacityVal">${cust.cardOpacity}%</span></label><input type="range" class="crop-slider" id="cardOpacitySlider" min="30" max="100" value="${cust.cardOpacity}"></div>
+    <div class="cust-field" data-subtab="pattern"><label>ضبابية الخلفية <span class="range-val" id="cardBlurVal">${cust.cardBackdropBlur}px</span></label><input type="range" class="crop-slider" id="cardBackdropBlurSlider" min="0" max="30" value="${cust.cardBackdropBlur}"></div>
+    <div class="cust-field" data-subtab="pattern"><label>وضع الدمج</label><div class="compact-chips">${[['normal','عادي'],['multiply','ضرب'],['screen','شاشة'],['overlay','تراكب'],['soft-light','خفيف']].map(([k,l]) => `<button class="cchip ${cust.cardBlendMode===k?'active':''}" data-cust="cardBlendMode" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="pattern"><label>العرض الأقصى <span class="range-val" id="cardMaxWidthVal">${cust.cardMaxWidth}%</span></label><input type="range" class="crop-slider" id="cardMaxWidthSlider" min="60" max="100" value="${cust.cardMaxWidth}"></div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      🏅 المستوى — 3 تبويبات: الشارة / الشريط / النص
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'level'){
-    return `
-      <!-- ═══ تبويب: الشارة ═══ -->
-      <div class="cust-field" data-subtab="badge"><label>شكل الشارة</label><div class="compact-chips">${Object.entries(LEVEL_BADGE_SHAPES).map(([k,s]) => `<button class="cchip ${cust.levelBadgeShape===k?'active':''}" data-cust="levelBadgeShape" data-val="${k}">${s.emoji} ${s.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="badge"><label>اللون الأول للشارة</label><div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.levelBadgeColor1===c?'active':''}" style="background:${c}" data-cust="levelBadgeColor1" data-val="${c}"></button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="badge"><label>اللون الثاني للشارة</label><div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.levelBadgeColor2===c?'active':''}" style="background:${c}" data-cust="levelBadgeColor2" data-val="${c}"></button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="badge"><label>أيقونة قبل الرقم</label><div class="compact-chips">${['','🏅','⭐','💎','👑','🎖️','🔥','⚡','🌟'].map(e => `<button class="cchip ${cust.levelIcon===e?'active':''}" data-cust="levelIcon" data-val="${e}">${e || 'بدون'}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="badge">
-        <label>حجم الشارة</label>
-        <div class="compact-chips">${[['sm','صغيرة'],['md','عادية'],['lg','كبيرة'],['xl','ضخمة']].map(([k,l]) => `<button class="cchip ${cust.levelBadgeSize===k?'active':''}" data-cust="levelBadgeSize" data-val="${k}">${l}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="badge">
-        <label>موضع الشارة</label>
-        <div class="compact-chips">${[['left','يسار'],['right','يمين']].map(([k,l]) => `<button class="cchip ${cust.levelBadgePosition===k?'active':''}" data-cust="levelBadgePosition" data-val="${k}">${l}</button>`).join('')}</div>
-      </div>
+if(zone === 'level'){
+  return `
+    <div class="cust-field" data-subtab="badge"><label>شكل الشارة</label><div class="compact-chips">${Object.entries(LEVEL_BADGE_SHAPES).map(([k,s]) => `<button class="cchip ${cust.levelBadgeShape===k?'active':''}" data-cust="levelBadgeShape" data-val="${k}">${s.emoji} ${s.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="badge"><label>اللون الأول للشارة</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.levelBadgeColor1===c?'active':''}" style="background:${c}" data-cust="levelBadgeColor1" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="badge"><label>اللون الثاني للشارة</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.levelBadgeColor2===c?'active':''}" style="background:${c}" data-cust="levelBadgeColor2" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="badge"><label>موضع الشارة</label><div class="compact-chips">${[['left','يسار'],['right','يمين']].map(([k,l]) => `<button class="cchip ${cust.levelBadgePosition===k?'active':''}" data-cust="levelBadgePosition" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="badge"><label>حجم الشارة</label><div class="compact-chips">${[['sm','صغيرة'],['md','عادية'],['lg','كبيرة'],['xl','ضخمة']].map(([k,l]) => `<button class="cchip ${cust.levelBadgeSize===k?'active':''}" data-cust="levelBadgeSize" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="badge"><label>أيقونة قبل الرقم</label><div class="compact-chips">${['','🏅','⭐','💎','👑','🎖️','🔥','⚡','🌟'].map(e => `<button class="cchip ${cust.levelIcon===e?'active':''}" data-cust="levelIcon" data-val="${e}">${e || 'بدون'}</button>`).join('')}</div></div>
 
-      <!-- ═══ تبويب: الشريط ═══ -->
-      <div class="cust-field" data-subtab="bar"><label>نمط شريط XP</label><div class="compact-chips">${Object.entries(LEVEL_BAR_STYLES).map(([k,s]) => `<button class="cchip ${cust.levelBarStyle===k?'active':''}" data-cust="levelBarStyle" data-val="${k}">${s.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="bar"><label>اللون الأول للشريط</label><div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.levelBarColor1===c?'active':''}" style="background:${c}" data-cust="levelBarColor1" data-val="${c}"></button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="bar"><label>اللون الثاني للشريط</label><div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.levelBarColor2===c?'active':''}" style="background:${c}" data-cust="levelBarColor2" data-val="${c}"></button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="bar">
-        <label>لون الشريط (بسيط — يتجاوز التدرج)</label>
-        <div class="color-strip">
-          <button class="color-dot ${!cust.levelBarColor?'active':''}"
-                  style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
-                  data-cust="levelBarColor" data-val="" title="بدون (استخدام التدرج)"></button>
-          ${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.levelBarColor===c?'active':''}" style="background:${c}" data-cust="levelBarColor" data-val="${c}"></button>`).join('')}
-        </div>
-        <div class="info-hint">💡 اختر "بدون" لاستخدام التدرج، أو لوناً واحداً لاستخدامه مباشرة</div>
-      </div>
-      <div class="cust-field" data-subtab="bar">
-        <label>سماكة الشريط <span class="range-val" id="levelBarHeightVal">${cust.levelBarHeight}px</span></label>
-        <input type="range" class="crop-slider" id="levelBarHeightSlider" min="3" max="20" value="${cust.levelBarHeight}">
-      </div>
-      <div class="cust-field" data-subtab="bar">
-        <label>سرعة الحركة <span class="range-val" id="levelBarSpeedVal">${cust.levelBarSpeed}s</span></label>
-        <input type="range" class="crop-slider" id="levelBarSpeedSlider" min="0.5" max="6" step="0.5" value="${cust.levelBarSpeed}">
-      </div>
+    <div class="cust-field" data-subtab="bar"><label>نمط الشريط</label><div class="compact-chips">${Object.entries(LEVEL_BAR_STYLES).map(([k,s]) => `<button class="cchip ${cust.levelBarStyle===k?'active':''}" data-cust="levelBarStyle" data-val="${k}">${s.label}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="bar"><label>اللون الأول</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.levelBarColor1===c?'active':''}" style="background:${c}" data-cust="levelBarColor1" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="bar"><label>اللون الثاني</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.levelBarColor2===c?'active':''}" style="background:${c}" data-cust="levelBarColor2" data-val="${c}"></button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="bar"><label>سماكة الشريط <span class="range-val" id="levelBarHeightVal">${cust.levelBarHeight}px</span></label><input type="range" class="crop-slider" id="levelBarHeightSlider" min="3" max="20" value="${cust.levelBarHeight}"></div>
+    <div class="cust-field" data-subtab="bar"><label>سرعة الحركة <span class="range-val" id="levelBarSpeedVal">${cust.levelBarSpeed}s</span></label><input type="range" class="crop-slider" id="levelBarSpeedSlider" min="0.5" max="6" step="0.5" value="${cust.levelBarSpeed}"></div>
 
-      <!-- ═══ تبويب: النص ═══ -->
-      <div class="cust-field" data-subtab="label"><label>نص "المستوى"</label><input class="input" id="levelLabelTextInput" value="${esc(cust.levelLabelText)}" maxlength="20" placeholder="المستوى"></div>
-      <div class="cust-field" data-subtab="label">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="levelShowLabelChk" ${cust.levelShowLabel?'checked':''} style="width:auto">
-          <span>إظهار كلمة "المستوى"</span>
-        </label>
-      </div>
-      <div class="cust-field" data-subtab="label">
-        <label>حجم النص</label>
-        <div class="compact-chips">${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([k,l]) => `<button class="cchip ${cust.levelTextSize===k?'active':''}" data-cust="levelTextSize" data-val="${k}">${l}</button>`).join('')}</div>
-      </div>
-      <div class="cust-field" data-subtab="label">
-        <label>لون النص</label>
-        <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.levelTextColor===c?'active':''}" style="background:${c}" data-cust="levelTextColor" data-val="${c}"></button>`).join('')}</div>
-      </div>
-    `;
-  }
+    <div class="cust-field" data-subtab="label"><label>نص "المستوى"</label><input class="input" id="levelLabelTextInput" value="${esc(cust.levelLabelText)}" maxlength="20" placeholder="المستوى"></div>
+    <div class="cust-field" data-subtab="label"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="levelShowLabelChk" ${cust.levelShowLabel?'checked':''} style="width:auto"><span>إظهار كلمة "المستوى"</span></label></div>
+    <div class="cust-field" data-subtab="label"><label>حجم النص</label><div class="compact-chips">${[['sm','صغير'],['md','عادي'],['lg','كبير'],['xl','أكبر']].map(([k,l]) => `<button class="cchip ${cust.levelTextSize===k?'active':''}" data-cust="levelTextSize" data-val="${k}">${l}</button>`).join('')}</div></div>
+    <div class="cust-field" data-subtab="label"><label>لون النص</label><div class="color-strip">${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.levelTextColor===c?'active':''}" style="background:${c}" data-cust="levelTextColor" data-val="${c}"></button>`).join('')}</div></div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      🔤 النصوص — 2 تبويبات: الألوان / الخطوط
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'texts'){
-    return `
-      <!-- ═══ تبويب: الألوان ═══ -->
-      <div class="info-hint" style="margin-bottom:12px" data-subtab="colors">💡 تحكم بألوان كل نص في بطاقتك</div>
-      ${[['joinDateColor','تاريخ الانضمام'],['followersBtnColor','أزرار المتابعين'],['locationColor','الموقع'],['levelTextColor','نص المستوى'],['teamTextColor','اسم الفريق'],['statusTextColor','رسالة الحالة'],['pronounsTextColor','الضمائر']].map(([field,label]) => `
-        <div class="cust-field" data-subtab="colors">
-          <label>${label}</label>
-          <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust[field]===c?'active':''}" style="background:${c}" data-cust="${field}" data-val="${c}"></button>`).join('')}</div>
-        </div>
-      `).join('')}
-      <div class="cust-field" data-subtab="colors">
-        <label>خلفية أزرار المتابعين</label>
-        <div class="color-strip">
-          <button class="color-dot ${cust.followersBtnBg==='transparent'?'active':''}"
-                  style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
-                  data-cust="followersBtnBg" data-val="transparent" title="شفاف"></button>
-          ${NAME_COLOR_PRESETS.slice(0,20).map(c => `<button class="color-dot ${cust.followersBtnBg===c?'active':''}" style="background:${c}" data-cust="followersBtnBg" data-val="${c}"></button>`).join('')}
-        </div>
+if(zone === 'texts'){
+  const colorField = (field, label) => `
+    <div class="cust-field" data-subtab="colors">
+      <label>${label}</label>
+      <div class="color-strip">
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust[field]===c?'active':''}" style="background:${c}" data-cust="${field}" data-val="${c}"></button>`).join('')}
       </div>
-      <div class="cust-field" data-subtab="colors">
-        <label>لون ظل النصوص</label>
-        <div class="color-strip">
-          <button class="color-dot ${cust.textShadowColor==='transparent'?'active':''}"
-                  style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
-                  data-cust="textShadowColor" data-val="transparent" title="بدون"></button>
-          ${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.textShadowColor===c?'active':''}" style="background:${c}" data-cust="textShadowColor" data-val="${c}"></button>`).join('')}
-        </div>
-      </div>
-      <div class="cust-field" data-subtab="colors">
-        <label>شدة الظل <span class="range-val" id="textShadowBlurVal">${cust.textShadowBlur}px</span></label>
-        <input type="range" class="crop-slider" id="textShadowBlurSlider" min="0" max="15" value="${cust.textShadowBlur}">
-      </div>
+    </div>`;
 
-      <!-- ═══ تبويب: الخطوط ═══ -->
-      <div class="cust-field" data-subtab="fonts"><label>الخط العام</label><div class="compact-chips">${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.globalFont===k?'active':''}" data-cust="globalFont" data-val="${k}" style="font-family:${f.value}">${f.label}</button>`).join('')}</div></div>
-      <div class="cust-field" data-subtab="fonts">
-        <label>تباعد الحروف <span class="range-val" id="textLetterSpacingVal">${cust.textLetterSpacing}px</span></label>
-        <input type="range" class="crop-slider" id="textLetterSpacingSlider" min="-1" max="4" step="0.5" value="${cust.textLetterSpacing}">
+  return `
+    <div class="info-hint" data-subtab="colors">💡 تحكم بألوان كل نص في بطاقتك</div>
+    ${colorField('joinDateColor','تاريخ الانضمام')}
+    ${colorField('followersBtnColor','نص أزرار المتابعين')}
+    ${colorField('locationColor','الموقع')}
+    ${colorField('teamTextColor','اسم الفريق')}
+    ${colorField('statusTextColor','رسالة الحالة')}
+    ${colorField('pronounsTextColor','الضمائر')}
+    ${colorField('bioTextColor','نص النبذة')}
+    ${colorField('joinedTextColor','تاريخ الانضمام (ثانوي)')}
+    ${colorField('levelTextColor','لون نص المستوى')}
+
+    <div class="cust-field" data-subtab="colors">
+      <label>خلفية أزرار المتابعين</label>
+      <div class="color-strip">
+        <button class="color-dot ${cust.followersBtnBg==='transparent'?'active':''}"
+                style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
+                data-cust="followersBtnBg" data-val="transparent" title="شفاف"></button>
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.followersBtnBg===c?'active':''}" style="background:${c}" data-cust="followersBtnBg" data-val="${c}"></button>`).join('')}
       </div>
-      <div class="cust-field" data-subtab="fonts">
-        <label>حالة الأحرف</label>
-        <div class="compact-chips">${[['none','عادي'],['uppercase','كبير'],['lowercase','صغير']].map(([k,l]) => `<button class="cchip ${cust.textTransform===k?'active':''}" data-cust="textTransform" data-val="${k}">${l}</button>`).join('')}</div>
+    </div>
+    <div class="cust-field" data-subtab="colors">
+      <label>لون ظل النصوص</label>
+      <div class="color-strip">
+        <button class="color-dot ${!cust.textShadowColor || cust.textShadowColor==='transparent'?'active':''}"
+                style="background:repeating-linear-gradient(45deg,#333 0 4px,#222 4px 8px)"
+                data-cust="textShadowColor" data-val="" title="بدون"></button>
+        ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.textShadowColor===c?'active':''}" style="background:${c}" data-cust="textShadowColor" data-val="${c}"></button>`).join('')}
       </div>
-    `;
-  }
+    </div>
+    <div class="cust-field" data-subtab="colors">
+      <label>شدة الظل <span class="range-val" id="textShadowBlurVal">${cust.textShadowBlur}px</span></label>
+      <input type="range" class="crop-slider" id="textShadowBlurSlider" min="0" max="15" value="${cust.textShadowBlur}">
+    </div>
+
+    <div class="cust-field" data-subtab="fonts">
+      <label>الخط العام</label>
+      <div class="compact-chips">
+        ${Object.entries(TEXT_FONTS).map(([k,f]) => `<button class="cchip ${cust.globalFont===k?'active':''}" data-cust="globalFont" data-val="${k}" style="font-family:${f.value}">${f.label} <small style="opacity:.6;font-size:9px">${f.lang}</small></button>`).join('')}
+      </div>
+    </div>
+    <div class="cust-field" data-subtab="fonts">
+      <label>تباعد الحروف <span class="range-val" id="textLetterSpacingVal">${cust.textLetterSpacing}px</span></label>
+      <input type="range" class="crop-slider" id="textLetterSpacingSlider" min="-1" max="4" step="0.5" value="${cust.textLetterSpacing}">
+    </div>
+    <div class="cust-field" data-subtab="fonts">
+      <label>حالة الأحرف</label>
+      <div class="compact-chips">
+        ${[['none','عادي'],['uppercase','كبير'],['lowercase','صغير']].map(([k,l]) => `<button class="cchip ${cust.textTransform===k?'active':''}" data-cust="textTransform" data-val="${k}">${l}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
 
   /* ══════════════════════════════════════════════════════════
      ✨ التأثيرات — 2 تبويبات: التأثيرات / المؤشر
      ══════════════════════════════════════════════════════════ */
-  if(zone === 'effects'){
-    return `
-      <!-- ═══ تبويب: التأثيرات ═══ -->
+if(zone === 'effects'){
+  return `
+    <!-- التأثيرات -->
+    <div class="cust-field" data-subtab="visual">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="showParticlesChk" ${cust.showParticles?'checked':''} style="width:auto">
+        <span>جزيئات متحركة حول البطاقة</span>
+      </label>
+    </div>
+    ${cust.showParticles ? `
       <div class="cust-field" data-subtab="visual">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="showParticlesChk" ${cust.showParticles?'checked':''} style="width:auto">
-          <span>جزيئات متحركة حول البطاقة</span>
-        </label>
+        <label>لون الجزيئات</label>
+        <div class="color-strip">
+          ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.particleColor===c?'active':''}" style="background:${c}" data-cust="particleColor" data-val="${c}"></button>`).join('')}
+        </div>
       </div>
-      ${cust.showParticles ? `
-        <div class="cust-field" data-subtab="visual">
-          <label>لون الجزيئات</label>
-          <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.particleColor===c?'active':''}" style="background:${c}" data-cust="particleColor" data-val="${c}"></button>`).join('')}</div>
-        </div>
-        <div class="cust-field" data-subtab="visual">
-          <label>عدد الجزيئات <span class="range-val" id="particleCountVal">${cust.particleCount}</span></label>
-          <input type="range" class="crop-slider" id="particleCountSlider" min="5" max="40" value="${cust.particleCount}">
-        </div>
-        <div class="cust-field" data-subtab="visual">
-          <label>سرعة الجزيئات <span class="range-val" id="particleSpeedVal">${cust.particleSpeed}s</span></label>
-          <input type="range" class="crop-slider" id="particleSpeedSlider" min="1" max="15" value="${cust.particleSpeed}">
-        </div>
-      ` : ''}
       <div class="cust-field" data-subtab="visual">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="showSparklesChk" ${cust.showSparkles?'checked':''} style="width:auto">
-          <span>بريق متلألئ</span>
-        </label>
+        <label>عدد الجزيئات <span class="range-val" id="particleCountVal">${cust.particleCount}</span></label>
+        <input type="range" class="crop-slider" id="particleCountSlider" min="5" max="40" value="${cust.particleCount}">
       </div>
-      ${cust.showSparkles ? `
-        <div class="cust-field" data-subtab="visual">
-          <label>لون البريق</label>
-          <div class="color-strip">${NAME_COLOR_PRESETS.slice(0,16).map(c => `<button class="color-dot ${cust.sparkleColor===c?'active':''}" style="background:${c}" data-cust="sparkleColor" data-val="${c}"></button>`).join('')}</div>
-        </div>
-        <div class="cust-field" data-subtab="visual">
-          <label>عدد البريق <span class="range-val" id="sparkleCountVal">${cust.sparkleCount}</span></label>
-          <input type="range" class="crop-slider" id="sparkleCountSlider" min="3" max="20" value="${cust.sparkleCount}">
-        </div>
-      ` : ''}
       <div class="cust-field" data-subtab="visual">
-        <label>حواف مظللة <span class="range-val" id="bgVignetteVal">${cust.bgVignette}%</span></label>
-        <input type="range" class="crop-slider" id="bgVignetteSlider" min="0" max="100" value="${cust.bgVignette}">
+        <label>سرعة الجزيئات <span class="range-val" id="particleSpeedVal">${cust.particleSpeed}s</span></label>
+        <input type="range" class="crop-slider" id="particleSpeedSlider" min="1" max="15" value="${cust.particleSpeed}">
       </div>
+    ` : ''}
 
-      <!-- ═══ تبويب: المؤشر ═══ -->
-      <div class="cust-field" data-subtab="cursor">
-        <label>شكل المؤشر</label>
-        <div class="compact-chips">${[['default','عادي'],['pointer','يد'],['crosshair','صليب'],['cell','مربع'],['help','مساعدة']].map(([v,l]) => `<button class="cchip ${cust.customCursor===v?'active':''}" data-cust="customCursor" data-val="${v}">${l}</button>`).join('')}</div>
+    <div class="cust-field" data-subtab="visual">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="showSparklesChk" ${cust.showSparkles?'checked':''} style="width:auto">
+        <span>بريق متلألئ</span>
+      </label>
+    </div>
+    ${cust.showSparkles ? `
+      <div class="cust-field" data-subtab="visual">
+        <label>لون البريق</label>
+        <div class="color-strip">
+          ${EFFECT_COLORS.map(c => `<button class="color-dot ${cust.sparkleColor===c?'active':''}" style="background:${c}" data-cust="sparkleColor" data-val="${c}"></button>`).join('')}
+        </div>
       </div>
-    `;
-  }
+      <div class="cust-field" data-subtab="visual">
+        <label>عدد البريق <span class="range-val" id="sparkleCountVal">${cust.sparkleCount}</span></label>
+        <input type="range" class="crop-slider" id="sparkleCountSlider" min="3" max="20" value="${cust.sparkleCount}">
+      </div>
+    ` : ''}
+
+    <div class="cust-field" data-subtab="visual">
+      <label>حواف مظللة <span class="range-val" id="bgVignetteVal">${cust.bgVignette}%</span></label>
+      <input type="range" class="crop-slider" id="bgVignetteSlider" min="0" max="100" value="${cust.bgVignette}">
+    </div>
+
+    <!-- المؤشر -->
+    <div class="cust-field" data-subtab="cursor">
+      <label>شكل المؤشر</label>
+      <div class="compact-chips">
+        ${[['default','عادي'],['pointer','يد'],['crosshair','صليب'],['cell','مربع'],['help','مساعدة'],['progress','تحميل']].map(([v,l]) => `<button class="cchip ${cust.customCursor===v?'active':''}" data-cust="customCursor" data-val="${v}">${l}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
 
   return '';
 }
@@ -13254,32 +13991,40 @@ if(zone === 'posts'){
    🎨 استوديو التخصيص — البنية الجديدة
    ============================================================ */
 
+/* ============================================================
+   🎨 دوال مساعدة لمناطق التخصيص
+   ============================================================ */
+function getZoneIcon(zone){
+  return ZONE_ICONS[zone] || '🎨';
+}
+
+/* ✅ استبدل ZONE_ICONS و ZONE_SUBTABS */
 const ZONE_ICONS = {
   cover:'🖼️', avatar:'👤', name:'✏️', username:'@',
   bio:'📝', body:'🎨', card:'🃏', level:'🏅',
-  texts:'🔤', effects:'✨',
-  signatures:'✍️',           // ★ جديد
-  posts:'📰',                // ★ جديد
+  texts:'🔤', effects:'✨', signatures:'✍️', posts:'📰',
 };
-function getZoneIcon(zone){ return ZONE_ICONS[zone] || '🎨'; }
 
 const ZONE_SUBTABS = {
   cover: [
-    { id:'image',  label:'الصورة',   icon:'🖼️' },
-    { id:'style',  label:'النمط',    icon:'🎭' },
-    { id:'effect', label:'التأثير',  icon:'✨' },
+    { id:'image',    label:'الصورة',    icon:'🖼️' },
+    { id:'style',    label:'النمط',     icon:'🎭' },
+    { id:'effect',   label:'التأثير',   icon:'✨' },
+    { id:'anim',     label:'الحركة',    icon:'🎬' },
   ],
   avatar: [
-    { id:'shape',      label:'الشكل',      icon:'⬜' },
-    { id:'frame',      label:'الإطار',     icon:'🖼️' },
-    { id:'effects',    label:'التأثيرات',  icon:'✨' },
-    { id:'decoration', label:'الزخرفة',    icon:'👑' },
+    { id:'shape',      label:'الشكل',    icon:'⬜' },
+    { id:'frame',      label:'الإطار',   icon:'🖼️' },
+    { id:'effects',    label:'التأثيرات', icon:'✨' },
+    { id:'movement',   label:'الحركة',   icon:'🎬' },   /* ★ جديد */
+    { id:'decoration', label:'الزخرفة',  icon:'👑' },
   ],
   name: [
-    { id:'color',  label:'اللون',    icon:'🎨' },
-    { id:'font',   label:'الخط',     icon:'🔤' },
-    { id:'effect', label:'التأثير',  icon:'✨' },
-    { id:'badge',  label:'الشارة',   icon:'👑' },
+    { id:'color',     label:'اللون',     icon:'🎨' },
+    { id:'font',      label:'الخط',      icon:'🔤' },
+    { id:'effect',    label:'التأثير',   icon:'✨' },
+    { id:'animation', label:'الحركة',    icon:'🎬' },   /* ★ جديد */
+    { id:'badge',     label:'الشارة',    icon:'👑' },
   ],
   username: [
     { id:'color',  label:'اللون',    icon:'🎨' },
@@ -13325,7 +14070,6 @@ const ZONE_SUBTABS = {
     { id:'animation', label:'الحركة',   icon:'✨' },
     { id:'display',   label:'العرض',    icon:'👁️' },
   ],
-
   posts: [
     { id:'style',   label:'النمط',   icon:'📄' },
     { id:'layout',  label:'التخطيط', icon:'📐' },
@@ -13336,41 +14080,92 @@ const ZONE_SUBTABS = {
 
 /* حقول كل فئة — لإعادة التعيين */
 const ZONE_FIELDS = {
-  cover: ['coverPreset','coverPattern','coverPatternColor','coverOverlayStyle',
-          'coverVignette','coverBlur','coverZoom','coverBrightnessNew','coverContrast',
-          'coverSaturation','bannerEffect','coverPosition'],
-  avatar: ['avatarShape','avatarBorder','avatarBorderColor','avatarBorderWidth',
-           'frameColor1','frameColor2','frameThickness','frameGlowIntensity',
-           'avatarRotation','avatarScale','avatarFilter','avatarDecoration',
-           'avatarDecorationColor','avatarBgPattern','avatarBgColor','avatarBreathing'],
-  name: ['nameColor','nameGradient2','nameEffect','nameAnimation','nameWeight',
-         'nameSize','nameFont','nameUnderline','nameUnderlineColor',
-         'nameLetterSpacing','nameBadge'],
-  username: ['usernameColor','usernameGradient','usernameEffect','usernameAnimation',
-             'usernameWeight','usernameSize','usernameLetterSpacing'],
-  bio: ['bioStyle','bioColor','bioGradient','bioEffect','bioFontSize','bioFontWeight',
-        'bioAlign','bioBorderColor','bioBorderWidth','bioBg','bioBgOpacity',
-        'bioIcon','bioIconColor'],
-  body: ['themeGradientAngle','themeOpacity','themePattern','themeGlow',
-         'accentColor','profileLayout','musicUrl'],
-  card: ['cardBorderColor','cardBorderWidth','cardBorderStyle','cardCorner',
-         'cardGlow','cardShadow','cardHoverEffect','cardEntrance','cardOpacity',
-         'cardBackdropBlur','bgPattern'],
-  level: ['levelBadgeShape','levelBadgeColor1','levelBadgeColor2','levelBarStyle',
-          'levelBarColor1','levelBarColor2','levelBarColor','levelIcon',
-          'levelLabelText','levelShowLabel'],
-  texts: ['joinDateColor','followersBtnColor','followersBtnBg','locationColor',
-          'levelTextColor','teamTextColor','statusTextColor','pronounsTextColor',
-          'globalFont'],
-  effects: ['showParticles','particleColor','showSparkles','customCursor'],
+  cover: [
+    'coverPreset','coverPattern','coverPatternColor','coverPatternSize','coverPatternOpacity',
+    'coverOverlayStyle','coverVignette','coverBlur','coverZoom',
+    'coverBrightnessNew','coverContrast','coverSaturation',
+    'bannerEffect','coverEffectColor','coverPosition',
+    'coverHue','coverOpacity','coverRadius','coverAnimType','coverAnimSpeed',
+    'coverTint','coverOverlap'
+  ],
+  avatar: [
+    'avatarShape','avatarBorder','avatarBorderStyle','avatarBorderWidth',
+    'avatarBorderColor','avatarBorderColor2',
+    'frameColor1','frameColor2','frameThickness',
+    'avatarRotation','avatarScale','avatarFilter',
+    'avatarDecoration','avatarDecorationColor','avatarDecorationPosition','avatarDecorationSize',
+    'avatarBgPattern','avatarBgColor',
+    'avatarMovement','avatarMovementSpeed',
+    'avatarSize','avatarOffsetX','avatarOffsetY',
+    'avatarGlowColor','avatarGlowIntensity'
+  ],
+  name: [
+    'nameColor','nameGradient','nameGradient2',
+    'nameEffectColor','nameShadowColor',
+    'nameEffect','nameAnimation','nameAnimationSpeed',
+    'nameWeight','nameSize','nameFont','nameFontStyle','nameTransform',
+    'nameUnderline','nameUnderlineColor',
+    'nameLetterSpacing','nameLineHeight',
+    'nameBadge','nameBadgeColor','nameBadgeEffect'
+  ],
+  username: [
+    'usernameColor','usernameGradient',
+    'usernameEffect','usernameAnimation','usernameAnimationSpeed',
+    'usernameWeight','usernameSize','usernameLetterSpacing',
+    'usernameOpacity','usernameFont','usernameShowAt','usernameItalic'
+  ],
+  bio: [
+    'bioStyle','bioColor','bioGradient','bioEffect','bioEffectColor',
+    'bioBorderColor','bioBorderWidth',
+    'bioBg','bioBgOpacity',
+    'bioFontSize','bioFontWeight','bioAlign',
+    'bioLineHeight','bioLetterSpacing','bioFontFamily','bioMaxWidth',
+    'bioItalic','bioUnderline',
+    'bioIcon','bioIconColor'
+  ],
+  body: [
+    'themeGradientAngle','themeOpacity',
+    'themePattern','themePatternColor','themePatternSize','themePatternOpacity',
+    'themeGlow','themeGlowColor',
+    'themeHue','themeSaturation','themeBrightness','themeBlur',
+    'profileLayout','accentColor','accentColor2',
+    'musicUrl','musicVolume','musicAutoplay',
+    'bgVignette'
+  ],
+  card: [
+    'cardBorderColor','cardBorderWidth','cardBorderStyle','cardCorner',
+    'cardPadding','cardRotate','cardOpacity','cardBackdropBlur',
+    'cardGlow','cardGlowColor','cardShadow',
+    'cardHoverEffect','cardPressEffect','cardEntrance',
+    'cardBlendMode','cardMaxWidth'
+  ],
+  level: [
+    'levelBadgeShape','levelBadgeColor1','levelBadgeColor2','levelBadgeSize',
+    'levelBadgePosition','levelIcon',
+    'levelBarStyle','levelBarColor1','levelBarColor2',
+    'levelBarHeight','levelBarSpeed',
+    'levelLabelText','levelShowLabel','levelTextSize','levelTextColor'
+  ],
+  texts: [
+    'joinDateColor','followersBtnColor','followersBtnBg','locationColor',
+    'teamTextColor','statusTextColor','pronounsTextColor',
+    'bioTextColor','joinedTextColor','levelTextColor',
+    'globalFont','textLetterSpacing','textTransform',
+    'textShadowColor','textShadowBlur'
+  ],
+  effects: [
+    'showParticles','particleColor','particleCount','particleSpeed',
+    'showSparkles','sparkleColor','sparkleCount',
+    'customCursor','bgVignette'
+  ],
   signatures: [
     'sigStyle','sigColor','sigGradient','sigEffect','sigBg','sigBgOpacity',
-    'sigBorderColor','sigBorderWidth','sigBorderRadius','sigFontSize',
-    'sigFontWeight','sigFontFamily','sigFontStyle','sigAnimation',
-    'sigAlign','sigPadding','sigShadow','sigLetterSpacing','sigLineHeight',
+    'sigBorderColor','sigBorderWidth','sigBorderRadius',
+    'sigFontSize','sigFontWeight','sigFontFamily','sigFontStyle',
+    'sigAnimation','sigAlign','sigPadding','sigShadow',
+    'sigLetterSpacing','sigLineHeight',
     'sigDisplayCount','sigShowAvatar','sigShowTime','sigShowName',
   ],
-
   posts: [
     'postCardStyle','postLayout','postBgColor','postBgOpacity',
     'postBorderColor','postBorderWidth','postBorderRadius','postGlow',
@@ -13384,114 +14179,113 @@ const SUBTAB_FIELD_MAP = {
   cover: {
     coverPreset:'image', coverBlur:'image', coverZoom:'image',
     coverBrightnessNew:'image', coverContrast:'image', coverSaturation:'image',
-    coverPattern:'style', coverPatternColor:'style',
-    coverOverlayStyle:'style', coverVignette:'style',
-    bannerEffect:'effect',
-  coverHue:'image', coverOpacity:'image',           // ★
-  coverRadius:'style',                              // ★
-  coverAnimType:'effect',                           // ★
-},
+    coverHue:'image', coverOpacity:'image',
+    coverPattern:'style', coverPatternColor:'style', coverPatternSize:'style',
+    coverPatternOpacity:'style', coverOverlayStyle:'style', coverVignette:'style',
+    coverRadius:'style', coverOverlap:'style',
+    bannerEffect:'effect', coverEffectColor:'effect',
+    coverAnimType:'anim', coverAnimSpeed:'anim',
+  },
   avatar: {
-    avatarShape:'shape', avatarBorder:'shape',
-    frameColor1:'frame', frameColor2:'frame',
-    frameThickness:'frame', frameGlowIntensity:'frame',
+    avatarShape:'shape', avatarBorder:'shape', avatarBorderStyle:'shape',
+    avatarBorderWidth:'shape', avatarSize:'shape',
+    frameColor1:'frame', frameColor2:'frame', frameThickness:'frame',
     avatarFilter:'effects', avatarRotation:'effects', avatarScale:'effects',
-    avatarBreathing:'effects', avatarBorderWidth:'effects', avatarBorderColor:'effects',
-    avatarDecoration:'decoration', avatarBgPattern:'decoration',
-  avatarSize:'shape', avatarBorderStyle:'shape',    // ★
-  avatarOffsetX:'effects', avatarOffsetY:'effects', // ★
-  avatarGlowColor:'frame', avatarGlowIntensity:'frame', // ★
-},
+    avatarOffsetX:'effects', avatarOffsetY:'effects',
+    avatarGlowColor:'effects', avatarGlowIntensity:'effects',
+    avatarMovement:'movement', avatarMovementSpeed:'movement',
+    avatarDecoration:'decoration', avatarDecorationColor:'decoration',
+    avatarDecorationPosition:'decoration', avatarDecorationSize:'decoration',
+    avatarBgPattern:'decoration', avatarBgColor:'decoration',
+  },
   name: {
     nameColor:'color', nameGradient2:'color',
+    nameEffectColor:'color', nameShadowColor:'color',
     nameWeight:'font', nameSize:'font', nameFont:'font',
-    nameLetterSpacing:'font', nameUnderline:'font', nameUnderlineColor:'font',
-    nameEffect:'effect', nameAnimation:'effect',
-    nameBadge:'badge',
-  nameShadowColor:'color',                          // ★
-  nameFontStyle:'font', nameTransform:'font',       // ★
-  nameLineHeight:'font',                            // ★
-},
+    nameFontStyle:'font', nameTransform:'font',
+    nameUnderline:'font', nameUnderlineColor:'font',
+    nameLetterSpacing:'font', nameLineHeight:'font',
+    nameEffect:'effect', nameAnimation:'animation', nameAnimationSpeed:'animation',
+    nameBadge:'badge', nameBadgeColor:'badge', nameBadgeEffect:'badge',
+  },
   username: {
-    usernameColor:'color', usernameGradient:'color',
+    usernameColor:'color', usernameGradient:'color', usernameOpacity:'color',
     usernameWeight:'font', usernameSize:'font', usernameLetterSpacing:'font',
+    usernameFont:'font', usernameShowAt:'font', usernameItalic:'font',
     usernameEffect:'effect', usernameAnimation:'effect',
-  usernameOpacity:'color',                          // ★
-  usernameFont:'font', usernameShowAt:'font',       // ★
-  usernameItalic:'font',                            // ★
-},
+  },
   bio: {
     bioStyle:'style',
-    bioColor:'color', bioGradient:'color', bioEffect:'color', bioBorderColor:'color',
+    bioColor:'color', bioGradient:'color', bioEffect:'color',
+    bioBorderColor:'color',
     bioFontSize:'layout', bioFontWeight:'layout', bioAlign:'layout',
     bioBg:'layout', bioBgOpacity:'layout', bioBorderWidth:'layout',
+    bioLineHeight:'layout', bioLetterSpacing:'layout',
+    bioFontFamily:'layout', bioMaxWidth:'layout', bioItalic:'layout',
     bioIcon:'icon', bioIconColor:'icon',
-  bioLineHeight:'layout', bioLetterSpacing:'layout',// ★
-  bioFontFamily:'layout', bioMaxWidth:'layout',     // ★
-  bioItalic:'layout',                               // ★
-},
+  },
   body: {
     themeGradientAngle:'theme', themeOpacity:'theme',
-    themePattern:'theme', themeGlow:'theme',
-    profileLayout:'layout', accentColor:'accent', musicUrl:'music',
-  themeHue:'theme', themeSaturation:'theme',        // ★
-  themeBrightness:'theme', themeBlur:'theme',       // ★
-  accentColor2:'accent',                            // ★
-  musicVolume:'music', musicAutoplay:'music',       // ★
-},
+    themeHue:'theme', themeSaturation:'theme',
+    themeBrightness:'theme', themeBlur:'theme',
+    themePattern:'theme', themePatternColor:'theme',
+    themePatternSize:'theme', themePatternOpacity:'theme',
+    themeGlow:'theme', themeGlowColor:'theme',
+    profileLayout:'layout',
+    accentColor:'accent', accentColor2:'accent',
+    musicUrl:'music', musicVolume:'music', musicAutoplay:'music',
+  },
   card: {
     cardBorderColor:'border', cardBorderWidth:'border',
     cardBorderStyle:'border', cardCorner:'border',
-    cardGlow:'shadow', cardShadow:'shadow',
-    cardHoverEffect:'effect', cardEntrance:'effect',
-    bgPattern:'pattern', cardOpacity:'pattern', cardBackdropBlur:'pattern',
-  cardPadding:'border', cardRotate:'border',        // ★
-  cardBlendMode:'pattern', cardMaxWidth:'pattern',  // ★
-},
+    cardPadding:'border', cardRotate:'border',
+    cardGlow:'shadow', cardGlowColor:'shadow', cardShadow:'shadow',
+    cardHoverEffect:'effect', cardPressEffect:'effect', cardEntrance:'effect',
+    cardOpacity:'pattern', cardBackdropBlur:'pattern',
+    cardBlendMode:'pattern', cardMaxWidth:'pattern',
+  },
   level: {
-    levelBadgeShape:'badge', levelBadgeColor1:'badge', levelBadgeColor2:'badge',
-    levelIcon:'badge',
-    levelBarStyle:'bar', levelBarColor1:'bar', levelBarColor2:'bar', levelBarColor:'bar',
+    levelBadgeShape:'badge', levelBadgeColor1:'badge',
+    levelBadgeColor2:'badge', levelBadgePosition:'badge',
+    levelBadgeSize:'badge', levelIcon:'badge',
+    levelBarStyle:'bar', levelBarColor1:'bar',
+    levelBarColor2:'bar', levelBarHeight:'bar', levelBarSpeed:'bar',
     levelLabelText:'label', levelShowLabel:'label',
-  levelBarHeight:'bar', levelBarSpeed:'bar',        // ★
-  levelTextSize:'label', levelBadgeSize:'badge',    // ★
-  levelBadgePosition:'badge',                       // ★
-},
+    levelTextSize:'label', levelTextColor:'label',
+  },
   texts: {
     joinDateColor:'colors', followersBtnColor:'colors', followersBtnBg:'colors',
-    locationColor:'colors', levelTextColor:'colors', teamTextColor:'colors',
+    locationColor:'colors', teamTextColor:'colors',
     statusTextColor:'colors', pronounsTextColor:'colors',
-    globalFont:'fonts',
-  textLetterSpacing:'fonts', textTransform:'fonts', // ★
-  textShadowColor:'colors', textShadowBlur:'colors',// ★
-},
-  effects: {
-    showParticles:'visual', particleColor:'visual', showSparkles:'visual',
-    customCursor:'cursor',
-  particleCount:'visual', particleSpeed:'visual',   // ★
-  sparkleColor:'visual', sparkleCount:'visual',     // ★
-  bgVignette:'visual',                              // ★
-},
-  signatures: {
-    sigStyle: 'style',
-    sigShowAvatar: 'style', sigShowTime: 'style', sigShowName: 'style',
-    sigColor: 'color', sigGradient: 'color', sigEffect: 'color',
-    sigBg: 'color', sigBgOpacity: 'color', sigBorderColor: 'color',
-    sigFontSize: 'font', sigFontWeight: 'font', sigFontFamily: 'font', sigFontStyle: 'font',
-    sigAlign: 'layout', sigPadding: 'layout', sigBorderWidth: 'layout',
-    sigBorderRadius: 'layout', sigLetterSpacing: 'layout',
-    sigLineHeight: 'layout', sigShadow: 'layout',
-    sigAnimation: 'animation',
-    sigDisplayCount: 'display',
+    textShadowColor:'colors', textShadowBlur:'colors',
+    globalFont:'fonts', textLetterSpacing:'fonts', textTransform:'fonts',
+    bioTextColor:'fonts',
   },
-
+  effects: {
+    showParticles:'visual', particleColor:'visual', particleCount:'visual',
+    particleSpeed:'visual', showSparkles:'visual', sparkleColor:'visual',
+    sparkleCount:'visual', bgVignette:'visual',
+    customCursor:'cursor',
+  },
+  signatures: {
+    sigStyle:'style', sigShowAvatar:'style', sigShowTime:'style', sigShowName:'style',
+    sigColor:'color', sigGradient:'color', sigEffect:'color',
+    sigBg:'color', sigBgOpacity:'color', sigBorderColor:'color',
+    sigFontSize:'font', sigFontWeight:'font',
+    sigFontFamily:'font', sigFontStyle:'font',
+    sigAlign:'layout', sigPadding:'layout', sigBorderWidth:'layout',
+    sigBorderRadius:'layout', sigLetterSpacing:'layout',
+    sigLineHeight:'layout', sigShadow:'layout',
+    sigAnimation:'animation',
+    sigDisplayCount:'display',
+  },
   posts: {
-    postCardStyle: 'style', postShowActions: 'style',
-    postLayout: 'layout', postAvatarShape: 'layout', postAvatarSize: 'layout',
-    postBorderRadius: 'layout', postBorderWidth: 'layout',
-    postBgColor: 'colors', postBgOpacity: 'colors',
-    postBorderColor: 'colors', postNameColor: 'colors', postTextColor: 'colors',
-    postGlow: 'glow',
+    postCardStyle:'style', postShowActions:'style',
+    postLayout:'layout', postAvatarShape:'layout',
+    postAvatarSize:'layout', postBorderRadius:'layout', postBorderWidth:'layout',
+    postBgColor:'colors', postBgOpacity:'colors',
+    postBorderColor:'colors', postNameColor:'colors', postTextColor:'colors',
+    postGlow:'glow',
   },
 };
 
@@ -13508,6 +14302,11 @@ const SLIDER_TO_FIELD = {
   themeGradientAngleSlider:'themeGradientAngle', themeOpacitySlider:'themeOpacity',
   cardBorderWidthSlider:'cardBorderWidth', cardOpacitySlider:'cardOpacity',
   cardBackdropBlurSlider:'cardBackdropBlur',
+  coverPatternSizeSlider:      { field:'coverPatternSize',       type:'int',   label:'coverPatternSizeVal',       suffix:'px' },
+  coverPatternOpacitySlider:   { field:'coverPatternOpacity',    type:'int',   label:'coverPatternOpacityVal',    suffix:'%' },
+  themePatternSizeSlider:      { field:'themePatternSize',       type:'int',   label:'themePatternSizeVal',       suffix:'px' },
+  themePatternOpacitySlider:   { field:'themePatternOpacity',    type:'int',   label:'themePatternOpacityVal',    suffix:'%' },
+  avatarDecorationSizeSlider:  { field:'avatarDecorationSize',   type:'int',   label:'avatarDecorationSizeVal',   suffix:'%' },
 };
 
 const CHECKBOX_TO_FIELD = {
@@ -13518,6 +14317,15 @@ const CHECKBOX_TO_FIELD = {
   sigShowTimeChk:   'sigShowTime',
   sigShowNameChk:   'sigShowName',
   postShowActionsChk: 'postShowActions',
+  coverOverlapChk: 'coverOverlap',
+  coverOverlapChk:  'coverOverlap',
+  usernameShowAtChk:'usernameShowAt',
+  usernameItalicChk:'usernameItalic',
+  sigShowAvatarChk: 'sigShowAvatar',
+  sigShowTimeChk:   'sigShowTime',
+  sigShowNameChk:   'sigShowName',
+  postShowActionsChk:'postShowActions',
+  musicAutoplayChk: 'musicAutoplay',
 };
 
 /* الحقول التي تحتاج إعادة رسم كامل عند التغيير */
@@ -13526,6 +14334,7 @@ const CONDITIONAL_FIELDS = ['avatarBorder', 'nameUnderline', 'showParticles'];
 /* ============================================================
    🖼️ معاينة العنصر المخصص (فوق التبويبات)
    ============================================================ */
+/* ✨ استبدل دالة renderZonePreview بالكامل — المعاينات الجديدة */
 function renderZonePreview(zone, p){
   if(!zone || !p) return '';
   const cust = getProfileCustomization(p);
@@ -13533,20 +14342,15 @@ function renderZonePreview(zone, p){
   const frameId = p.equipped?.frameId || p.frameId || 'none';
   const theme = THEMES_EXTENDED[themeId] || THEMES_EXTENDED.default;
 
-/* ★ إضافة فلتر Hue للتأثيرات */
-if(zone === 'cover'){
-  return `<div class="zone-preview-inner">
-    <div style="width:100%;aspect-ratio:16/7;border-radius:10px;overflow:hidden;position:relative;
-                ${buildCoverStyle(p, cust, theme)}
-                filter:hue-rotate(${cust.coverHue}deg) opacity(${cust.coverOpacity/100});
-                border-radius:${cust.coverRadius}px;">
-      ${buildCoverOverlayHTML(cust)}
-      ${cust.bannerEffect !== 'none' ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0;z-index:4"></div>` : ''}
-      ${cust.coverAnimType !== 'none' ? `<div class="cover-anim-${cust.coverAnimType}" style="position:absolute;inset:0;background:inherit;background-size:cover;"></div>` : ''}
-      ${!p.coverUrl ? `<div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]});display:grid;place-items:center;color:rgba(255,255,255,.75);font-size:11px;font-weight:800;z-index:1;gap:4px">${ic('camera','sm')} <span>الغلاف</span></div>` : ''}
-    </div>
-  </div>`;
-}
+  if(zone === 'cover'){
+    return `<div class="zone-preview-inner">
+      <div style="width:100%;aspect-ratio:16/7;border-radius:${cust.coverRadius || 10}px;overflow:hidden;position:relative;
+                  ${buildCoverStyle(p, cust, theme)}">
+        ${buildCoverOverlayHTML(cust)}
+        ${!p.coverUrl ? `<div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]});display:grid;place-items:center;color:rgba(255,255,255,.75);font-size:11px;font-weight:800;z-index:1;gap:4px">${ic('camera','sm')} <span>الغلاف</span></div>` : ''}
+      </div>
+    </div>`;
+  }
 
   if(zone === 'avatar'){
     return `<div class="zone-preview-inner" style="display:flex;justify-content:center;padding:16px 0">
@@ -13556,31 +14360,34 @@ if(zone === 'cover'){
 
   if(zone === 'name'){
     const badge = NAME_BADGES[cust.nameBadge] || NAME_BADGES.none;
+    const badgeColorStyle = cust.nameBadgeColor ? `color:${cust.nameBadgeColor}` : '';
     return `<div class="zone-preview-inner" style="display:flex;justify-content:center;align-items:center;padding:20px;text-align:center">
-      <div class="anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)}">
-        ${badge.emoji ? `<span style="margin-inline-end:4px">${badge.emoji}</span>` : ''}
+      <div class="anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)};--anim-duration:${(NAME_ANIMATION_SPEEDS[cust.nameAnimationSpeed]||NAME_ANIMATION_SPEEDS.normal).duration}s">
+        ${badge.emoji ? `<span class="preview-badge" style="${badgeColorStyle};margin-inline-end:4px">${badge.emoji}</span>` : ''}
         ${esc(p.name)}
       </div>
     </div>`;
   }
 
-  if(zone === 'username'){
-    return `<div class="zone-preview-inner" style="display:flex;justify-content:center;padding:20px">
-      <div style="${buildUsernameStyle(cust)}">@${esc(p.username)}</div>
-    </div>`;
-  }
-
   if(zone === 'bio'){
+    const icon = cust.bioIcon
+      ? `<span style="${cust.bioIconColor?`color:${cust.bioIconColor}`:''};margin-inline-end:4px">${cust.bioIcon}</span>`
+      : '';
     return `<div class="zone-preview-inner" style="padding:14px">
-      <div style="${buildBioStyle(cust)}">${cust.bioIcon ? `<span style="color:${cust.bioIconColor};margin-inline-end:4px">${cust.bioIcon}</span>` : ''}${esc(p.bio || 'نبذة قصيرة عن نفسك…')}</div>
+      <div style="${buildBioStyle(cust)}">${icon}${esc(p.bio || 'نبذة قصيرة عن نفسك…')}</div>
     </div>`;
   }
 
   if(zone === 'body'){
-    const bg = `background:linear-gradient(${cust.themeGradientAngle}deg, ${theme.colors[0]}55, ${theme.colors[1]}22), #0c111c;`;
+    const alpha1 = Math.round((cust.themeOpacity / 100) * 0.55 * 255).toString(16).padStart(2,'0');
+    const alpha2 = Math.round((cust.themeOpacity / 100) * 0.25 * 255).toString(16).padStart(2,'0');
+    const bg = `background:linear-gradient(${cust.themeGradientAngle}deg, ${theme.colors[0]}${alpha1}, ${theme.colors[1]}${alpha2}), #0c111c;`;
+    const glowCss = cust.themeGlow !== 'none'
+      ? `box-shadow:0 0 30px ${cust.themeGlowColor}88;`
+      : '';
     return `<div class="zone-preview-inner">
-      <div style="height:100px;border-radius:10px;position:relative;overflow:hidden;display:grid;place-items:center;${bg}">
-        ${buildBgPattern(cust.themePattern)}
+      <div style="height:100px;border-radius:10px;position:relative;overflow:hidden;display:grid;place-items:center;${bg}${glowCss}">
+        ${cust.themePattern !== 'none' ? `<div class="cover-pattern cover-pattern-${cust.themePattern}" style="color:${cust.themePatternColor};position:absolute;inset:0;opacity:${cust.themePatternOpacity/100};background-size:${cust.themePatternSize}px ${cust.themePatternSize}px;"></div>` : ''}
         <div style="position:relative;z-index:1;text-align:center">
           <div style="font-size:26px">🎨</div>
           <div style="font-size:12px;font-weight:900;color:#fff;margin-top:4px">${theme.name}</div>
@@ -13589,93 +14396,133 @@ if(zone === 'cover'){
     </div>`;
   }
 
-  if(zone === 'card'){
-    return `<div class="zone-preview-inner" style="padding:14px 0">
-      <div style="${buildCardStyle(cust)};height:90px;background:linear-gradient(135deg, rgba(108,92,231,.15), rgba(0,210,255,.08));display:grid;place-items:center">
-        <div style="font-size:11px;color:var(--muted);font-weight:800">معاينة شكل البطاقة</div>
-      </div>
-    </div>`;
-  }
-
   if(zone === 'level'){
+    const shape = LEVEL_BADGE_SHAPES[cust.levelBadgeShape] || LEVEL_BADGE_SHAPES.rounded;
     const badgeBg = `linear-gradient(135deg, ${cust.levelBadgeColor1}, ${cust.levelBadgeColor2})`;
-    const badgeStyle = `
-      background:${badgeBg};
-      ${cust.levelBadgeShape === 'hexagon' ? 'clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);' : ''}
-      ${cust.levelBadgeShape === 'star' ? 'clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);' : ''}
-    `;
+    const clipMap = {
+      hexagon: 'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)',
+      star:    'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)',
+      diamond: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
+      shield:  'polygon(50% 0%,100% 20%,100% 60%,50% 100%,0% 60%,0% 20%)',
+      octagon: 'polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)',
+    };
+    const clipCss = clipMap[cust.levelBadgeShape] || '';
+    const barCss = `background:linear-gradient(90deg, ${cust.levelBarColor1}, ${cust.levelBarColor2}); height:${cust.levelBarHeight}px;`;
     return `<div class="zone-preview-inner" style="padding:14px 0">
-      <div class="pc-level" style="padding:8px 0">
-        <div class="pc-level-bar level-bar-${cust.levelBarStyle || 'gradient'}" style="flex:1">
-          <span style="width:60%;${cust.levelBarColor ? `background:${cust.levelBarColor};box-shadow:0 0 14px ${cust.levelBarColor};` : `background:linear-gradient(90deg, ${cust.levelBarColor1}, ${cust.levelBarColor2});`}"></span>
+      <div class="pc-level" style="padding:8px 0; display:flex; align-items:center; gap:10px; ${cust.levelBadgePosition==='right'?'flex-direction:row-reverse;':''}">
+        <div class="pc-level-bar level-bar-${cust.levelBarStyle}" style="flex:1; height:${cust.levelBarHeight}px; border-radius:99px; background:rgba(255,255,255,.075); overflow:hidden">
+          <span style="display:block; height:100%; width:60%; border-radius:99px; ${barCss}"></span>
         </div>
-        <div class="pc-level-num" style="${badgeStyle}">
+        <div class="pc-level-num size-${cust.levelBadgeSize}"
+             style="background:${badgeBg};
+                    ${clipCss?`clip-path:${clipCss};`:''};
+                    color:${cust.levelTextColor};
+                    padding:6px 12px; border-radius:9px; font-weight:900;">
           ${cust.levelIcon || ''} ${cust.levelShowLabel ? (cust.levelLabelText || 'المستوى') + ' ' : ''}${p.level || 1}
         </div>
       </div>
     </div>`;
   }
 
+  if(zone === 'username'){
+    const unameSpeed = (NAME_ANIMATION_SPEEDS[cust.usernameAnimationSpeed] || NAME_ANIMATION_SPEEDS.normal).duration;
+    return `<div class="zone-preview-inner" style="display:flex;justify-content:center;padding:24px 12px">
+      <div class="${cust.usernameAnimation !== 'none' ? `anim-name-${cust.usernameAnimation}` : ''}"
+           style="${buildUsernameStyle(cust)};--anim-duration:${unameSpeed}s">
+        ${cust.usernameShowAt ? '@' : ''}${esc(p.username || 'username')}
+      </div>
+    </div>`;
+  }
+
+  if(zone === 'card'){
+    return `<div class="zone-preview-inner" style="padding:16px 8px">
+      <div class="player-card" style="${buildCardStyle(cust)};max-width:340px;margin:0 auto;padding:18px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">🃏</div>
+        <div style="font-size:12px;font-weight:900;color:var(--txt)">معاينة شكل البطاقة</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.6">
+          الحواف · الظل · التوهج · الشفافية<br>والخلفية الضبابية
+        </div>
+      </div>
+    </div>`;
+  }
+
   if(zone === 'texts'){
-    return `<div class="zone-preview-inner">
-      <div style="background:var(--card);border-radius:10px;padding:12px;font-size:11px;display:flex;flex-direction:column;gap:7px">
-        <div style="color:${cust.joinDateColor}">${ic('clock','xs')} انضم حديثاً</div>
-        <div style="color:${cust.locationColor}">${ic('location','xs')} القاهرة، مصر</div>
+    const shadowCss = (cust.textShadowColor && cust.textShadowColor !== 'transparent')
+      ? `text-shadow:0 0 ${cust.textShadowBlur}px ${cust.textShadowColor};`
+      : '';
+    return `<div class="zone-preview-inner" style="padding:14px">
+      <div style="background:var(--card);border-radius:10px;padding:12px;font-size:11px;
+                  display:flex;flex-direction:column;gap:7px;
+                  letter-spacing:${cust.textLetterSpacing}px;
+                  text-transform:${cust.textTransform || 'none'};
+                  font-family:${TEXT_FONTS[cust.globalFont]?.value || 'inherit'};
+                  ${shadowCss}">
+        <div style="color:${cust.joinDateColor}">🕒 انضم حديثاً</div>
+        <div style="color:${cust.locationColor}">📍 القاهرة، مصر</div>
         <div style="color:${cust.teamTextColor}">🛡️ فريق نكسوس</div>
         <div style="color:${cust.statusTextColor}">متاح للعب</div>
+        <div style="color:${cust.bioTextColor}">هذه نبذة قصيرة عن المستخدم</div>
+        <div style="color:${cust.levelTextColor}">المستوى 5</div>
       </div>
-
-        <div class="pc-match-stats" id="pcMatchStats_${p.uid}">
-          <div class="pms-item"><span class="pms-icon">🎮</span><span class="pms-val">…</span><span class="pms-lbl">مباراة</span></div>
-          <div class="pms-divider"></div>
-          <div class="pms-item"><span class="pms-icon">🏆</span><span class="pms-val">…</span><span class="pms-lbl">فوز</span></div>
-        </div>
-
-      <!-- ★ معاينة صف المتابعين بالنمط الجديد -->
-      <div class="pc-social-row"
-           style="margin-top:10px;border-radius:10px;
-                  --btn-bg:${cust.followersBtnBg === 'transparent' ? 'rgba(0,0,0,.18)' : cust.followersBtnBg};
-                  --btn-fg:${cust.followersBtnColor};
-                  --btn-label-fg:${cust.followersBtnColor};">
-        <button class="pc-social-btn" type="button">
-          <b>128</b>
-          <small>متابع</small>
-        </button>
-        <button class="pc-social-btn" type="button">
-          <b>42</b>
-          <small>متابَع</small>
-        </button>
+      <div class="pc-social-row" style="margin-top:10px;border-radius:10px;
+           --btn-bg:${cust.followersBtnBg === 'transparent' ? 'rgba(0,0,0,.18)' : cust.followersBtnBg};
+           --btn-fg:${cust.followersBtnColor};
+           --btn-label-fg:${cust.followersBtnColor};">
+        <button class="pc-social-btn" type="button"><b>128</b><small>متابع</small></button>
+        <button class="pc-social-btn" type="button"><b>42</b><small>متابَع</small></button>
       </div>
     </div>`;
   }
 
   if(zone === 'effects'){
+    const dots = cust.showParticles
+      ? Array.from({length: Math.min(cust.particleCount || 10, 20)}).map((_, i) => {
+          const left = (i * 37) % 100;
+          const top = (i * 53) % 100;
+          const delay = (i * 0.3) % cust.particleSpeed;
+          return `<span style="position:absolute;left:${left}%;top:${top}%;
+                                width:4px;height:4px;border-radius:50%;
+                                background:${cust.particleColor};
+                                box-shadow:0 0 6px ${cust.particleColor};
+                                animation:particleDrift ${cust.particleSpeed}s ease-in-out ${delay}s infinite;"></span>`;
+        }).join('')
+      : '';
+    const sparkles = cust.showSparkles
+      ? `<div style="position:absolute;inset:0;
+                      background-image:radial-gradient(1px 1px at 20% 30%,${cust.sparkleColor},transparent),
+                                       radial-gradient(1px 1px at 70% 60%,${cust.sparkleColor},transparent),
+                                       radial-gradient(1px 1px at 40% 80%,${cust.sparkleColor},transparent),
+                                       radial-gradient(1px 1px at 90% 20%,${cust.sparkleColor},transparent);
+                      animation:pulse 2s infinite;"></div>`
+      : '';
+    const vignette = cust.bgVignette > 0
+      ? `<div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,${cust.bgVignette/100}) 100%)"></div>`
+      : '';
     return `<div class="zone-preview-inner">
-      <div style="height:90px;border-radius:10px;background:linear-gradient(135deg, rgba(108,92,231,.15), rgba(0,210,255,.08));display:grid;place-items:center;position:relative;overflow:hidden">
-        ${cust.showParticles ? `<div class="card-particles" style="color:${cust.particleColor}"></div>` : ''}
-        ${cust.showSparkles ? `<div style="position:absolute;inset:0;background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 60%,#f5b301,transparent),radial-gradient(1px 1px at 40% 80%,#fff,transparent);animation:pulse 2s infinite"></div>` : ''}
-        <div style="position:relative;z-index:1;font-size:11px;color:var(--muted);font-weight:800">
+      <div style="height:120px;border-radius:10px;position:relative;overflow:hidden;
+                  background:linear-gradient(135deg, rgba(108,92,231,.15), rgba(0,210,255,.08));
+                  display:grid;place-items:center;">
+        ${dots}${sparkles}${vignette}
+        <div style="position:relative;z-index:1;font-size:11px;color:var(--muted);font-weight:800;text-align:center">
           ${(cust.showParticles || cust.showSparkles) ? '✨ تأثيرات نشطة' : 'لا تأثيرات'}
         </div>
       </div>
     </div>`;
   }
 
-  /* ══════════════════════════════════════════════════════════
-     ✍️ معاينة التوقيعات
-     ══════════════════════════════════════════════════════════ */
   if(zone === 'signatures'){
+    const sigStyle = buildSignatureStyle(cust);
     return `<div class="zone-preview-inner" style="padding:14px">
-      <div class="sig-preview-list">
+      <div style="display:flex;flex-direction:column;gap:10px">
         ${Array.from({length: Math.min(3, cust.sigDisplayCount || 3)}).map((_, i) => `
-          <div class="sig-preview-row" style="animation-delay:${i*0.2}s">
+          <div style="display:flex;align-items:flex-start;gap:8px;animation:sigRowFade .4s ease both;animation-delay:${i*.15}s">
             ${cust.sigShowAvatar
-              ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;
-                            background:var(--grad);margin-inline-end:8px;vertical-align:middle;
-                            box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>`
+              ? `<span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;
+                              background:linear-gradient(135deg,${cust.sigBorderColor},${cust.sigBg || '#00d2ff'});
+                              box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>`
               : ''}
-            <div style="${buildSignatureStyle(cust)};display:inline-block;text-align:${cust.sigAlign};min-width:60%">
-              ${cust.sigShowName ? `<b style="font-size:10px;color:${cust.sigColor};display:block;margin-bottom:2px;font-style:normal">لاعب ${i+1}</b>` : ''}
+            <div style="${sigStyle};min-width:60%">
+              ${cust.sigShowName ? `<b style="font-size:10px;display:block;margin-bottom:2px;font-style:normal">لاعب ${i + 1}</b>` : ''}
               <span>هذا توقيع تجريبي ✨</span>
               ${cust.sigShowTime ? `<small style="display:block;font-size:8px;opacity:.55;font-style:normal;margin-top:3px">الآن</small>` : ''}
             </div>
@@ -13685,16 +14532,15 @@ if(zone === 'cover'){
     </div>`;
   }
 
-  /* ══════════════════════════════════════════════════════════
-     📰 معاينة المنشورات
-     ══════════════════════════════════════════════════════════ */
   if(zone === 'posts'){
     const postStyle = buildPostCardStyle(cust, p);
     return `<div class="zone-preview-inner" style="padding:12px 0">
       <div class="post" style="${postStyle}">
         <div class="post-h" style="padding:${cust.postLayout === 'compact' ? '8px' : cust.postLayout === 'spacious' ? '18px' : '12px'};margin-bottom:${cust.postLayout === 'compact' ? '6px' : '10px'}">
-          <div class="av ${cust.postAvatarShape === 'circle' ? 'sq' : ''}"
-               style="--s:${cust.postAvatarSize}px;background:var(--grad);border-radius:${POST_AVATAR_SHAPES[cust.postAvatarShape]?.radius || '50%'};font-size:${Math.round(cust.postAvatarSize*0.35)}px">
+          <div class="av ${cust.postAvatarShape === 'circle' ? '' : 'sq'}"
+               style="--s:${cust.postAvatarSize}px;background:var(--grad);
+                      border-radius:${POST_AVATAR_SHAPES[cust.postAvatarShape]?.radius || '50%'};
+                      font-size:${Math.round(cust.postAvatarSize * 0.35)}px">
             ${(p.name || 'ن').charAt(0)}
           </div>
           <div style="flex:1;min-width:0">
@@ -13702,7 +14548,8 @@ if(zone === 'cover'){
             <div class="post-sub">@${esc(p.username || 'user')}·الآن</div>
           </div>
         </div>
-        <p class="post-text" style="color:${cust.postTextColor || '#dbe3f5'};padding:0 ${cust.postLayout === 'compact' ? '8px' : cust.postLayout === 'spacious' ? '18px' : '12px'}">
+        <p class="post-text" style="color:${cust.postTextColor || '#dbe3f5'};
+                                    padding:0 ${cust.postLayout === 'compact' ? '8px' : cust.postLayout === 'spacious' ? '18px' : '12px'}">
           هذا منشور تجريبي لمعاينة النمط…
         </p>
         ${cust.postShowActions ? `
@@ -13737,66 +14584,63 @@ async function resetZone(zone){
   const defaults = getProfileCustomization({});
   const updates = {};
 
-  /* ★ الحقول التي تغيّرت فعلاً فقط */
   fields.forEach(f => {
     if(f in defaults && state.profile[f] !== defaults[f]){
       updates[f] = defaults[f];
     }
   });
 
-  if(zone === 'avatar' && state.profile.frameId !== 'none'){
-    updates.frameId = 'none';
+  /* معالجة الإطارات/الثيم */
+  const currentEquipped = state.profile.equipped || {};
+  const newEquipped = { ...currentEquipped };
+  let equippedChanged = false;
+
+  if(zone === 'avatar'){
+    if(currentEquipped.frameId){
+      delete newEquipped.frameId;
+      equippedChanged = true;
+    }
+    if(state.profile.frameId && state.profile.frameId !== 'none'){
+      updates.frameId = 'none';
+    }
   }
-  if(zone === 'body' && state.profile.themeId !== 'default'){
-    updates.themeId = 'default';
+  if(zone === 'body'){
+    if(currentEquipped.themeId && currentEquipped.themeId !== 'default'){
+      newEquipped.themeId = 'default';
+      equippedChanged = true;
+    }
+    if(state.profile.themeId && state.profile.themeId !== 'default'){
+      updates.themeId = 'default';
+    }
   }
 
   const entries = Object.entries(updates);
-  if(entries.length === 0){
-    await resetEquippedFields({
-      frame: zone === 'avatar',
-      theme: zone === 'body',
-    });
-    toast('الفئة بالفعل افتراضية ✓');
-    render();
+
+  if(entries.length === 0 && !equippedChanged){
+    toast('البطاقة بالفعل بالإعدادات الافتراضية ✓');
     return;
   }
 
-  /* دفعة واحدة */
-  let batchOk = false;
+  /* ★ ارفع العلم أولاً */
+  state._resettingZone = true;
+
   try {
-    await updateDoc(doc(db, 'users', state.user.uid), updates);
     Object.assign(state.profile, updates);
-    batchOk = true;
+    if(equippedChanged) state.profile.equipped = newEquipped;
+    render();
+
+    /* ★ كتابة واحدة */
+    const payload = { ...updates };
+    if(equippedChanged) payload.equipped = newEquipped;
+
+    await updateDoc(doc(db, 'users', state.user.uid), payload);
+    toast('تمت إعادة تعيين الفئة ✓');
   } catch(e){
-    if(e.code !== 'permission-denied') throw e;
-    console.warn('Zone batch rejected — writing per-field…');
+    console.error('❌ resetZone:', e);
+    toast('فشل الحفظ');
+  } finally {
+    setTimeout(() => { state._resettingZone = false; }, 1500);
   }
-
-  /* احتياطي: حقل بحقل */
-  if(!batchOk){
-    let ok = 0, fail = 0;
-    for(const [field, value] of entries){
-      try {
-        await updateDoc(doc(db, 'users', state.user.uid), { [field]: value });
-        state.profile[field] = value;
-        ok++;
-      } catch(err){ fail++; }
-    }
-    if(fail > 0){
-      toast(`تم ${ok}، فشل ${fail} — راجع قواعد Firebase`);
-    } else {
-      toast(`تم إعادة تعيين ${ok} حقل ✓`);
-    }
-  } else {
-    toast('تم إعادة التعيين ✓');
-  }
-
-  await resetEquippedFields({
-    frame: zone === 'avatar',
-    theme: zone === 'body',
-  });
-  render();
 }
 
 /* ============================================================
@@ -13805,11 +14649,11 @@ async function resetZone(zone){
 async function resetAllCustomizations(){
   if(!confirm('إعادة تعيين جميع تخصيصات البطاقة؟ (لن تُحذف الصور)')) return;
 
+  /* ═══════════ 1) جمع الحقول ═══════════ */
   const allFields = new Set();
   Object.values(ZONE_FIELDS).forEach(arr => arr.forEach(f => allFields.add(f)));
   const defaults = getProfileCustomization({});
 
-  /* ★ فقط الحقول التي تختلف عن الافتراضي فعلاً */
   const updates = {};
   allFields.forEach(f => {
     if(f in defaults && state.profile[f] !== defaults[f]){
@@ -13817,7 +14661,11 @@ async function resetAllCustomizations(){
     }
   });
 
-  /* ★ بدون dot-notation ولا null */
+  /* معالجة الإطارات والثيم */
+  const currentEquipped = state.profile.equipped || {};
+  const newEquipped = { ...currentEquipped, themeId: 'default' };
+  delete newEquipped.frameId;
+
   if(state.profile.frameId && state.profile.frameId !== 'none'){
     updates.frameId = 'none';
   }
@@ -13826,59 +14674,34 @@ async function resetAllCustomizations(){
   }
 
   const entries = Object.entries(updates);
+  const hasEquippedChange = currentEquipped.frameId || currentEquipped.themeId !== 'default';
 
-  /* ═══════════ الحالة 1: لا شيء لتغييره ═══════════ */
-  if(entries.length === 0){
-    await resetEquippedFields({ frame: true, theme: true });
+  if(entries.length === 0 && !hasEquippedChange){
     toast('البطاقة بالفعل بالإعدادات الافتراضية ✓');
-    render();
     return;
   }
 
-  /* ═══════════ الحالة 2: محاولة دفعة واحدة ═══════════ */
-  let batchSucceeded = false;
+  /* ═══════════ 2) ★ ارفع العلم أولاً — قبل أي شيء ═══════════ */
+  state._resettingAll = true;
+
   try {
-    await updateDoc(doc(db, 'users', state.user.uid), updates);
+    /* ═══════════ 3) تطبيق محلي فوري + render واحد ═══════════ */
     Object.assign(state.profile, updates);
-    batchSucceeded = true;
+    state.profile.equipped = newEquipped;
+    render();
+
+    /* ═══════════ 4) ★ كتابة واحدة لكل الحقول بدل 100+ كتابة ═══════════ */
+    const payload = { ...updates, equipped: newEquipped };
+    await updateDoc(doc(db, 'users', state.user.uid), payload);
+
+    toast('البطاقة أصبحت بالإعدادات الافتراضية ✓');
   } catch(e){
-    if(e.code !== 'permission-denied'){
-      console.error('resetAll:', e);
-      toast('فشل: ' + (e.message || e.code));
-      return;
-    }
-    console.warn('Batch reset rejected — falling back to per-field writes…');
+    console.error('❌ resetAllCustomizations:', e);
+    toast('فشل الحفظ: ' + (e.message || e.code || ''));
+  } finally {
+    /* ═══════════ 5) ★ أبقِ العلم مرفوعاً 2 ثانية لتغطية onSnapshot ═══════════ */
+    setTimeout(() => { state._resettingAll = false; }, 2000);
   }
-
-  /* ═══════════ الحالة 3: كتابة حقل بحقل (احتياطي) ═══════════ */
-  if(!batchSucceeded){
-    let okCount = 0;
-    const failedFields = [];
-
-    for(const [field, value] of entries){
-      try {
-        await updateDoc(doc(db, 'users', state.user.uid), { [field]: value });
-        state.profile[field] = value;
-        okCount++;
-      } catch(err){
-        failedFields.push(field);
-        console.warn(`❌ reset failed → ${field}:`, err.code);
-      }
-    }
-
-    if(failedFields.length > 0){
-      console.error('🚫 حقول رفضتها قواعد Firebase:', failedFields);
-      toast(`تم ${okCount} حقل · فشل ${failedFields.length} (راجع Console)`);
-    } else {
-      toast(`تم إعادة تعيين ${okCount} حقل ✓`);
-    }
-  } else {
-    toast('تم إعادة تعيين البطاقة بالكامل ✓');
-  }
-
-  /* ═══════════ تنظيف equipped بدون null ═══════════ */
-  await resetEquippedFields({ frame: true, theme: true });
-  render();
 }
 
 /* ★ كتابة كائن equipped كامل بدلًا من dot-notation/null */
@@ -14249,6 +15072,8 @@ const SLIDER_MAP = {
   coverContrastSlider:      { field: 'coverContrast',      type: 'int',   label: 'coverContrastVal',      suffix: '%'  },
   coverSaturationSlider:    { field: 'coverSaturation',    type: 'int',   label: 'coverSaturationVal',    suffix: '%'  },
   coverVignetteSlider:      { field: 'coverVignette',      type: 'int',   label: 'coverVignetteVal',      suffix: '%'  },
+  coverPatternSizeSlider:      { field:'coverPatternSize',      type:'int',   label:'coverPatternSizeVal',      suffix:'px' },
+  coverPatternOpacitySlider:   { field:'coverPatternOpacity',   type:'int',   label:'coverPatternOpacityVal',   suffix:'%'  },
   /* الأفاتار */
   avatarBorderWidthSlider:  { field: 'avatarBorderWidth',  type: 'int',   label: 'avatarBorderWidthVal',  suffix: 'px' },
   avatarRotationSlider:     { field: 'avatarRotation',     type: 'int',   label: 'avatarRotationVal',     suffix: '°'  },
@@ -14266,6 +15091,8 @@ const SLIDER_MAP = {
   /* الثيم */
   themeGradientAngleSlider: { field: 'themeGradientAngle', type: 'int',   label: 'themeAngleVal',         suffix: '°'  },
   themeOpacitySlider:       { field: 'themeOpacity',       type: 'int',   label: 'themeOpacityVal',       suffix: '%'  },
+  themePatternSizeSlider:      { field:'themePatternSize',      type:'int',   label:'themePatternSizeVal',      suffix:'px' },
+  themePatternOpacitySlider:   { field:'themePatternOpacity',   type:'int',   label:'themePatternOpacityVal',   suffix:'%'  },
   /* البطاقة */
   cardBorderWidthSlider:    { field: 'cardBorderWidth',    type: 'int',   label: 'cardBorderWidthVal',    suffix: 'px' },
   cardOpacitySlider:        { field: 'cardOpacity',        type: 'int',   label: 'cardOpacityVal',        suffix: '%'  },
@@ -14279,6 +15106,8 @@ avatarSizeSlider:         { field:'avatarSize',         type:'int',   label:'ava
 avatarOffsetXSlider:      { field:'avatarOffsetX',      type:'int',   label:'avatarOffsetXVal',     suffix:'px' },
 avatarOffsetYSlider:      { field:'avatarOffsetY',      type:'int',   label:'avatarOffsetYVal',     suffix:'px' },
 avatarGlowIntensitySlider:{ field:'avatarGlowIntensity',type:'int',   label:'avatarGlowIntensityVal',suffix:''  },
+avatarDecorationSizeSlider:  { field:'avatarDecorationSize',  type:'int',   label:'avatarDecorationSizeVal',  suffix:'%'  },
+avatarSizeSlider:            { field:'avatarSize',            type:'int',   label:'avatarSizeVal',            suffix:'px' },
 /* اسم جديد */
 nameLineHeightSlider:     { field:'nameLineHeight',     type:'float', label:'nameLineHeightVal',    suffix:''   },
 /* اسم المستخدم */
@@ -14558,6 +15387,31 @@ document.addEventListener('click', async (e)=>{
 
   /* ════════ 0) تجاهل نقر ملف الإدخال (يمنع الحلقة) ════════ */
   if(e.target && e.target.id === 'globalFileInput') return;
+
+  /* ════════ 🆕 فتح صفحة المنشور المفرد ════════ */
+  const openPostPageBtn = e.target.closest('[data-open-post-page]');
+  if(openPostPageBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    state.viewingPostId = openPostPageBtn.dataset.openPostPage;
+    go('post');
+    return;
+  }
+
+  /* ════════ 🆕 فتح المنشور عند النقر على البطاقة ════════ */
+  const postCardEl = e.target.closest('[data-post-card]');
+  if(postCardEl){
+    const isInteractive = e.target.closest(
+      'button, a, input, textarea, ' +
+      '[data-action], [data-like], [data-save], [data-reblog], ' +
+      '[data-open-comments], [data-post-menu], [data-view-profile], [data-follow]'
+    );
+    if(!isInteractive){
+      state.viewingPostId = postCardEl.dataset.postCard;
+      go('post');
+      return;
+    }
+  }
 
 /* 🔮 الاقتراحات — قبل أي شيء */
 const acItem = e.target.closest('[data-ac-idx]');
@@ -15150,7 +16004,10 @@ if(t.dataset.cust){
   if(t.id === 'saveMusicBtn'){
     const url = document.getElementById('musicUrlInput')?.value.trim() || '';
     const ok = await saveCustomField('musicUrl', url);
-    if(ok) toast('تم الحفظ ✓');
+    if(ok){
+      toast('تم الحفظ ✓');
+      playProfileMusic(state.profile);
+    }
     return;
   }
 
@@ -15205,6 +16062,9 @@ updateZonePreview();
     if(t.dataset.reset === 'chat') state.chatWith = null;
     if(t.dataset.reset === 'game') state.activeGame = null;
     if(t.dataset.nav === 'more'){ openDrawer(); return; }
+    if(t.dataset.nav === 'posts'){
+      state.viewingPostsUid = t.dataset.postsUid || state.user.uid;
+    }
     go(t.dataset.nav);
     return;
   }
@@ -15608,7 +16468,16 @@ if(t.dataset.viewProfile){
   /* ============================================================
      30) التعليقات
      ============================================================ */
-  if(t.dataset.openComments){ await openCommentsModal(t.dataset.openComments); return; }
+  if(t.dataset.openComments){
+    /* ★ على صفحة المنشور المفرد → تمرير إلى التعليقات بدل فتح المودال */
+    if(state.page === 'post' && state.viewingPostId === t.dataset.openComments){
+      document.getElementById('commentsListBody')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    await openCommentsModal(t.dataset.openComments);
+    return;
+  }
   if(t.dataset.deletePost){ await deletePost(t.dataset.deletePost); return; }
 
   /* ============================================================

@@ -4468,11 +4468,43 @@ html[dir="rtl"] .scroll-top-btn { left: auto; right: 16px; }
 @keyframes flipIn{ from{ opacity:0; transform: perspective(400px) rotateY(90deg); } to{ opacity:1; transform: none; } }
 
 /* Level bar styles */
-.level-bar-solid span{ background: var(--level-bar-color-1, #6c5ce7); }
-.level-bar-striped span{ background: repeating-linear-gradient(45deg, #6c5ce7 0 8px, #00d2ff 8px 16px); }
-.level-bar-animated span{ background: linear-gradient(90deg, #6c5ce7, #00d2ff, #6c5ce7); background-size: 200% 100%; animation: barGradient 2s linear infinite; }
-.level-bar-glow span{ box-shadow: 0 0 16px rgba(0,210,255,.8); }
-.level-bar-dots span{ background: radial-gradient(circle, #6c5ce7 30%, transparent 32%); background-size: 10px 10px; }
+.level-bar-solid span{
+  background: var(--lvl-bar-single, var(--lvl-bar-1, #6c5ce7)) !important;
+}
+.level-bar-gradient span{
+  background: linear-gradient(90deg, var(--lvl-bar-1, #6c5ce7), var(--lvl-bar-2, #00d2ff)) !important;
+}
+.level-bar-striped span{
+  background: repeating-linear-gradient(45deg,
+    var(--lvl-bar-1, #6c5ce7) 0 8px,
+    var(--lvl-bar-2, #00d2ff) 8px 16px) !important;
+}
+.level-bar-animated span{
+  background: linear-gradient(90deg,
+    var(--lvl-bar-1, #6c5ce7),
+    var(--lvl-bar-2, #00d2ff),
+    var(--lvl-bar-1, #6c5ce7)) !important;
+  background-size: 200% 100% !important;
+  animation: barGradient 2s linear infinite !important;
+}
+.level-bar-glow span{
+  background: linear-gradient(90deg, var(--lvl-bar-1, #6c5ce7), var(--lvl-bar-2, #00d2ff)) !important;
+  box-shadow: 0 0 16px var(--lvl-bar-2, #00d2ff) !important;
+}
+.level-bar-dots span{
+  background: radial-gradient(circle, var(--lvl-bar-1, #6c5ce7) 30%, transparent 32%) !important;
+  background-size: 10px 10px !important;
+}
+.level-bar-neon span{
+  background: var(--lvl-bar-1, #6c5ce7) !important;
+  box-shadow: 0 0 8px var(--lvl-bar-2, #00d2ff),
+              inset 0 0 8px var(--lvl-bar-2, #00d2ff) !important;
+}
+.level-bar-rainbow span{
+  background: linear-gradient(90deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3) !important;
+  background-size: 200% 100% !important;
+  animation: barGradient 3s linear infinite !important;
+}
 
 /* Badge shapes */
 .level-badge-diamond{ transform: rotate(45deg); }
@@ -7769,5 +7801,937 @@ body.no-bars { padding-bottom: 20px !important; }
   .comment-replies-flat{
     padding-inline-start: 14px;
     margin-inline-start: 12px;
+  }
+}
+
+/* ============================================================
+   🎬 حركات الأفاتار
+   ============================================================ */
+@keyframes avBreathe   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+@keyframes avFloat     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes avPulse     { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+@keyframes avRotate    { to{transform:rotate(360deg)} }
+@keyframes avBounce    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes avSwing     { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+@keyframes avShake     { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+@keyframes avTilt      { 0%,100%{transform:rotate(0)} 50%{transform:rotate(8deg)} }
+@keyframes avWobble    { 0%,100%{transform:translateX(0) rotate(0)} 25%{transform:translateX(-3px) rotate(-3deg)} 75%{transform:translateX(3px) rotate(3deg)} }
+@keyframes avFlip      { 0%{transform:rotateY(0)} 100%{transform:rotateY(360deg)} }
+@keyframes avHeartbeat { 0%,100%{transform:scale(1)} 30%{transform:scale(1.1)} 60%{transform:scale(0.95)} }
+@keyframes avTada      { 0%,100%{transform:scale(1) rotate(0)} 20%{transform:scale(.9) rotate(-3deg)} 50%{transform:scale(1.15) rotate(3deg)} 80%{transform:scale(.95) rotate(-1deg)} }
+@keyframes avRubber    { 0%,100%{transform:scale(1,1)} 30%{transform:scale(1.15,.85)} 60%{transform:scale(.9,1.1)} }
+@keyframes avZoom      { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+@keyframes avSlideX    { 0%,100%{transform:translateX(0)} 50%{transform:translateX(8px)} }
+
+.av-wrap.av-move-breathe   { animation: avBreathe   var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-float     { animation: avFloat     var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-pulse     { animation: avPulse     var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-rotate    { animation: avRotate    var(--move-duration,3s) linear infinite; }
+.av-wrap.av-move-bounce    { animation: avBounce    var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-swing     { animation: avSwing     var(--move-duration,3s) ease-in-out infinite; transform-origin:top center; }
+.av-wrap.av-move-shake     { animation: avShake     var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-tilt      { animation: avTilt      var(--move-duration,3s) ease-in-out infinite; transform-origin:bottom center; }
+.av-wrap.av-move-wobble    { animation: avWobble    var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-flip      { animation: avFlip      var(--move-duration,3s) linear infinite; }
+.av-wrap.av-move-heartbeat { animation: avHeartbeat var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-tada      { animation: avTada      var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-rubber    { animation: avRubber    var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-zoom      { animation: avZoom      var(--move-duration,3s) ease-in-out infinite; }
+.av-wrap.av-move-slide_x   { animation: avSlideX    var(--move-duration,3s) ease-in-out infinite; }
+
+/* ============================================================
+   ✨ حركات الأسماء (بالسرعة المخصصة)
+   ============================================================ */
+.anim-name-pulse       { animation: namePulse      var(--anim-duration,3s) ease-in-out infinite; }
+.anim-name-shake       { animation: nameShake      var(--anim-duration,3s) ease-in-out infinite; }
+.anim-name-bounce      { animation: nameBounce     var(--anim-duration,3s) ease-in-out infinite; }
+.anim-name-typewriter  { overflow:hidden; white-space:nowrap; border-inline-end:2px solid currentColor;
+                         animation: nameTypewriter var(--anim-duration,3s) steps(30) infinite,
+                                    nameBlink .7s step-end infinite; max-width:fit-content; }
+.anim-name-blink       { animation: nameBlink      var(--anim-duration,3s) steps(2) infinite; }
+.anim-name-wave        { animation: nameWave       var(--anim-duration,3s) ease-in-out infinite; }
+.anim-name-glitch      { animation: nameGlitch     var(--anim-duration,3s) infinite; text-shadow:2px 0 #ff3d71, -2px 0 #00d2ff; }
+.anim-name-flip        { animation: nameFlipY      var(--anim-duration,3s) ease-in-out infinite; }
+.anim-name-swing       { animation: nameSwing      var(--anim-duration,3s) ease-in-out infinite; transform-origin:top center; }
+.anim-name-slide       { animation: nameSlide      var(--anim-duration,3s) ease-in-out infinite; }
+.anim-name-pop         { animation: namePop        var(--anim-duration,3s) ease-in-out infinite; }
+
+@keyframes nameFlipY { 0%,100%{transform:rotateY(0)} 50%{transform:rotateY(180deg)} }
+@keyframes nameSwing { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
+@keyframes nameSlide { 0%,100%{transform:translateX(0)} 50%{transform:translateX(10px)} }
+@keyframes namePop   { 0%,100%{transform:scale(1)} 30%{transform:scale(1.15)} 60%{transform:scale(.95)} }
+
+/* ============================================================
+   🖼️ أنماط الغلاف الجديدة
+   ============================================================ */
+.cover-pattern-triangles{
+  background-image:repeating-linear-gradient(60deg,currentColor 0 2px,transparent 2px 12px),
+                   repeating-linear-gradient(-60deg,currentColor 0 2px,transparent 2px 12px);
+}
+.cover-pattern-zigzag{
+  background-image:linear-gradient(135deg,currentColor 25%,transparent 25%,transparent 50%,currentColor 50%,currentColor 75%,transparent 75%,transparent);
+}
+.cover-pattern-circles{
+  background-image:radial-gradient(circle,transparent 40%,currentColor 42%,currentColor 45%,transparent 47%);
+}
+.cover-pattern-arrows{
+  background-image:linear-gradient(45deg,transparent 45%,currentColor 45%,currentColor 55%,transparent 55%),
+                   linear-gradient(-45deg,transparent 45%,currentColor 45%,currentColor 55%,transparent 55%);
+}
+.cover-pattern-chevron{
+  background-image:repeating-linear-gradient(135deg,currentColor 0 2px,transparent 2px 10px),
+                   repeating-linear-gradient(45deg,currentColor 0 2px,transparent 2px 10px);
+}
+.cover-pattern-splatter{
+  background-image:radial-gradient(circle 3px at 20% 30%,currentColor 50%,transparent 52%),
+                   radial-gradient(circle 2px at 70% 60%,currentColor 50%,transparent 52%),
+                   radial-gradient(circle 3px at 40% 80%,currentColor 50%,transparent 52%),
+                   radial-gradient(circle 2px at 90% 20%,currentColor 50%,transparent 52%);
+  background-size:80px 80px;
+}
+
+/* ============================================================
+   ✨ تأثيرات الغلاف — متحركة
+   ============================================================ */
+.cover-fx{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden;border-radius:inherit}
+.cover-fx::before,.cover-fx::after{content:"";position:absolute;inset:0;}
+
+.cover-fx-particles::before{
+  background-image:radial-gradient(2px 2px at 20% 30%,currentColor,transparent),
+                   radial-gradient(2px 2px at 60% 70%,currentColor,transparent),
+                   radial-gradient(1px 1px at 85% 20%,currentColor,transparent),
+                   radial-gradient(2px 2px at 40% 90%,currentColor,transparent),
+                   radial-gradient(1px 1px at 15% 80%,currentColor,transparent);
+  animation: coverParticlesFloat 6s ease-in-out infinite;
+}
+@keyframes coverParticlesFloat{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+.cover-fx-stars::before{
+  background-image:radial-gradient(1px 1px at 10% 20%,currentColor,transparent),
+                   radial-gradient(1px 1px at 30% 60%,#fff,transparent),
+                   radial-gradient(1px 1px at 70% 30%,currentColor,transparent),
+                   radial-gradient(1px 1px at 90% 70%,#fff,transparent);
+  animation: coverStarsPulse 2s ease-in-out infinite;
+}
+@keyframes coverStarsPulse{ 0%,100%{opacity:.5} 50%{opacity:1} }
+
+.cover-fx-wave::before{
+  background:radial-gradient(ellipse at bottom,currentColor 0%,transparent 70%);
+  bottom:0;top:auto;height:40%;
+  animation: coverWaveMove 3s ease-in-out infinite;
+}
+@keyframes coverWaveMove{ 0%,100%{transform:translateX(-10%)} 50%{transform:translateX(10%)} }
+
+.cover-fx-snow::before{
+  background-image:radial-gradient(2px 2px at 20% 10%,#fff,transparent),
+                   radial-gradient(2px 2px at 60% 40%,#fff,transparent),
+                   radial-gradient(2px 2px at 80% 80%,#fff,transparent),
+                   radial-gradient(2px 2px at 40% 60%,#fff,transparent);
+  animation: coverSnowFall 5s linear infinite;
+}
+@keyframes coverSnowFall{ from{background-position:0 0} to{background-position:0 200px} }
+
+.cover-fx-rain::before{
+  background-image:repeating-linear-gradient(180deg,transparent 0 20px,currentColor 20px 22px);
+  background-size:3px 100%;
+  opacity:.4;
+  animation: coverRainFall 0.7s linear infinite;
+}
+@keyframes coverRainFall{ from{background-position:0 0} to{background-position:0 22px} }
+
+.cover-fx-fire::before{
+  background:radial-gradient(ellipse at bottom,currentColor 0%,transparent 60%);
+  bottom:0;top:auto;height:70%;
+  animation: coverFireFlicker 1.5s ease-in-out infinite;
+}
+@keyframes coverFireFlicker{ 0%,100%{opacity:.7;transform:scaleY(1)} 50%{opacity:1;transform:scaleY(1.1)} }
+
+.cover-fx-bubbles::before{
+  background-image:radial-gradient(circle 6px at 20% 90%,currentColor 50%,transparent 52%),
+                   radial-gradient(circle 4px at 50% 80%,currentColor 50%,transparent 52%),
+                   radial-gradient(circle 8px at 80% 95%,currentColor 50%,transparent 52%);
+  animation: coverBubblesRise 4s linear infinite;
+}
+@keyframes coverBubblesRise{ from{transform:translateY(0)} to{transform:translateY(-100px)} }
+
+.cover-fx-hearts::before{
+  content:"💖 💗 💓 💕 💞";
+  font-size:24px; letter-spacing:20px;
+  animation: coverHeartsFloat 5s linear infinite;
+}
+@keyframes coverHeartsFloat{ from{transform:translateY(20px)} to{transform:translateY(-100px)} }
+
+.cover-fx-sparkles::before{
+  background-image:radial-gradient(2px 2px at 20% 30%,#fff,transparent),
+                   radial-gradient(3px 3px at 60% 70%,#fff,transparent),
+                   radial-gradient(2px 2px at 80% 40%,#fff,transparent);
+  animation: coverSparkleTwinkle 1.2s ease-in-out infinite;
+}
+@keyframes coverSparkleTwinkle{ 0%,100%{opacity:.3} 50%{opacity:1} }
+
+.cover-fx-lightning::before{
+  background:linear-gradient(180deg,currentColor,transparent 60%);
+  opacity:0;
+  animation: coverLightning 3s infinite;
+}
+@keyframes coverLightning{ 0%,92%,100%{opacity:0} 93%,95%{opacity:1} }
+
+.cover-fx-matrix::before{
+  background-image:repeating-linear-gradient(180deg,currentColor 0 2px,transparent 2px 20px);
+  background-size:2px 100%;
+  opacity:.4;
+  animation: coverMatrixFall 1s linear infinite;
+}
+@keyframes coverMatrixFall{ from{background-position:0 0} to{background-position:0 20px} }
+
+.cover-fx-confetti::before{
+  content:"🎉 🎊 ✨ 🎈";
+  font-size:20px; letter-spacing:15px;
+  animation: coverConfettiFall 4s linear infinite;
+}
+@keyframes coverConfettiFall{ from{transform:translateY(-20px) rotate(0)} to{transform:translateY(200px) rotate(360deg)} }
+
+.cover-fx-aurora::before{
+  background:linear-gradient(135deg,currentColor 0%,transparent 50%,currentColor 100%);
+  animation: coverAurora 4s ease-in-out infinite;
+  opacity:.5;
+}
+@keyframes coverAurora{ 0%,100%{transform:translateX(-30%)} 50%{transform:translateX(30%)} }
+
+.cover-fx-fog::before{
+  background:radial-gradient(ellipse at center,currentColor 0%,transparent 70%);
+  opacity:.4;
+  animation: coverFog 6s ease-in-out infinite;
+}
+@keyframes coverFog{ 0%,100%{transform:translateX(-20%)} 50%{transform:translateX(20%)} }
+
+/* ============================================================
+   🎬 حركات الغلاف
+   ============================================================ */
+.cover-anim-pan     { animation: coverPan      var(--anim-duration,15s) ease-in-out infinite alternate; }
+.cover-anim-zoom    { animation: coverZoom2    var(--anim-duration,8s)  ease-in-out infinite alternate; }
+.cover-anim-pulse   { animation: coverPulse2   var(--anim-duration,4s)  ease-in-out infinite; }
+.cover-anim-sway    { animation: coverSway2    var(--anim-duration,6s)  ease-in-out infinite; }
+.cover-anim-rotate  { animation: coverRotate   var(--anim-duration,20s) linear infinite; }
+.cover-anim-float   { animation: coverFloat2   var(--anim-duration,5s)  ease-in-out infinite; }
+.cover-anim-breathe { animation: coverBreathe  var(--anim-duration,4s)  ease-in-out infinite; }
+.cover-anim-glitch  { animation: coverGlitch   var(--anim-duration,2s)  steps(5) infinite; }
+.cover-anim-wave    { animation: coverWave2    var(--anim-duration,5s)  ease-in-out infinite; }
+
+@keyframes coverPan     { 0%{transform:scale(1.05) translateX(0)}    100%{transform:scale(1.05) translateX(-8%)} }
+@keyframes coverZoom2   { 0%{transform:scale(1)} 100%{transform:scale(1.15)} }
+@keyframes coverPulse2  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+@keyframes coverSway2   { 0%,100%{transform:translateX(-2%) rotate(-1deg)} 50%{transform:translateX(2%) rotate(1deg)} }
+@keyframes coverRotate  { to{transform:rotate(360deg)} }
+@keyframes coverFloat2  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes coverBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
+@keyframes coverGlitch  { 0%{transform:translate(0)} 20%{transform:translate(-2px,1px)} 40%{transform:translate(2px,-1px)} 60%{transform:translate(-1px,-2px)} 80%{transform:translate(1px,2px)} 100%{transform:translate(0)} }
+@keyframes coverWave2   { 0%,100%{transform:skewX(0)} 50%{transform:skewX(2deg)} }
+
+/* ============================================================
+   🃏 تأثيرات البطاقة (تمرير + ضغط)
+   ============================================================ */
+.player-card{ transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
+.player-card.hover-lift:hover       { transform:translateY(-6px); }
+.player-card.hover-tilt:hover       { transform:rotate(-1deg) scale(1.02); }
+.player-card.hover-scale:hover      { transform:scale(1.02); }
+.player-card.hover-glow:hover       { box-shadow:0 0 40px var(--card-glow-c, #00d2ff); }
+.player-card.hover-shake:hover      { animation:nameShake .4s ease; }
+.player-card.hover-border:hover     { border-color:var(--brand-2); box-shadow:0 0 24px var(--brand-2); }
+.player-card.hover-rotate:hover     { transform:rotate(1.5deg); }
+
+.player-card.press-shrink:active    { transform:scale(.98); }
+.player-card.press-glow:active      { box-shadow:0 0 40px var(--brand-2); }
+.player-card.press-scale:active     { transform:scale(1.02); }
+
+/* دخول */
+.player-card.entrance-fade      { animation: rise .5s ease backwards; }
+.player-card.entrance-slide_r   { animation: slideR .5s ease backwards; }
+.player-card.entrance-slide_l   { animation: slideL .5s ease backwards; }
+.player-card.entrance-slide_u   { animation: rise .5s ease backwards; }
+.player-card.entrance-slide_d   { animation: slideD .5s ease backwards; }
+.player-card.entrance-zoom      { animation: zoomIn .5s ease backwards; }
+.player-card.entrance-flip      { animation: flipIn .7s ease backwards; }
+.player-card.entrance-bounce    { animation: bounceIn .7s ease backwards; }
+.player-card.entrance-rotate    { animation: rotateIn .7s ease backwards; }
+
+@keyframes slideL{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
+@keyframes slideD{from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:none}}
+@keyframes bounceIn{0%{opacity:0;transform:scale(.7)}60%{opacity:1;transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes rotateIn{from{opacity:0;transform:rotate(-15deg) scale(.9)}to{opacity:1;transform:none}}
+
+/* ============================================================
+   🏅 شريط المستوى — أنماط
+   ============================================================ */
+.level-bar-solid span    { background: var(--lvl-bar-1, #6c5ce7); }
+.level-bar-striped span  { background: repeating-linear-gradient(45deg,#6c5ce7 0 8px,#00d2ff 8px 16px); }
+.level-bar-animated span { background: linear-gradient(90deg,#6c5ce7,#00d2ff,#6c5ce7); background-size:200% 100%; animation:barGradient 2s linear infinite; }
+.level-bar-glow span     { box-shadow: 0 0 16px #00d2ff; }
+.level-bar-dots span     { background: radial-gradient(circle,#6c5ce7 30%,transparent 32%); background-size:10px 10px; }
+.level-bar-neon span     { box-shadow: 0 0 8px #00d2ff, inset 0 0 8px #00d2ff; }
+.level-bar-rainbow span  { background: linear-gradient(90deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3); background-size:200% 100%; animation:barGradient 3s linear infinite; }
+
+/* ============================================================
+   ⚪ حدود الأفاتار الجديدة
+   ============================================================ */
+@keyframes borderPulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 8px transparent}}
+
+/* ============================================================
+   👑 الزخرفة — 4 زوايا
+   ============================================================ */
+.av-decoration{
+  position:absolute; z-index:10;
+  pointer-events:none;
+  animation: decorationFloat 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.55));
+}
+@keyframes decorationFloat{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-3px) rotate(8deg)}}
+
+/* ============================================================
+   🌊 تداخل الغلاف مع الثيم
+   ============================================================ */
+.player-card.cover-overlap {
+  /* الغلاف يمتد للأسفل ليصل لتحت الصورة الشخصية */
+  --cover-overlap-h: 60px;
+}
+.player-card.cover-overlap .pc-cover{
+  margin-bottom: -80px;
+  z-index: 0;
+}
+.player-card.cover-overlap .pc-body-section{
+  background:
+    linear-gradient(180deg,
+      transparent 0%,
+      transparent 40px,
+      var(--tc1, transparent) 80px,
+      var(--tc2, transparent) 100%),
+    linear-gradient(180deg,
+      transparent 0%,
+      transparent 40px,
+      #121a2b 80px,
+      #0c111c 100%) !important;
+  padding-top: 85px;
+  position: relative;
+  z-index: 1;
+  border-radius: 0 0 24px 24px;
+}
+.player-card.cover-overlap .pc-body{
+  position: relative;
+  z-index: 2;
+}
+.player-card.cover-overlap .avatar-sig-wrapper{
+  margin-top: -80px;
+  position: relative;
+  z-index: 3;
+}
+
+.player-card.press-ripple:active {
+  position: relative;
+}
+.player-card.press-ripple:active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at center, rgba(0,210,255,.3), transparent 70%);
+  pointer-events: none;
+  animation: rippleOut .6s ease-out;
+}
+@keyframes rippleOut {
+  from { transform: scale(0); opacity: 1; }
+  to   { transform: scale(2); opacity: 0; }
+}
+
+/* ============================================================
+   ✨ جزيئات + بريق المعاينة
+   ============================================================ */
+@keyframes particleDrift{
+  0%,100% { transform: translate(0, 0) scale(1); opacity: .4; }
+  50%     { transform: translate(10px, -20px) scale(1.4); opacity: 1; }
+}
+
+/* البطاقة الحقيقية — البريق حولها */
+.player-card.sparkle-active::before{
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: inherit;
+  background-image: radial-gradient(2px 2px at 20% 30%, var(--sparkle-c, #fff), transparent),
+                    radial-gradient(2px 2px at 80% 70%, var(--sparkle-c, #fff), transparent),
+                    radial-gradient(1px 1px at 50% 15%, var(--sparkle-c, #fff), transparent),
+                    radial-gradient(1px 1px at 15% 85%, var(--sparkle-c, #fff), transparent);
+  background-size: 60px 60px;
+  animation: sparkleTwinkle 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes sparkleTwinkle{
+  0%,100% { opacity: 0.3; }
+  50%     { opacity: 0.9; }
+}
+
+/* الجزيئات الحقيقية */
+.player-card.particle-active{
+  position: relative;
+}
+.player-card.particle-active .card-particles-fx{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+  z-index: 0;
+}
+.player-card.particle-active .card-particles-fx span{
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  animation: particleDrift 4s ease-in-out infinite;
+}
+
+/* ============================================================
+   🔤 حركة اسم المستخدم
+   ============================================================ */
+.pc-user.anim-name-pulse       { animation: namePulse    var(--anim-duration,3s) ease-in-out infinite; display:inline-block; }
+.pc-user.anim-name-shake       { animation: nameShake    var(--anim-duration,3s) ease-in-out infinite; display:inline-block; }
+.pc-user.anim-name-bounce      { animation: nameBounce   var(--anim-duration,3s) ease-in-out infinite; display:inline-block; }
+.pc-user.anim-name-typewriter  { display:inline-block; overflow:hidden; white-space:nowrap;
+                                 border-inline-end:2px solid currentColor;
+                                 animation: nameTypewriter var(--anim-duration,3s) steps(30) infinite,
+                                            nameBlink .7s step-end infinite;
+                                 max-width:fit-content; }
+.pc-user.anim-name-blink       { animation: nameBlink    var(--anim-duration,3s) steps(2) infinite; }
+.pc-user.anim-name-wave        { animation: nameWave     var(--anim-duration,3s) ease-in-out infinite; display:inline-block; }
+.pc-user.anim-name-glitch      { animation: nameGlitch   var(--anim-duration,3s) infinite;
+                                 text-shadow:1px 0 #ff3d71, -1px 0 #00d2ff; display:inline-block; }
+.pc-user.anim-name-flip        { animation: nameFlipY    var(--anim-duration,3s) ease-in-out infinite; display:inline-block; }
+.pc-user.anim-name-swing       { animation: nameSwing    var(--anim-duration,3s) ease-in-out infinite;
+                                 transform-origin:top center; display:inline-block; }
+.pc-user.anim-name-slide       { animation: nameSlide    var(--anim-duration,3s) ease-in-out infinite; display:inline-block; }
+.pc-user.anim-name-pop         { animation: namePop      var(--anim-duration,3s) ease-in-out infinite; display:inline-block; }
+
+/* ============================================================
+   👑 لون الشارة المستقلة — منع تطبيق تخصيصات الاسم عليها
+   ============================================================ */
+.name-badge-sep{
+  display:inline-block;
+  margin-inline-end:4px;
+  /* ✅ لا يرث color/gradient/animation من .pc-nick */
+  animation: none !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+}
+.name-badge-sep.glow{
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* ============================================================
+   🎬 حركات الغلاف — تُطبَّق مباشرة على .pc-cover
+   ============================================================ */
+.cover-anim-pan{
+  background-size: 120% !important;
+  animation: coverPanAnim var(--anim-duration, 15s) ease-in-out infinite alternate;
+}
+@keyframes coverPanAnim{
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+.cover-anim-zoom{
+  animation: coverZoomAnim var(--anim-duration, 8s) ease-in-out infinite alternate;
+}
+@keyframes coverZoomAnim{
+  0%   { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+.cover-anim-pulse{
+  animation: coverPulseAnim var(--anim-duration, 4s) ease-in-out infinite;
+}
+@keyframes coverPulseAnim{
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+.cover-anim-sway{
+  animation: coverSwayAnim var(--anim-duration, 6s) ease-in-out infinite;
+}
+@keyframes coverSwayAnim{
+  0%, 100% { transform: translateX(-2%) rotate(-1deg); }
+  50%      { transform: translateX(2%) rotate(1deg); }
+}
+.cover-anim-rotate{
+  animation: coverRotateAnim var(--anim-duration, 20s) linear infinite;
+}
+@keyframes coverRotateAnim{
+  to { transform: rotate(360deg); }
+}
+.cover-anim-float{
+  animation: coverFloatAnim var(--anim-duration, 5s) ease-in-out infinite;
+}
+@keyframes coverFloatAnim{
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+.cover-anim-breathe{
+  animation: coverBreatheAnim var(--anim-duration, 4s) ease-in-out infinite;
+}
+@keyframes coverBreatheAnim{
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+.cover-anim-glitch{
+  animation: coverGlitchAnim var(--anim-duration, 2s) steps(5) infinite;
+}
+@keyframes coverGlitchAnim{
+  0%   { transform: translate(0); }
+  20%  { transform: translate(-2px, 1px); }
+  40%  { transform: translate(2px, -1px); }
+  60%  { transform: translate(-1px, -2px); }
+  80%  { transform: translate(1px, 2px); }
+  100% { transform: translate(0); }
+}
+.cover-anim-wave{
+  animation: coverWaveAnim var(--anim-duration, 5s) ease-in-out infinite;
+}
+@keyframes coverWaveAnim{
+  0%, 100% { transform: skewX(0); }
+  50%      { transform: skewX(2deg); }
+}
+
+/* ============================================================
+   👑 شارة الاسم — لا ترث تخصيصات الأب
+   ============================================================ */
+.name-badge-sep{
+  display: inline-block;
+  margin-inline-end: 4px;
+  animation: none !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+}
+
+/* شارة المشرف — معزولة تماماً */
+.admin-name-badge{
+  -webkit-text-fill-color: #f5c451 !important;
+  color: #f5c451 !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  animation: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  font-family: 'Cairo', system-ui, sans-serif !important;
+  font-size: 9.5px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+  line-height: 1.2 !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(245,179,1,.25), rgba(255,138,0,.15)) !important;
+  border: 1px solid rgba(245,179,1,.45);
+  vertical-align: middle;
+  margin-inline-start: 4px;
+}
+.admin-name-badge.mod{
+  -webkit-text-fill-color: #5fe3ff !important;
+  color: #5fe3ff !important;
+  background: rgba(0,210,255,.15) !important;
+  border-color: rgba(0,210,255,.4);
+}
+
+.pc-level-num.size-text-sm{ font-size: 9px  !important; padding: 3px 8px  !important; }
+.pc-level-num.size-text-md{ font-size: 11px !important; padding: 4px 11px !important; }
+.pc-level-num.size-text-lg{ font-size: 13px !important; padding: 6px 14px !important; }
+.pc-level-num.size-text-xl{ font-size: 15px !important; padding: 7px 16px !important; }
+
+/* ============================================================
+   📰 صفحة المنشورات + صفحة المنشور المفرد
+   ============================================================ */
+
+/* --- نص المنشور المقتطع --- */
+.post-text.truncated{
+  display:-webkit-box;
+  -webkit-line-clamp:6;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  max-height:11em;
+}
+.post-text-more{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:5px 0;
+  margin-top:4px;
+  background:none;
+  border:0;
+  color:var(--brand-2);
+  font-size:12px;
+  font-weight:800;
+  font-family:inherit;
+  cursor:pointer;
+  transition:color .15s;
+}
+.post-text-more:hover{
+  color:#5fe3ff;
+  text-decoration:underline;
+}
+
+/* --- البطاقة القابلة للنقر --- */
+.post[data-post-card]{cursor:pointer}
+.post[data-post-card]:hover{
+  border-color:rgba(108,92,231,.35);
+  box-shadow:0 8px 24px rgba(0,0,0,.3);
+  transition:border-color .2s, box-shadow .2s;
+}
+
+/* --- صفحة المنشورات --- */
+.posts-page-header{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:14px;
+}
+.posts-page-title{
+  display:flex;align-items:center;gap:8px;
+  font-size:17px;font-weight:900;
+}
+.posts-page-count{
+  padding:2px 10px;border-radius:8px;
+  background:rgba(0,210,255,.12);
+  color:var(--brand-2);
+  font-size:11px;font-weight:900;
+}
+
+/* --- صفحة المنشور المفرد --- */
+.single-post-wrapper{margin-bottom:18px}
+
+.inline-comments-section{
+  margin-top:16px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:18px;
+  overflow:hidden;
+}
+.inline-comments-section .comments-header{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(135deg, rgba(108,92,231,.06), rgba(0,210,255,.02));
+  border-radius:18px 18px 0 0;
+}
+.inline-comments-section .comments-sort-tabs{
+  padding:8px 14px;
+  background:rgba(0,0,0,.15);
+  border-bottom:1px solid var(--line);
+}
+.inline-comments-section .comments-body{
+  padding:12px 16px;
+  min-height:100px;
+  max-height:600px;
+  overflow-y:auto;
+}
+.inline-comments-section .comments-input-area{
+  border-top:1px solid var(--line);
+  padding:12px 14px 10px;
+  background:rgba(0,0,0,.15);
+}
+
+/* دعم RTL للـ line-clamp */
+[dir="rtl"] .post-text.truncated{
+  -webkit-box-orient:vertical;
+}
+
+/* ============================================================
+   📄 صفحة المنشور المفرد — تصميم منظم
+   ============================================================ */
+
+.single-post-view{
+  padding-bottom: 110px;   /* مساحة لصندوق التعليق المثبت */
+}
+
+/* ═══ جسم المنشور ═══ */
+.spa-body{
+  padding: 6px 2px 4px;
+}
+
+.spa-place{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(0,210,255,.08);
+  border: 1px solid rgba(0,210,255,.22);
+  color: var(--brand-2);
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.spa-place .ic{ width: 11px; height: 11px; }
+
+.spa-text{
+  font-size: 15px;
+  line-height: 1.75;
+  color: #e4ebfb;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ═══ شريط التفاعل (بدون زر تعليقات) ═══ */
+.spa-actions{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.spa-actions .pact{
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.spa-actions .pact .ic{ width: 16px; height: 16px; }
+.spa-actions .pact.ml{ margin-inline-start: auto; }
+
+/* ═══ التعليقات متصلة ═══ */
+.spa-comments{
+  margin-top: 2px;
+}
+
+.spa-comments-head{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 2px 8px;
+}
+
+.spa-comments-title{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--txt);
+}
+.spa-comments-title .ic{
+  width: 15px;
+  height: 15px;
+  color: var(--brand-2);
+}
+
+.spa-sort{
+  display: flex;
+  gap: 3px;
+  margin-inline-start: auto;
+}
+.spa-sort-btn{
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: .2s;
+  font-family: inherit;
+  padding: 0;
+}
+.spa-sort-btn:hover{
+  background: var(--card-2);
+  color: var(--txt);
+}
+.spa-sort-btn.active{
+  background: rgba(0,210,255,.12);
+  border-color: rgba(0,210,255,.45);
+  color: #5fe3ff;
+}
+.spa-sort-btn .ic{ width: 12px; height: 12px; }
+
+.spa-comments .comments-body{
+  padding: 4px 0;
+  min-height: 80px;
+  max-height: none;
+  overflow: visible;
+}
+
+/* ═══ صندوق التعليق المثبت أسفل الصفحة ═══ */
+.fixed-comment-bar{
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(7,10,17,.96);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0,0,0,.5);
+}
+.fixed-comment-bar .comment-input-row{
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.fixed-comment-bar .comment-input-wrap{
+  flex: 1;
+  padding: 8px 14px;
+  border-radius: 20px;
+  min-height: 40px;
+}
+.fixed-comment-bar .comment-input-wrap textarea{
+  font-size: 13px;
+  max-height: 100px;
+}
+.fixed-comment-bar .comment-send-btn{
+  width: 40px;
+  height: 40px;
+}
+.fixed-comment-bar .comment-input-footer{
+  padding: 6px 4px 0 44px;
+  min-height: 14px;
+  margin-top: 0;
+}
+
+/* ═══ استجابة للشاشات الصغيرة ═══ */
+@media (max-width: 480px){
+  .spa-header{
+    top: 54px;
+    padding: 10px 12px;
+    margin: 0 -12px 6px;
+  }
+  .spa-name{ font-size: 13px; }
+  .spa-text{ font-size: 14px; }
+  .spa-actions .pact{ padding: 7px 10px; font-size: 12px; }
+  .single-post-view{ padding-bottom: 100px; }
+  .fixed-comment-bar{ padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ═══ في RTL: توضيح اتجاه شريط الإجراءات ═══ */
+html[dir="rtl"] .spa-actions .pact.ml{
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+/* ============================================================
+   📄 شريط رأس صفحة المنشور — معلومات المؤلف مدمجة
+   ============================================================ */
+
+/* تجاوز الأنماط النصية عندما يحتوي العنوان على HTML */
+.page-header-title.has-html{
+  font-size: inherit;
+  font-weight: inherit;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  min-width: 0;
+}
+
+/* حاوية معلومات المؤلف داخل العنوان */
+.ph-post-author{
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  width: 100%;
+}
+
+.ph-author-avatar{
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform .15s;
+}
+.ph-author-avatar:hover{
+  transform: scale(1.05);
+}
+.ph-author-avatar .av{
+  border: 1.5px solid rgba(255,255,255,.12);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.ph-author-info{
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.ph-author-name{
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--txt);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  letter-spacing: -.1px;
+}
+
+.ph-author-sub{
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ph-dot{
+  opacity: .5;
+  flex-shrink: 0;
+}
+
+/* ضبط ارتفاع رأس الصفحة لصفحة المنشور فقط */
+.page-header:has(.page-header-title.has-html){
+  height: 62px;
+}
+
+/* تعديل المسافة العلوية للمحتوى في صفحة المنشور */
+.app.no-bars{
+  padding-top: 78px;
+}
+
+/* ═══ استجابة للشاشات الصغيرة ═══ */
+@media (max-width: 480px){
+  .page-header:has(.page-header-title.has-html){
+    height: 58px;
+    padding: 0 10px;
+  }
+  .ph-author-avatar .av{
+    --s: 32px;
+  }
+  .ph-author-name{
+    font-size: 12.5px;
+  }
+  .ph-author-sub{
+    font-size: 10px;
+  }
+  .ph-post-author{
+    gap: 7px;
+  }
+  .app.no-bars{
+    padding-top: 72px;
+  }
+}
+
+@media (max-width: 360px){
+  .ph-author-sub span:not(:first-child):not(.ph-dot){
+    display: none;   /* إخفاء الوقت والمعدّل في الشاشات الضيقة جداً */
   }
 }
