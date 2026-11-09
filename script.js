@@ -250,6 +250,26 @@ const GIFT_ITEMS = [
   { id:'g_rocket',   name:'صاروخ',         emoji:'🚀', price:2000 },
 ];
 
+/* ============ خيارات إحصائيات الملف المختصر (3 حد أقصى) ============ */
+const MINI_STAT_OPTIONS = {
+  games:      { label:'مباراة', icon:'🎮', color:'#6c5ce7' },
+  wins:       { label:'فوز',    icon:'🏆', color:'#22c55e' },
+  heba:       { label:'هيبة',   icon:'👑', color:'#f5b301' },
+  fame:       { label:'شهرة',   icon:'⭐', color:'#f59e0b' },
+  power:      { label:'قوة',    icon:'⚡', color:'#00d2ff' },
+  support:    { label:'دعم',    icon:'💎', color:'#34d399' },
+  reputation: { label:'سمعة',   icon:'🤝', color:'#22c55e' },
+  sigs:       { label:'تواقيع', icon:'✍️', color:'#ec4899' },
+  trust:      { label:'ثقة',    icon:'🛡️', color:'#0891b2' },
+  views:      { label:'زيارة',  icon:'👁️', color:'#94a3b8' },
+  likes:      { label:'إعجاب',  icon:'❤️', color:'#ff3d71' },
+  gameLikes:  { label:'لعب',    icon:'🎯', color:'#f97316' },
+  posts:      { label:'منشور',  icon:'📝', color:'#8b5cf6' },
+};
+const MINI_STATS_DEFAULT = ['games','wins','heba'];
+const MINI_STATS_MAX = 3;
+const MINI_STATS_ALLOWED = Object.keys(MINI_STAT_OPTIONS);
+
 /* ============ المواسم ============ */
 const SEASON_DURATION_DAYS = 30;
 const SEASON_THEMES = [
@@ -1355,6 +1375,7 @@ showSuggestions: false,
   activityLog: [],
   activityUnsub: null,
   notifFilter: 'all',
+  notifSearch: '',   /* ★ جديد */
   challengeInProgress: false,
 
     /* ===== Batch 4 ===== */
@@ -1396,7 +1417,18 @@ custFieldTab: null,   // ★ جديد: التبويب الثالث (التخصي
   /* ★★★ منشورات وصفحة المنشور ★★★ */
   viewingPostId: null,
   viewingPostsUid: null,
+
+  /* ★★★ صفحة العلاقة + إخفاء المنشورات ★★★ */
+  viewingRelationUid: null,
+  relationData: null,
+  hiddenFromFeed: new Set(),
 };
+
+/* استعادة المنشورات المخفية من localStorage */
+try {
+  const _savedHidden = localStorage.getItem('nexus_hidden_posts');
+  if (_savedHidden) JSON.parse(_savedHidden).forEach(id => state.hiddenFromFeed.add(id));
+} catch(e) {}
 
 /* ============ نظام المستويات ============ */
 function xpForLevel(level){ return (level - 1) * 500; }
@@ -1545,11 +1577,17 @@ function pickImage(type, onPicked) {
 }
 
 /* ============ Notifications Helper ============ */
-async function notify(uid, type, text, link = '') {
+async function notify(uid, type, text, link = '', targetType = '', actorId = null) {
   if (!uid || uid === state.user.uid) return;
   try {
     await addDoc(collection(db, 'notifications', uid, 'items'), {
-      type, text, link, read: false, createdAt: serverTimestamp()
+      type,
+      text,
+      link,
+      targetType,
+      actorId: actorId || state.user.uid,   /* ★ الفاعل — افتراضياً المستخدم الحالي */
+      read: false,
+      createdAt: serverTimestamp()
     });
   } catch (e) { console.warn('notify:', e); }
 }
@@ -1797,15 +1835,27 @@ case 'userprofile': {
     <button class="page-hbtn ${on?'on':'primary'}" data-follow="${state.viewingUid}">
       ${on ? '✓ متابَع' : '+ متابعة'}
     </button>
-            <button class="page-hbtn" data-nav="posts" data-posts-uid="${state.viewingUid}" title="المنشورات">
-          ${ic('grid','xs')}
-        </button>
+    <button class="page-hbtn" data-action="view-relation" data-uid="${state.viewingUid}" title="العلاقة">
+      ${ic('chart','xs')}<span>العلاقة</span>
+    </button>
+    <button class="page-hbtn" data-nav="posts" data-posts-uid="${state.viewingUid}" title="المنشورات">
+      ${ic('grid','xs')}
+    </button>
     <button class="page-hbtn" data-action="profile-actions" data-uid="${state.viewingUid}" title="خيارات">
       ${ic('dots','xs')}
     </button>
   `;
   break;
 }
+
+case 'relation':
+  cfg.title = '📊 العلاقة';
+  cfg.actions = `
+    <button class="page-hbtn" data-action="preview-relation" title="معلومات">
+      ${ic('chart','xs')}
+    </button>
+  `;
+  break;
 
 case 'profile':
   cfg.title = 'ملفي الشخصي';
@@ -2352,15 +2402,19 @@ state.unsubs.push(onSnapshot(
     }
   ));
 
-  state.unsubs.push(onSnapshot(
-    query(collection(db,'notifications',state.user.uid,'items'), orderBy('createdAt','desc'), limit(50)),
-    snap=>{
-      state.notifs = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      if(state.notifs.some(n=>!n.read) && state.page !== 'notifs') state.notifRead = false;
-      renderTopbar();
-      if(state.page==='notifs') render();
+state.unsubs.push(onSnapshot(
+  query(collection(db,'notifications',state.user.uid,'items'), orderBy('createdAt','desc'), limit(50)),
+  snap=>{
+    state.notifs = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    if(state.notifs.some(n=>!n.read) && state.page !== 'notifs') state.notifRead = false;
+    renderTopbar();
+    if(state.page === 'notifs'){
+      /* ★ debounce: جمع التحديثات السريعة في render واحد */
+      clearTimeout(window._notifsRenderTimer);
+      window._notifsRenderTimer = setTimeout(() => render(), 200);
     }
-  ));
+  }
+));
 
   state.unsubs.push(onSnapshot(collection(db,'rooms'), snap=>{
     state.rooms = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -2406,7 +2460,9 @@ async function toggleLike(postId){
     });
 
     if(!wasLiked && authorId && authorId !== state.user.uid){
-      await notify(authorId, 'like', `<b>${esc(state.profile.name)}</b> أعجبه منشورك`);
+      await notify(authorId, 'like',
+  `<b>${esc(state.profile.name)}</b> أعجبه منشورك`,
+  postId, 'post');
     }
   } catch(e){
     state.liked[postId] = wasLiked;
@@ -2457,7 +2513,9 @@ async function toggleFollow(targetId){
         followers:  increment(1),
         reputation: increment(REPUTATION_WEIGHTS.follower),
       });
-      await notify(targetId, 'follow', `<b>${esc(state.profile.name)}</b> بدأ متابعتك`);
+      await notify(targetId, 'follow',
+  `<b>${esc(state.profile.name)}</b> بدأ متابعتك`,
+  state.user.uid, 'user');
     }
   } catch(e){
     toast('تعذّر التحديث');
@@ -2489,7 +2547,8 @@ async function toggleProfileLike(targetUid){
     });
 
     await notify(targetUid, 'like',
-      `<b>${esc(state.profile.name)}</b> أعجبه ملفك الشخصي`);
+  `<b>${esc(state.profile.name)}</b> أعجبه ملفك الشخصي`,
+  state.user.uid, 'user');
     toast('تم إعجاب الملف ✓ (نهائي)');
   } catch(e){
     console.error(e);
@@ -2528,7 +2587,8 @@ async function toggleTrust(targetUid){
         reputation:    increment(REPUTATION_WEIGHTS.trust),
       });
       await notify(targetUid, 'trust',
-        `<b>${esc(state.profile.name)}</b> منحك ثقته 🤝`);
+  `<b>${esc(state.profile.name)}</b> منحك ثقته 🤝`,
+  state.user.uid, 'user');
       toast('تم منح الثقة ✓');
     }
   } catch(e){
@@ -2550,7 +2610,9 @@ await updateDoc(doc(db,'users',targetUid), {
   support: increment(10),
   fame: increment(10)   // ★ جديد
 });
-    await notify(targetUid, 'support', `<b>${esc(state.profile.name)}</b> أرسل لك 10 نقاط دعم`);
+    await notify(targetUid, 'support',
+  `<b>${esc(state.profile.name)}</b> أرسل لك 10 نقاط دعم`,
+  state.user.uid, 'user');
     toast('تم إرسال 10 نقاط دعم ✓');
   } catch(e){ toast('فشل الدعم'); }
 }
@@ -2905,7 +2967,8 @@ async function submitComment(){
       if(targetAuthor && targetAuthor !== state.user.uid){
         const isReply = !!state.replyingTo;
         await notify(targetAuthor, isReply ? 'reply' : 'comment',
-          `<b>${esc(state.profile.name)}</b> ${isReply ? 'ردّ على تعليقك' : 'علّق على منشورك'}`);
+  `<b>${esc(state.profile.name)}</b> ${isReply ? 'ردّ على تعليقك' : 'علّق على منشورك'}`,
+  postId, 'post');
       }
     } catch(e){}
 
@@ -3019,7 +3082,8 @@ async function toggleCommentLike(commentId){
     /* إشعار */
     if(!wasLiked && comment.authorId !== state.user.uid){
       await notify(comment.authorId, 'comment_like',
-        `<b>${esc(state.profile.name)}</b> أعجبه تعليقك`);
+  `<b>${esc(state.profile.name)}</b> أعجبه تعليقك`,
+  postId, 'post');
     }
   } catch(e){
     console.error('toggleCommentLike:', e);
@@ -3875,7 +3939,9 @@ async function acceptChallenge(challengeId){
     });
 
     await updateDoc(chRef, { status: 'accepted', roomId: roomRef.id });
-    await notify(ch.from, 'game', `<b>${esc(state.profile.name)}</b> قبل تحديك — المباراة جاهزة!`);
+    await notify(ch.from, 'game',
+  `<b>${esc(state.profile.name)}</b> قبل تحديك — المباراة جاهزة!`,
+  roomRef.id, 'room');
 
     closeModal();
     toast('قُبل التحدي — بدء المباراة');
@@ -3904,7 +3970,8 @@ async function requestJoinTeam(teamId){
       joinRequests: arrayUnion(state.user.uid),
     });
     await notify(team.leaderId, 'team_request',
-      `<b>${esc(state.profile.name)}</b> يطلب الانضمام لفريق ${esc(team.name)}`, teamId);
+  `<b>${esc(state.profile.name)}</b> يطلب الانضمام لفريق ${esc(team.name)}`,
+  teamId, 'team');
     toast('تم إرسال الطلب — بانتظار موافقة القائد');
   } catch(e){ console.error(e); toast('فشل'); }
 }
@@ -4892,8 +4959,9 @@ function pageHome(){
   if(state.homeTab === 'explore'){
     const suggestions = Object.values(state.users).filter(u => u.uid !== state.user.uid).slice(0, 8);
     const hasSuggestions = suggestions.length > 0;
-    const allPosts = [...state.posts]
-      .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+const allPosts = [...state.posts]
+  .filter(p => !state.hiddenFromFeed.has(p.id))
+  .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
     const visiblePosts = filterSeenPosts(allPosts);
 
     body = `
@@ -4932,7 +5000,8 @@ function pageHome(){
 
   /* ═══════ متابعة ═══════ */
   else if(state.homeTab === 'follow'){
-    const allFollowPosts = state.posts.filter(p => state.followed.has(p.authorId));
+const allFollowPosts = state.posts
+  .filter(p => state.followed.has(p.authorId) && !state.hiddenFromFeed.has(p.id));
     const visiblePosts = filterSeenPosts(allFollowPosts);
 
     body = `
@@ -4947,7 +5016,8 @@ function pageHome(){
   /* ═══════ دارج — بدون فلترة المشاهدات (دائماً يظهر) ═══════ */
   else {
     /* احسب النقاط */
-    const scored = state.posts
+const scored = state.posts
+  .filter(p => !p.hidden && !p.reblogOf && !state.hiddenFromFeed.has(p.id))
       .filter(p => !p.hidden && !p.reblogOf)
       .map(p => ({ post: p, score: calculateTrendingScore(p) }))
       .filter(x => x.score > 0)
@@ -5178,7 +5248,8 @@ async function toggleReblog(postId){
         reblogs: increment(1),
       });
       await notify(original.authorId, 'reblog',
-        `<b>${esc(state.profile.name)}</b> أعاد نشر منشورك`);
+  `<b>${esc(state.profile.name)}</b> أعاد نشر منشورك`,
+  postId, 'post');
       toast('تمت إعادة النشر ✓');
     }
   } catch(e){
@@ -5187,15 +5258,538 @@ async function toggleReblog(postId){
   }
 }
 
+/* ============================================================
+   📊 صفحة العلاقة — تحميل سريع + Skeleton
+   ============================================================ */
+function pageRelation(){
+  const otherUid = state.viewingRelationUid;
+  if(!otherUid) return emptyState('لا يمكن تحديد المستخدم','users');
+
+  const me = state.profile;
+  const meUid = state.user.uid;
+  const other = state.users[otherUid];
+
+  if(!other) return emptyState('المستخدم غير موجود','user');
+  if(otherUid === meUid) return emptyState('لا يمكن مقارنة حسابك مع نفسه','users');
+
+  const data = state.relationData;
+
+  /* ★ لا توجد بيانات أو بيانات مستخدم سابق → ابدأ التحميل */
+  if(!data || data._uid !== otherUid){
+    state.relationData = { _uid: otherUid, _loading: true };
+    loadRelationData(otherUid);
+    return renderRelationSkeleton(me, other);
+  }
+
+  /* ★ لا تزال البيانات قيد التحميل */
+  if(data._loading){
+    return renderRelationSkeleton(me, other);
+  }
+
+  /* ★ البيانات جاهزة */
+  return renderRelationContent(me, other, data);
+}
+
+/* ============================================================
+   💀 Skeleton — عرض فوري
+   ============================================================ */
+function renderRelationSkeleton(me, other){
+  return `
+    <div class="relation-header">
+      <div class="relation-user">
+        ${avatar(me, 60)}
+        <div class="relation-name">${esc(me.name)}</div>
+      </div>
+      <div class="relation-vs">
+        <div class="relation-vs-icon" style="animation:pulse 1.5s infinite">⏳</div>
+        <div class="relation-vs-label" style="color:var(--muted)">جاري التحميل…</div>
+        <div class="relation-vs-score">…</div>
+      </div>
+      <div class="relation-user">
+        ${avatar(other, 60)}
+        <div class="relation-name">${esc(other.name)}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="relation-progress-title">مستوى العلاقة</div>
+      <div class="relation-progress">
+        <span style="width:0%;background:var(--brand-2);"></span>
+      </div>
+      <div class="relation-progress-meta">
+        <span>…</span>
+        <span style="color:var(--muted)">⏳</span>
+      </div>
+    </div>
+
+    <div class="relation-section-title">⚖️ المقارنة المباشرة</div>
+    <div class="relation-compare-table" style="opacity:.4">
+      <div class="relation-compare-header">
+        <div class="rc-huser">${esc((me.name || '').split(' ')[0])}</div>
+        <div class="rc-hvs">VS</div>
+        <div class="rc-huser">${esc((other.name || '').split(' ')[0])}</div>
+      </div>
+      ${Array.from({length: 6}).map(() => `
+        <div class="relation-compare-row">
+          <div class="rc-value">…</div>
+          <div class="rc-label"><span class="rc-icon">⏳</span></div>
+          <div class="rc-value">…</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="relation-section-title">📊 الإحصائيات المتبادلة</div>
+    <div class="relation-stats">
+      ${Array.from({length:8}).map(() => `
+        <div class="relation-stat" style="opacity:.35">
+          <div class="rs-icon">⏳</div>
+          <div class="rs-value">…</div>
+          <div class="rs-label">…</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/* ============================================================
+   ⚡ تحميل البيانات — في الخلفية
+   ============================================================ */
+async function loadRelationData(otherUid){
+  const meUid = state.user.uid;
+
+  try {
+    const chatId = [meUid, otherUid].sort().join('_');
+
+    /* ★ كل الاستعلامات بالتوازي — بدون حلقات متسلسلة */
+    const [
+      myMatchesSnap,
+      otherMatchesSnap,
+      chatSnap,
+      giftsSentSnap,
+      giftsReceivedSnap,
+      supportsSnap,
+      iFollowSnap,
+      theyFollowSnap,
+      trustSnap,
+      reverseTrustSnap,
+      signaturesSnap,
+    ] = await Promise.all([
+      getDocs(collection(db, 'users', meUid, 'matchHistory')).catch(()=>({size:0, docs:[]})),
+      getDocs(collection(db, 'users', otherUid, 'matchHistory')).catch(()=>({size:0, docs:[]})),
+      getDocs(query(collection(db, 'chats', chatId, 'messages'), limit(500))).catch(()=>({size:0, docs:[]})),
+      getDocs(query(collection(db, 'gifts'), where('from','==',meUid), where('to','==',otherUid))).catch(()=>({size:0, docs:[]})),
+      getDocs(query(collection(db, 'gifts'), where('from','==',otherUid), where('to','==',meUid))).catch(()=>({size:0, docs:[]})),
+      getDocs(query(collection(db, 'supports'), where('from','==',meUid), where('to','==',otherUid))).catch(()=>({size:0})),
+      getDoc(doc(db, 'follows', `${meUid}_${otherUid}`)).catch(()=>({exists:()=>false})),
+      getDoc(doc(db, 'follows', `${otherUid}_${meUid}`)).catch(()=>({exists:()=>false})),
+      getDoc(doc(db, 'trusts', `${meUid}_${otherUid}`)).catch(()=>({exists:()=>false})),
+      getDoc(doc(db, 'trusts', `${otherUid}_${meUid}`)).catch(()=>({exists:()=>false})),
+      getDocs(query(collection(db, 'users', otherUid, 'signatures'), where('fromId','==',meUid))).catch(()=>({size:0})),
+    ]);
+
+    /* ★ حماية من race condition */
+    if(state.viewingRelationUid !== otherUid) return;
+
+    /* ─── المباريات ─── */
+    const myMatches = myMatchesSnap.docs.map(d => d.data());
+    const otherMatches = otherMatchesSnap.docs.map(d => d.data());
+    const vsThem = myMatches.filter(m => m.opponent === otherUid);
+
+    /* ─── بناء الإحصائيات ─── */
+    const stats = {
+      _uid: otherUid,
+      _loading: false,
+      /* المشتركة */
+      matchesTogether: vsThem.length,
+      winsAgainst: vsThem.filter(m => m.result === 'win').length,
+      lossesAgainst: vsThem.filter(m => m.result === 'loss').length,
+      teamwork: 0,
+      competition: vsThem.length,
+      chatMessages: chatSnap.size || 0,
+      giftsSent: giftsSentSnap.size || 0,
+      giftsReceived: giftsReceivedSnap.size || 0,
+      supports: supportsSnap.size || 0,
+      signedTimes: signaturesSnap.size || 0,
+      /* الحالة */
+      isMutualFollow: iFollowSnap.exists() && theyFollowSnap.exists(),
+      iFollowThem: iFollowSnap.exists(),
+      theyFollowMe: theyFollowSnap.exists(),
+      hasTrusted: trustSnap.exists(),
+      isTrustedBy: reverseTrustSnap.exists(),
+      /* إجماليات كل مستخدم */
+      myTotalMatches: myMatchesSnap.size || myMatches.length,
+      myTotalWins: myMatches.filter(m => m.result === 'win').length,
+      theirTotalMatches: otherMatchesSnap.size || otherMatches.length,
+      theirTotalWins: otherMatches.filter(m => m.result === 'win').length,
+    };
+
+    /* ─── حساب النقاط ─── */
+    stats.relationScore =
+      (stats.hasTrusted ? 100 : 0) +
+      (stats.isTrustedBy ? 100 : 0) +
+      (stats.isMutualFollow ? 50 : 0) +
+      (stats.chatMessages * 2) +
+      (stats.giftsSent * 5) +
+      (stats.giftsReceived * 5) +
+      (stats.matchesTogether * 3) +
+      (stats.signedTimes * 10) +
+      (stats.supports * 5);
+
+    /* ★ حماية مزدوجة قبل الحفظ */
+    if(state.viewingRelationUid !== otherUid) return;
+
+    state.relationData = stats;
+
+    if(state.page === 'relation' && state.viewingRelationUid === otherUid){
+      render();
+    }
+  } catch(e){
+    console.error('relation load:', e);
+    if(state.viewingRelationUid !== otherUid) return;
+    state.relationData = { _uid: otherUid, _loading: false, _error: true };
+    if(state.page === 'relation') render();
+  }
+}
+
+/* ============================================================
+   🎨 محتوى الصفحة الكامل
+   ============================================================ */
+function renderRelationContent(me, other, stats){
+  if(stats._error){
+    return emptyState('تعذّر تحميل البيانات — حاول مجدداً','close');
+  }
+
+  /* حساب المستوى */
+  const score = stats.relationScore;
+  let level = { emoji: '❔', name: 'غرباء', color: '#8a95ad' };
+  if(score >= 2000)      level = { emoji: '💎', name: 'رفيق درب', color: '#a78bfa' };
+  else if(score >= 1000) level = { emoji: '🔥', name: 'صديق مقرب', color: '#ff3d71' };
+  else if(score >= 500)  level = { emoji: '⭐', name: 'صديق', color: '#f5b301' };
+  else if(score >= 200)  level = { emoji: '🤝', name: 'معارف', color: '#22c55e' };
+  else if(score >= 50)   level = { emoji: '👋', name: 'تعارف', color: '#00d2ff' };
+  else if(score > 0)     level = { emoji: '🌱', name: 'بداية', color: '#10b981' };
+
+  const pct = Math.min(100, (score / 2000) * 100);
+
+  /* ─── بيانات المقارنة ─── */
+  const meStats = {
+    level: me.level || 1,
+    fame: me.fame || 0,
+    power: me.power || 0,
+    support: me.support || 0,
+    heba: calculateHeba(me),
+    reputation: typeof me.reputation === 'number' ? me.reputation : calculateReputationFromData(me),
+    followers: me.followers || 0,
+    following: me.following || 0,
+    likesProfile: me.likesProfile || 0,
+    trustReceived: me.trustReceived || 0,
+    views: me.views || 0,
+    matches: stats.myTotalMatches || 0,
+    wins: stats.myTotalWins || 0,
+  };
+
+  const otherStats = {
+    level: other.level || 1,
+    fame: other.fame || 0,
+    power: other.power || 0,
+    support: other.support || 0,
+    heba: calculateHeba(other),
+    reputation: typeof other.reputation === 'number' ? other.reputation : calculateReputationFromData(other),
+    followers: other.followers || 0,
+    following: other.following || 0,
+    likesProfile: other.likesProfile || 0,
+    trustReceived: other.trustReceived || 0,
+    views: other.views || 0,
+    matches: stats.theirTotalMatches || 0,
+    wins: stats.theirTotalWins || 0,
+  };
+
+  const comparisonRows = [
+    { key: 'level',        label: 'المستوى',        icon: '🏅', format: v => v },
+    { key: 'heba',         label: 'الهيبة',         icon: '👑', format: nf },
+    { key: 'reputation',   label: 'السمعة',         icon: '🤝', format: nf },
+    { key: 'fame',         label: 'الشهرة',         icon: '⭐', format: nf },
+    { key: 'power',        label: 'القوة',          icon: '⚡', format: nf },
+    { key: 'support',      label: 'الدعم',          icon: '💎', format: nf },
+    { key: 'matches',      label: 'المباريات',      icon: '🎮', format: nf },
+    { key: 'wins',         label: 'الانتصارات',     icon: '🏆', format: nf },
+    { key: 'followers',    label: 'المتابعون',      icon: '👥', format: nf },
+    { key: 'following',    label: 'يتابع',          icon: '➡️', format: nf },
+    { key: 'likesProfile', label: 'إعجابات الملف',  icon: '❤️', format: nf },
+    { key: 'trustReceived',label: 'الثقات',         icon: '🛡️', format: nf },
+    { key: 'views',        label: 'الزيارات',       icon: '👁️', format: nf },
+  ];
+
+  /* حساب عدد الانتصارات في المقارنة */
+  let meAhead = 0, otherAhead = 0;
+  const comparisonHTML = comparisonRows.map(row => {
+    const meVal = Number(meStats[row.key]) || 0;
+    const otherVal = Number(otherStats[row.key]) || 0;
+    const iWon = meVal > otherVal;
+    const otherWon = otherVal > meVal;
+    if(iWon) meAhead++;
+    if(otherWon) otherAhead++;
+    return `
+      <div class="relation-compare-row">
+        <div class="rc-value ${iWon?'win':''}">
+          ${row.format(meVal)}
+          ${iWon ? ' <span class="rc-crown">👑</span>' : ''}
+        </div>
+        <div class="rc-label">
+          <span class="rc-icon">${row.icon}</span>
+          <span>${row.label}</span>
+        </div>
+        <div class="rc-value ${otherWon?'win':''}">
+          ${otherWon ? '<span class="rc-crown">👑</span> ' : ''}
+          ${row.format(otherVal)}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  /* شريط المقارنة الإجمالي */
+  const totalComp = meAhead + otherAhead || 1;
+  const mePct = Math.round((meAhead / totalComp) * 100);
+  const otherPct = 100 - mePct;
+
+  return `
+    <div class="relation-header">
+      <div class="relation-user" data-view-profile="${me.uid || state.user.uid}">
+        ${avatar(me, 60)}
+        <div class="relation-name">${esc(me.name)}</div>
+      </div>
+      <div class="relation-vs">
+        <div class="relation-vs-icon">${level.emoji}</div>
+        <div class="relation-vs-label" style="color:${level.color}">${level.name}</div>
+        <div class="relation-vs-score">${nf(score)} نقطة</div>
+      </div>
+      <div class="relation-user" data-view-profile="${other.uid}">
+        ${avatar(other, 60)}
+        <div class="relation-name">${esc(other.name)}</div>
+      </div>
+    </div>
+
+    <!-- شريط مستوى العلاقة -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="relation-progress-title">مستوى العلاقة</div>
+      <div class="relation-progress">
+        <span style="width:${pct}%;background:${level.color};box-shadow:0 0 14px ${level.color};"></span>
+      </div>
+      <div class="relation-progress-meta">
+        <span>${nf(score)} / 2000</span>
+        <span style="color:${level.color}">${level.emoji} ${level.name}</span>
+      </div>
+    </div>
+
+    <!-- ═══ المقارنة المباشرة ═══ -->
+    <div class="relation-section-title">⚖️ المقارنة المباشرة</div>
+    
+    <!-- شريط تفوق -->
+    <div class="relation-battle-bar">
+      <div class="rbb-side left" style="width:${mePct}%">
+        <span>${meAhead} تفوق</span>
+      </div>
+      <div class="rbb-side right" style="width:${otherPct}%">
+        <span>${otherAhead} تفوق</span>
+      </div>
+    </div>
+    
+    <div class="relation-compare-table">
+      <div class="relation-compare-header">
+        <div class="rc-huser">
+          ${avatar(me, 26)}
+          <span>${esc((me.name||'').split(' ')[0])}</span>
+        </div>
+        <div class="rc-hvs">VS</div>
+        <div class="rc-huser">
+          ${avatar(other, 26)}
+          <span>${esc((other.name||'').split(' ')[0])}</span>
+        </div>
+      </div>
+      ${comparisonHTML}
+    </div>
+
+    <!-- ═══ الإحصائيات المتبادلة ═══ -->
+    <div class="relation-section-title">📊 الإحصائيات المتبادلة</div>
+    <div class="relation-stats">
+      <div class="relation-stat">
+        <div class="rs-icon">🎮</div>
+        <div class="rs-value">${stats.matchesTogether}</div>
+        <div class="rs-label">مباريات معاً</div>
+      </div>
+      <div class="relation-stat">
+        <div class="rs-icon">🏆</div>
+        <div class="rs-value" style="color:var(--ok)">${stats.winsAgainst}</div>
+        <div class="rs-label">فزت عليه</div>
+      </div>
+      <div class="relation-stat">
+        <div class="rs-icon">💔</div>
+        <div class="rs-value" style="color:var(--pink)">${stats.lossesAgainst}</div>
+        <div class="rs-label">خسرت منه</div>
+      </div>
+      <div class="relation-stat">
+        <div class="rs-icon">💬</div>
+        <div class="rs-value">${nf(stats.chatMessages)}</div>
+        <div class="rs-label">رسالة</div>
+      </div>
+      <div class="relation-stat">
+        <div class="rs-icon">🎁</div>
+        <div class="rs-value">${stats.giftsSent + stats.giftsReceived}</div>
+        <div class="rs-label">هدايا متبادلة</div>
+      </div>
+      <div class="relation-stat">
+        <div class="rs-icon">⭐</div>
+        <div class="rs-value">${stats.supports}</div>
+        <div class="rs-label">دعم</div>
+      </div>
+      <div class="relation-stat">
+        <div class="rs-icon">✍️</div>
+        <div class="rs-value">${stats.signedTimes}</div>
+        <div class="rs-label">تواقيع</div>
+      </div>
+      <div class="relation-stat">
+        <div class="rs-icon">🎯</div>
+        <div class="rs-value">${stats.competition}</div>
+        <div class="rs-label">تنافس</div>
+      </div>
+    </div>
+
+    <!-- ═══ الحالة الحالية ═══ -->
+    <div class="relation-section-title">🤝 الحالة الحالية</div>
+    <div class="relation-status-grid">
+      <div class="relation-status ${stats.isMutualFollow ? 'active' : ''}">
+        <span class="rss-icon">${stats.isMutualFollow ? '🤝' : stats.iFollowThem ? '➡️' : stats.theyFollowMe ? '⬅️' : '👤'}</span>
+        <span class="rss-text">${
+          stats.isMutualFollow ? 'متابعة متبادلة' :
+          stats.iFollowThem ? 'أنت تتابعه فقط' :
+          stats.theyFollowMe ? 'هو يتابعك فقط' :
+          'لا متابعة'
+        }</span>
+      </div>
+      <div class="relation-status ${stats.hasTrusted ? 'active' : ''}">
+        <span class="rss-icon">${stats.hasTrusted ? '✅' : '⚪'}</span>
+        <span class="rss-text">${stats.hasTrusted ? 'أنت تثق به' : 'لم تمنحه الثقة بعد'}</span>
+      </div>
+      <div class="relation-status ${stats.isTrustedBy ? 'active' : ''}">
+        <span class="rss-icon">${stats.isTrustedBy ? '🛡️' : '⚪'}</span>
+        <span class="rss-text">${stats.isTrustedBy ? 'هو يثق بك' : 'لم يمنحك الثقة بعد'}</span>
+      </div>
+    </div>
+
+    <!-- ═══ التفاصيل التنافسية ═══ -->
+    ${stats.matchesTogether > 0 ? `
+      <div class="relation-section-title">⚔️ التفاصيل التنافسية</div>
+      <div class="card">
+        <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+          <span style="font-size:16px">⚔️</span>
+          <div style="flex:1;font-size:12.5px;font-weight:800">عدد التنافس</div>
+          <div class="pill">${stats.competition} مباراة</div>
+        </div>
+        <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
+          <span style="font-size:16px">👥</span>
+          <div style="flex:1;font-size:12.5px;font-weight:800">عدد التعاون</div>
+          <div class="pill">${stats.teamwork} مباراة</div>
+        </div>
+        <div class="row" style="padding:8px 0">
+          <span style="font-size:16px">📊</span>
+          <div style="flex:1;font-size:12.5px;font-weight:800">نسبة الفوز</div>
+          <div class="pill ${stats.winsAgainst > stats.lossesAgainst ? 'ok' : 'pink'}">
+            ${stats.matchesTogether ? Math.round(stats.winsAgainst / stats.matchesTogether * 100) : 0}%
+          </div>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- ═══ إجراءات سريعة ═══ -->
+    <div class="relation-section-title">🎯 إجراءات سريعة</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <button class="btn btn-primary" data-open-chat="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('message','sm')} مراسلة
+      </button>
+      <button class="btn btn-ghost" data-send-gift="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('crown','sm')} إهداء
+      </button>
+      <button class="btn btn-ghost" data-send-challenge="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('bolt','sm')} تحدي
+      </button>
+      <button class="btn btn-ghost" data-action="profile-actions" data-uid="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('dots','sm')} خيارات
+      </button>
+    </div>
+  `;
+}
+
 /* ============ 📋 قائمة خيارات المنشور ============ */
 function openPostActionsModal(postId){
   const p = state.posts.find(x => x.id === postId);
   if(!p) return toast('المنشور غير موجود');
   const isMine = p.authorId === state.user.uid;
   const isAdmin = state.profile?.role === 'admin';
+  const wasReblogged = (p.rebloggedBy || []).includes(state.user.uid);
+  const isHidden = state.hiddenFromFeed?.has(p.id);
 
   let actions = '';
 
+  /* ═══ متاح للجميع: مشاركة + نسخ رابط ═══ */
+  actions += `
+    <button class="set-row" data-share-post="${postId}">
+      ${ic('share','sm')} 
+      <span class="sr-txt">
+        <span class="sr-n">مشاركة خارجية</span>
+        <span class="sr-d">واتساب، تيليجرام، أو أي تطبيق</span>
+      </span>
+    </button>
+    <button class="set-row" data-copy-post-link="${postId}">
+      ${ic('globe','sm')} 
+      <span class="sr-txt">
+        <span class="sr-n">نسخ رابط المنشور</span>
+      </span>
+    </button>
+  `;
+
+  /* ═══ لغير صاحب المنشور ═══ */
+  if(!isMine && !p.reblogOf){
+    actions += `
+      <button class="set-row" data-reblog="${postId}" style="${wasReblogged?'color:var(--ok)':''}">
+        ${ic('share','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n" style="${wasReblogged?'color:var(--ok)':''}">${wasReblogged?'إلغاء إعادة النشر':'إعادة نشر'}</span>
+          <span class="sr-d">${wasReblogged?'إزالة من متابعيك':'يظهر لمتابعيك'}</span>
+        </span>
+      </button>
+
+      <button class="set-row" data-send-post-to="${postId}">
+        ${ic('message','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n">إرسال إلى صديق</span>
+          <span class="sr-d">في محادثة خاصة</span>
+        </span>
+      </button>
+
+      <button class="set-row" data-save="${postId}" data-close-modal="1">
+        ${ic('bookmark','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n">${state.saved[postId] ? 'إزالة من المحفوظات' : 'حفظ المنشور'}</span>
+        </span>
+      </button>
+
+      <button class="set-row" data-hide-from-feed="${postId}" 
+              data-close-modal="1" style="color:#f5c451">
+        ${ic('eye','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n" style="color:#f5c451">${isHidden?'إظهار في الخلاصة':'عدم الاهتمام'}</span>
+          <span class="sr-d">${isHidden?'سيظهر مجدداً':'إخفاء من الخلاصة فقط'}</span>
+        </span>
+      </button>
+
+      <button class="set-row" data-report-target="${postId}" data-report-type="post">
+        ${ic('shield','sm')} 
+        <span class="sr-txt"><span class="sr-n">إبلاغ</span></span>
+      </button>
+    `;
+  }
+
+  /* ═══ لصاحب المنشور ═══ */
   if(isMine && !p.reblogOf){
     actions += `
       <button class="set-row" data-edit-post="${postId}">
@@ -5205,25 +5799,15 @@ function openPostActionsModal(postId){
         ${ic('star','sm')} <span class="sr-txt"><span class="sr-n">${p.pinned?'إلغاء التثبيت':'تثبيت على الملف'}</span></span>
       </button>
       <button class="set-row" data-set-visibility="${postId}">
-        ${ic('eye','sm')} <span class="sr-txt"><span class="sr-n">الخصوصية</span><span class="sr-d">${p.visibility==='followers'?'المتابعون فقط':p.visibility==='private'?'خاص':'عام'}</span></span>
+        ${ic('eye','sm')} <span class="sr-txt">
+          <span class="sr-n">الخصوصية</span>
+          <span class="sr-d">${p.visibility==='followers'?'المتابعون فقط':p.visibility==='private'?'خاص':'عام'}</span>
+        </span>
       </button>
     `;
   }
 
-  if(!isMine && !p.reblogOf){
-    actions += `
-${(()=>{
-  const wasReblogged = (p.rebloggedBy || []).includes(state.user.uid);
-  return `<button class="set-row" data-reblog="${postId}" style="${wasReblogged?'color:var(--ok)':''}">
-    ${ic('share','sm')} <span class="sr-txt"><span class="sr-n" style="${wasReblogged?'color:var(--ok)':''}">${wasReblogged?'إلغاء إعادة النشر':'إعادة النشر'}</span></span>
-  </button>`;
-})()}
-      <button class="set-row" data-report-target="${postId}" data-report-type="post">
-        ${ic('shield','sm')} <span class="sr-txt"><span class="sr-n">إبلاغ</span></span>
-      </button>
-    `;
-  }
-
+  /* ═══ حذف (صاحب أو مشرف) ═══ */
   if(isMine || isAdmin){
     actions += `
       <button class="set-row" data-delete-post="${postId}" style="color:#ff7b9d">
@@ -5232,6 +5816,7 @@ ${(()=>{
     `;
   }
 
+  /* ═══ مشرف ═══ */
   if(isAdmin && !isMine){
     actions += `
       <button class="set-row" data-admin-hide-post="${postId}" style="color:#f5c451">
@@ -6320,8 +6905,8 @@ async function openProfileActionsModal(uid){
 
   const blocked = (state.profile.blockedUsers || []).includes(uid);
   const liked   = state.profileLiked[uid];
+  const on      = state.followed.has(uid);
 
-  /* ★ جلب حالة الثقة */
   let hasTrusted = false;
   try {
     const trustSnap = await getDoc(doc(db, 'trusts', `${state.user.uid}_${uid}`));
@@ -6336,7 +6921,17 @@ async function openProfileActionsModal(uid){
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
 
-      <!-- ★ زر الثقة (الأهم) -->
+      <!-- ★★ صفحة العلاقة (الأهم) ★★ -->
+      <button class="set-row" data-action="view-relation" data-uid="${uid}" data-close-modal="1"
+              style="background:linear-gradient(135deg,rgba(108,92,231,.1),rgba(0,210,255,.04));border-color:rgba(108,92,231,.35)">
+        <span style="font-size:20px">📊</span>
+        <span class="sr-txt">
+          <span class="sr-n">العلاقة بينكما</span>
+          <span class="sr-d">إحصائيات التعاون والتنافس المتبادل</span>
+        </span>
+      </button>
+
+      <!-- الثقة -->
       <button class="set-row trust-btn ${hasTrusted?'trusted':''}"
               data-toggle-trust="${uid}" data-close-modal="1">
         <span style="font-size:20px">${hasTrusted ? '✅' : '🤝'}</span>
@@ -6346,11 +6941,29 @@ async function openProfileActionsModal(uid){
         </span>
       </button>
 
+      <!-- متابعة -->
+      <button class="set-row ${on?'':''}" data-follow="${uid}" data-close-modal="1">
+        ${ic('user','sm')}
+        <span class="sr-txt">
+          <span class="sr-n">${on ? 'إلغاء المتابعة' : 'متابعة'}</span>
+          <span class="sr-d">${on ? 'أنت تتابعه' : 'إضافة إلى قائمة المتابَعين'}</span>
+        </span>
+      </button>
+
       <button class="set-row" data-open-chat="${uid}" data-close-modal="1">
         ${ic('message','sm')} <span class="sr-txt"><span class="sr-n">مراسلة</span></span>
       </button>
 
-      <!-- ★ الإعجاب نهائي -->
+      <!-- ★★ مشاركة الملف (جديد) ★★ -->
+      <button class="set-row" data-share-profile="${uid}" data-close-modal="1">
+        ${ic('share','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n">مشاركة الملف</span>
+          <span class="sr-d">نسخ الرابط أو مشاركته</span>
+        </span>
+      </button>
+
+      <!-- الإعجاب نهائي -->
       <button class="set-row ${liked?'liked-final':''}"
               ${liked ? 'disabled' : `data-profile-like="${uid}" data-close-modal="1"`}>
         ${ic('heart','sm')} 
@@ -6361,15 +6974,23 @@ async function openProfileActionsModal(uid){
       </button>
 
       <button class="set-row" data-support="${uid}" data-close-modal="1">
-        ${ic('star','sm')} <span class="sr-txt"><span class="sr-n">دعم +10</span></span>
+        ${ic('star','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n">دعم +10</span>
+          <span class="sr-d">يدعم شهرة اللاعب</span>
+        </span>
       </button>
 
       <button class="set-row" data-send-gift="${uid}" data-close-modal="1">
-        ${ic('crown','sm')} <span class="sr-txt"><span class="sr-n">إهداء</span></span>
+        ${ic('crown','sm')} 
+        <span class="sr-txt">
+          <span class="sr-n">إرسال هدية</span>
+          <span class="sr-d">وردة، قلب، ألماسة وأكثر</span>
+        </span>
       </button>
 
       <button class="set-row" data-send-challenge="${uid}" data-close-modal="1">
-        ${ic('bolt','sm')} <span class="sr-txt"><span class="sr-n">تحدي</span></span>
+        ${ic('bolt','sm')} <span class="sr-txt"><span class="sr-n">تحدي مباشر</span></span>
       </button>
 
       <button class="set-row" data-report-target="${uid}" data-report-type="user" data-close-modal="1">
@@ -6378,7 +6999,8 @@ async function openProfileActionsModal(uid){
 
       <button class="set-row" data-block-user="${uid}" data-close-modal="1"
               style="${blocked?'color:#ff7b9d':''}">
-        ${ic('lock','sm')} <span class="sr-txt"><span class="sr-n" style="${blocked?'color:#ff7b9d':''}">${blocked?'إلغاء الحظر':'حظر'}</span></span>
+        ${ic('lock','sm')} 
+        <span class="sr-txt"><span class="sr-n" style="${blocked?'color:#ff7b9d':''}">${blocked?'إلغاء الحظر':'حظر'}</span></span>
       </button>
 
       ${state.profile?.role === 'admin' ? `
@@ -6400,11 +7022,37 @@ async function openProfileActionsModal(uid){
 /* ============================================================
    🖼️ مودال إجراءات الصورة (أفاتار / غلاف)
    ============================================================ */
-function openImageActionsModal(type){
+function openImageActionsModal(type, uid){
+  const isOwner = !uid || uid === state.user.uid;
+  const profile = isOwner ? (state.profile || {}) : (state.users[uid] || {});
   const isAvatar = type === 'avatar';
-  const url = isAvatar ? (state.profile.avatarUrl || '') : (state.profile.coverUrl || '');
+  const url = isAvatar ? (profile.avatarUrl || '') : (profile.coverUrl || '');
   const label = isAvatar ? 'الصورة الشخصية' : 'صورة الغلاف';
 
+  /* ════ الزائر — عرض فقط ════ */
+  if(!isOwner){
+    openModal(`
+      <h3>${label}</h3>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">
+        ${url ? `
+          <button class="set-row" data-view-image="${type}" data-image-uid="${uid}">
+            ${ic('image','sm')} <span class="sr-txt"><span class="sr-n">عرض الصورة</span></span>
+          </button>
+        ` : `
+          <div class="empty" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">
+            ${ic('image')}
+            <div style="margin-top:8px">لا توجد صورة</div>
+          </div>
+        `}
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إغلاق</button>
+      </div>
+    `);
+    return;
+  }
+
+  /* ════ المالك — كل الإجراءات ════ */
   openModal(`
     <h3>${label}</h3>
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">
@@ -6505,6 +7153,287 @@ async function recropCover(){
       toast('فشل الحفظ');
     }
   };
+}
+
+/* ============================================================
+   👤 مودال الملف الشخصي المختصر — إصدار كامل
+   ============================================================ */
+async function openMiniProfileModal(uid){
+  const u = state.users[uid];
+  if(!u) return toast('المستخدم غير موجود');
+  if(uid === state.user.uid){ go('profile'); return; }
+
+  /* ═══ حفظ سياق التعليقات ═══ */
+  if(state.currentPostId){
+    const scrollBody = document.querySelector('.comments-body');
+    state.returnToComments = {
+      postId: state.currentPostId,
+      fromPage: state.page,
+      scrollTop: scrollBody ? scrollBody.scrollTop : 0,
+      replyingTo: state.replyingTo ? { ...state.replyingTo } : null,
+      collapsedThreads: new Set(state.collapsedThreads),
+    };
+  }
+  if(state.commentsUnsub){
+    try { state.commentsUnsub(); } catch(e){}
+    state.commentsUnsub = null;
+  }
+  state.currentPostId = null;
+  state.replyingTo = null;
+  state.editingCommentId = null;
+  state.commentEmojiOpen = false;
+  state.collapsedThreads.clear();
+
+  /* ═══ كل التخصيصات ═══ */
+  const cust    = getProfileCustomization(u);
+  const theme   = THEMES_EXTENDED[u.equipped?.themeId || u.themeId || 'default'] || THEMES_EXTENDED.default;
+  const frameId = u.equipped?.frameId || u.frameId || 'none';
+  const frameClass = FRAME_STYLES[frameId]?.class || '';
+  const badge   = NAME_BADGES[cust.nameBadge] || NAME_BADGES.none;
+  const badgeStyleStr = buildBadgeStyle(cust);
+  const badgeHTML = badge.emoji
+    ? `<span class="name-badge-sep" style="${badgeStyleStr}">${badge.emoji}</span>`
+    : '';
+  const nameAnimSpeed = (NAME_ANIMATION_SPEEDS[cust.nameAnimationSpeed] || NAME_ANIMATION_SPEEDS.normal).duration;
+  const unameSpeed    = (NAME_ANIMATION_SPEEDS[cust.usernameAnimationSpeed] || NAME_ANIMATION_SPEEDS.normal).duration;
+  const moveSpeed     = (AVATAR_MOVEMENT_SPEEDS[cust.avatarMovementSpeed] || AVATAR_MOVEMENT_SPEEDS.normal).duration;
+  const moveClass     = cust.avatarMovement !== 'none' ? `av-move-${cust.avatarMovement}` : '';
+
+  /* ═══ الإحصائيات (3 كحد أقصى) ═══ */
+  const miniStats = cust.miniStats || MINI_STATS_DEFAULT;
+
+  const getValue = (key) => {
+    switch(key){
+      case 'followers':  return nf(u.followers || 0);
+      case 'following':  return nf(u.following || 0);
+      case 'heba':       return nf(calculateHeba(u));
+      case 'fame':       return nf(u.fame || 0);
+      case 'power':      return nf(u.power || 0);
+      case 'support':    return nf(u.support || 0);
+      case 'reputation': return nf(typeof u.reputation === 'number' ? u.reputation : calculateReputationFromData(u));
+      case 'trust':      return nf(u.trustReceived || 0);
+      case 'views':      return nf(u.views || 0);
+      case 'likes':      return nf(u.likesProfile || 0);
+      case 'gameLikes':  return nf(u.likesGames || 0);
+      case 'posts':      return nf(state.posts.filter(p => p.authorId === uid && !p.reblogOf).length);
+      case 'games':
+      case 'wins':
+      case 'sigs':       return '…';
+      default:           return '0';
+    }
+  };
+
+  const statsHTML = miniStats.map(key => {
+    const opt = MINI_STAT_OPTIONS[key];
+    if(!opt) return '';
+    return `
+      <div class="mini-stat" data-mini-key="${key}">
+        <div class="ms-v" style="color:${opt.color}">${getValue(key)}</div>
+        <div class="ms-l">${opt.icon} ${opt.label}</div>
+      </div>`;
+  }).join('');
+
+  /* ═══ بناء المودال ═══ */
+  openModal(`
+    <div class="mini-profile-card" id="miniProfileCard">
+      <button type="button" class="mini-profile-close" data-action="modal-close" aria-label="إغلاق">
+        ${ic('close','sm')}
+      </button>
+
+      <!-- الغلاف -->
+<div class="mini-profile-cover" style="${buildCoverStyle(u, cust, theme)}">
+  ${buildCoverOverlayHTML(cust)}
+  ${!u.coverUrl ? `<div style="position:absolute;inset:0;background:linear-gradient(135deg,${theme.colors[0]},${theme.colors[1]})"></div>` : ''}
+  ${cust.bannerEffect !== 'none'
+    ? `<div class="preview-effect effect-${cust.bannerEffect}" style="position:absolute;inset:0;z-index:4"></div>` : ''}
+
+<div class="mini-cover-chips">
+  ${cust.miniShowCoverChips ? `
+    <div class="mini-cover-chip views" title="مشاهدات">
+      ${ic('eye','xs')} ${nf(u.views || 0)}
+    </div>
+    <div class="mini-cover-chip likes" title="إعجابات">
+      ${ic('heart','xs')} ${nf(u.likesProfile || 0)}
+    </div>
+  ` : ''}
+  ${cust.miniShowFollowStatus
+    ? renderMiniFollowChip(state.followed.has(uid), false, true)
+    : ''}
+</div>
+</div>
+
+      <!-- الجسم -->
+      <div class="mini-profile-body">
+        <div class="mini-profile-avatar ${moveClass}" style="--move-duration:${moveSpeed}s">
+          ${avatar(u, 82, frameClass)}
+        </div>
+
+        <!-- الاسم -->
+        <div class="mini-profile-name anim-name-${cust.nameAnimation}" style="${buildNameStyle(cust)};--anim-duration:${nameAnimSpeed}s">
+          ${badgeHTML}${esc(u.name)} ${getAdminBadge(u)}
+          ${cust.pronouns ? `<span class="pc-pronouns">${esc(cust.pronouns)}</span>` : ''}
+        </div>
+
+        <!-- اسم المستخدم -->
+        <div class="mini-profile-username ${cust.usernameAnimation !== 'none' ? `anim-name-${cust.usernameAnimation}` : ''}"
+             style="${buildUsernameStyle(cust)};--anim-duration:${unameSpeed}s">
+          ${cust.usernameShowAt ? '@' : ''}${esc(u.username)}
+        </div>
+
+        <!-- الفريق -->
+        ${cust.miniShowTeam && u.teamName ? `
+          <div class="mini-profile-team">
+            ${u.teamEmblem || '🛡️'} ${esc(u.teamName)}
+          </div>
+        ` : ''}
+
+        <!-- الموقع -->
+        ${cust.miniShowLocation && cust.location ? `
+          <div class="mini-profile-location" style="color:${cust.locationColor || 'var(--muted)'}">
+            ${ic('location','xs')} ${esc(cust.location)}
+          </div>
+        ` : ''}
+
+        <!-- ★★ المتابعون والمتابَعون (قبل النبذة) ★★ -->
+        ${cust.miniShowFollows ? `
+          <div class="mini-follows-row">
+            <div class="mini-follow-item">
+              <b>${nf(u.followers || 0)}</b>
+              <span>متابع</span>
+            </div>
+            <div class="mini-follow-divider"></div>
+            <div class="mini-follow-item">
+              <b>${nf(u.following || 0)}</b>
+              <span>متابَع</span>
+            </div>
+          </div>
+        ` : ''}
+
+<!-- ★ النبذة (مثل الملف الشخصي تماماً) -->
+<!-- ★ النبذة — بنفس بنية صفحة الملف الشخصي تماماً -->
+${cust.miniShowBio && u.bio ? `
+  <div class="mini-profile-bio">
+    <div class="pc-bio" style="${buildBioStyle(cust)}">${
+      cust.bioIcon
+        ? `<span style="margin-inline-end:6px;${
+            cust.bioIconColor ? `color:${cust.bioIconColor};text-shadow:0 0 8px ${cust.bioIconColor}88;` : ''
+          }">${cust.bioIcon}</span>`
+        : ''
+    }${esc(u.bio).replace(/\n/g,'<br>')}</div>
+  </div>
+` : ''}
+
+        <!-- ★ الإحصائيات (3 كحد أقصى) -->
+        <div class="mini-profile-stats-grid">
+          ${statsHTML}
+        </div>
+
+        <div class="mini-profile-hint">
+          ${ic('user','xs')} اضغط لعرض الملف الكامل
+        </div>
+      </div>
+    </div>
+  `, 'mini-profile-modal');
+
+  /* ═══ النقر على البطاقة → الملف الكامل ═══ */
+  setTimeout(() => {
+    const card = document.getElementById('miniProfileCard');
+    if(card){
+      card.addEventListener('click', (e) => {
+        if(e.target.closest('button')) return;
+        closeModal();
+        state.profileTab = 'posts';
+        go('userprofile', { viewingUid: uid });
+      });
+    }
+  }, 30);
+
+  loadMiniProfileAsyncStats(uid);
+}
+
+/* حالة المتابعة — للغلاف (مختصرة) */
+function renderMiniFollowChip(isFollowing, followsMe, loading = false){
+  /* ⏳ حالة تحميل مؤقتة */
+  if(loading && !isFollowing){
+    return `<div class="mini-cover-chip follow loading" id="mpFollowChip">
+      <span class="mpc-spinner"></span>
+    </div>`;
+  }
+
+  /* 🤝 متابعة متبادلة */
+  if(isFollowing && followsMe){
+    return `<div class="mini-cover-chip follow mutual" id="mpFollowChip" title="متابعة متبادلة">
+      <span>🤝</span><span>متبادلة</span>
+    </div>`;
+  }
+  /* ✓ تتابعه */
+  if(isFollowing){
+    return `<div class="mini-cover-chip follow following" id="mpFollowChip" title="أنت تتابعه">
+      <span>✓</span><span>تتابعه</span>
+    </div>`;
+  }
+  /* 👁 يتابعك */
+  if(followsMe){
+    return `<div class="mini-cover-chip follow follower" id="mpFollowChip" title="يتابعك">
+      <span>👁</span><span>يتابعك</span>
+    </div>`;
+  }
+  /* ★ لا متابعة — ظاهر دائماً */
+  return `<div class="mini-cover-chip follow none" id="mpFollowChip" title="لا متابعة">
+    <span>•</span><span>لا متابعة</span>
+  </div>`;
+}
+
+async function loadMiniProfileAsyncStats(uid){
+  try {
+    const [matchSnap, sigSnap, followsMeSnap, iFollowSnap] = await Promise.all([
+      getDocs(collection(db, 'users', uid, 'matchHistory')).catch(() => ({ size: 0, docs: [] })),
+      getDocs(collection(db, 'users', uid, 'signatures')).catch(() => ({ size: 0 })),
+      getDoc(doc(db, 'follows', `${uid}_${state.user.uid}`)).catch(() => ({ exists: () => false })),
+      getDoc(doc(db, 'follows', `${state.user.uid}_${uid}`)).catch(() => ({ exists: () => false })),
+    ]);
+
+    const matches = matchSnap.size || 0;
+    const wins    = (matchSnap.docs || []).filter(d => d.data().result === 'win').length;
+    const sigs    = sigSnap.size || 0;
+    const followsMe = followsMeSnap.exists();  /* هل يتابعني؟ */
+    const iFollow   = iFollowSnap.exists();     /* هل أتابعه؟ */
+
+    const setVal = (key, val) => {
+      const el = document.querySelector(`[data-mini-key="${key}"] .ms-v`);
+      if(el) el.textContent = nf(val);
+    };
+    setVal('games', matches);
+    setVal('wins', wins);
+    setVal('sigs', sigs);
+
+    /* ★ تحديث chip المتابعة */
+    const chipEl = document.getElementById('mpFollowChip');
+    if(chipEl){
+      const newHTML = renderMiniFollowChip(iFollow, followsMe, false);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = newHTML;
+      const newChip = tmp.firstElementChild;
+      if(newChip){
+        chipEl.replaceWith(newChip);
+      }
+    }
+  } catch(e){
+    console.warn('mini profile async:', e);
+    /* fallback: حالة من state.followed */
+    const chipEl = document.getElementById('mpFollowChip');
+    if(chipEl){
+      const newHTML = renderMiniFollowChip(state.followed.has(uid), false, false);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = newHTML;
+      const newChip = tmp.firstElementChild;
+      if(newChip) chipEl.replaceWith(newChip);
+    }
+    ['games','wins','sigs'].forEach(k => {
+      const el = document.querySelector(`[data-mini-key="${k}"] .ms-v`);
+      if(el) el.textContent = '0';
+    });
+  }
 }
 
 function openImageViewerModal(url){
@@ -8226,6 +9155,20 @@ function getProfileCustomization(p){
     postShowActions: p.postShowActions ?? true,
     postNameColor: p.postNameColor || '',
     postTextColor: p.postTextColor || '',
+
+    /* ============ 📱 الملف الشخصي المختصر ============ */
+miniStats: (() => {
+  const saved = Array.isArray(p.miniStats)
+    ? p.miniStats.filter(x => MINI_STATS_ALLOWED.includes(x))
+    : [];
+  return saved.length ? saved.slice(0, MINI_STATS_MAX) : [...MINI_STATS_DEFAULT];
+})(),
+miniShowBio:           p.miniShowBio !== false,
+miniShowFollowStatus:  p.miniShowFollowStatus !== false,
+miniShowFollows:       p.miniShowFollows !== false,   /* ★ جديد */
+miniShowCoverChips:    p.miniShowCoverChips !== false,
+miniShowTeam:          p.miniShowTeam !== false,
+miniShowLocation:      p.miniShowLocation !== false,
   };
 }
 
@@ -9874,9 +10817,9 @@ setTimeout(() => playProfileMusic(p), 100);
           </div>
 
 <div class="avatar-sig-wrapper">
-  <div class="pc-avatar ${moveClass}" style="--move-duration:${moveSpeed}s">
-    ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
-  </div>
+<div class="pc-avatar ${moveClass}" data-action="avatar-click" data-avatar-uid="${p.uid}" style="cursor:pointer;--move-duration:${moveSpeed}s">
+  ${avatar(p, 82, frameClass, false, buildAvatarInnerStyle(cust))}
+</div>
             <div class="sig-slider-preview" id="userSigSlider"
                  data-action="toggle-signatures" style="cursor:pointer">
               <div class="sig-preview-item" style="animation:none; opacity:0.5;">جاري التحميل...</div>
@@ -9959,6 +10902,26 @@ setTimeout(() => playProfileMusic(p), 100);
         ${ic('shield','xs')} <b>${nf(p.trustReceived||0)}</b> ثقة
       </button>
     </div>
+
+    <!-- ★★★ شريط الإجراءات السريعة — لغير صاحب الملف فقط ★★★ -->
+    ${state.viewingUid !== state.user.uid ? `
+      <div class="quick-action-bar">
+        <button class="qa-btn primary" data-open-chat="${state.viewingUid}">
+          ${ic('message','sm')}<span>مراسلة</span>
+        </button>
+        <button class="qa-btn" data-send-gift="${state.viewingUid}">
+          ${ic('crown','sm')}<span>إهداء</span>
+        </button>
+        <button class="qa-btn" data-send-challenge="${state.viewingUid}">
+          ${ic('bolt','sm')}<span>تحدي</span>
+        </button>
+        <button class="qa-btn ${state.profileLiked[state.viewingUid] ? 'on' : ''}"
+                data-profile-like="${state.viewingUid}"
+                ${state.profileLiked[state.viewingUid] ? 'disabled' : ''}>
+          ${ic('heart','sm')}<span>${state.profileLiked[state.viewingUid] ? 'معجب ✓' : 'إعجاب'}</span>
+        </button>
+      </div>
+    ` : ''}
 
     <div class="tabs scrollable" style="margin-top:16px">
       ${tabs.map(t => `<button class="tab ${state.profileTab===t.id?'active':''}" data-ptab="${t.id}">
@@ -10053,7 +11016,9 @@ async function submitSignature(targetUid){
       createdAt: serverTimestamp(),
     });
     
-    await notify(targetUid, 'signature', `<b>${esc(state.profile.name)}</b> وقع ملفك ✍️`);
+await notify(targetUid, 'signature',
+  `<b>${esc(state.profile.name)}</b> وقع على ملفك ✍️`,
+  state.user.uid, 'user');
     
     closeModal();
     toast('تم التوقيع ✓');
@@ -10225,6 +11190,181 @@ const dataUrl = await window.htmlToImage.toPng(target, {
     toast('فشل إنشاء الصورة');
   } finally {
     freezeStyle.remove();
+  }
+}
+
+/* ============================================================
+   📤 مشاركة المنشور خارجياً
+   ============================================================ */
+async function sharePostExternal(postId){
+  const post = state.posts.find(x => x.id === postId);
+  if(!post) return;
+
+  const url = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+  const text = post.text ? post.text.slice(0, 150) : 'شاهد هذا المنشور على نكسوس';
+
+  try {
+    if(navigator.share){
+      await navigator.share({
+        title: `منشور من ${post.author?.name || 'نكسوس'}`,
+        text,
+        url,
+      });
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast('✓ تم نسخ رابط المنشور');
+    }
+  } catch(e){
+    if(e.name !== 'AbortError'){
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('✓ تم نسخ رابط المنشور');
+      } catch(err){ toast('فشل المشاركة'); }
+    }
+  }
+}
+
+/* ============================================================
+   📋 نسخ رابط المنشور
+   ============================================================ */
+async function copyPostLink(postId){
+  const url = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('✓ تم نسخ رابط المنشور');
+  } catch(e){
+    toast('فشل النسخ');
+  }
+}
+
+/* ============================================================
+   👁️ إخفاء/إظهار المنشور من الخلاصة
+   ============================================================ */
+function toggleHideFromFeed(postId){
+  if(!state.hiddenFromFeed) state.hiddenFromFeed = new Set();
+
+  if(state.hiddenFromFeed.has(postId)){
+    state.hiddenFromFeed.delete(postId);
+    toast('تم الإظهار في الخلاصة');
+  } else {
+    state.hiddenFromFeed.add(postId);
+    toast('تم إخفاء المنشور من خلاصتك');
+  }
+
+  try {
+    localStorage.setItem('nexus_hidden_posts', JSON.stringify([...state.hiddenFromFeed]));
+  } catch(e){}
+
+  render();
+}
+
+/* ============================================================
+   📤 إرسال منشور لصديق عبر محادثة
+   ============================================================ */
+async function openSendPostToModal(postId){
+  try {
+    const fSnap = await getDocs(query(collection(db,'follows'), where('followerId','==',state.user.uid)));
+    const myFollowing = new Set(fSnap.docs.map(d=>d.data().followingId));
+    const rSnap = await getDocs(query(collection(db,'follows'), where('followingId','==',state.user.uid)));
+    const myFollowers = new Set(rSnap.docs.map(d=>d.data().followerId));
+    const mutual = [...myFollowing].filter(u=>myFollowers.has(u));
+    const friends = mutual.map(uid=>state.users[uid]).filter(Boolean);
+
+    const postUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+
+    openModal(`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">📤 إرسال المنشور إلى</h3>
+        <button class="icon-btn" data-action="modal-close">${ic('close','sm')}</button>
+      </div>
+      <div style="max-height:60vh;overflow-y:auto">
+        ${friends.length ? friends.map(u => `
+          <div class="follow-list-item"
+               data-send-post-to-uid="${u.uid}"
+               data-post-id="${postId}"
+               data-post-url="${esc(postUrl)}">
+            ${avatar(u, 44)}
+            <div style="flex:1;min-width:0">
+              <div class="follow-name">${esc(u.name)}</div>
+              <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+            </div>
+            ${ic('send','sm')}
+          </div>
+        `).join('') : `<div class="empty" style="padding:30px">${ic('users')}<div>لا أصدقاء متبادلون بعد</div></div>`}
+      </div>
+    `);
+  } catch(e){
+    console.error(e);
+    toast('فشل');
+  }
+}
+
+async function sendPostToUser(targetUid, postId, postUrl){
+  try {
+    const chatId = [state.user.uid, targetUid].sort().join('_');
+    const chatRef = doc(db, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+    if(!chatSnap.exists()){
+      await setDoc(chatRef, {
+        participants: [state.user.uid, targetUid],
+        lastMessage: 'بداية المحادثة',
+        lastSender: state.user.uid,
+        lastTime: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    const message = `📤 شارك معك منشوراً:\n${postUrl}`;
+    await addDoc(collection(db, 'chats', chatId, 'messages'), {
+      senderId: state.user.uid,
+      text: message,
+      createdAt: serverTimestamp(),
+    });
+
+    await updateDoc(chatRef, {
+      lastMessage: '📤 شارك معك منشوراً',
+      lastSender: state.user.uid,
+      lastTime: serverTimestamp(),
+    });
+
+    await notify(targetUid, 'message',
+      `<b>${esc(state.profile.name)}</b> شارك معك منشوراً`);
+
+    closeModal();
+    toast('✓ تم إرسال المنشور');
+  } catch(e){
+    console.error(e);
+    toast('فشل الإرسال');
+  }
+}
+
+/* ============================================================
+   📤 مشاركة ملف شخصي
+   ============================================================ */
+async function shareProfileExternal(uid){
+  const user = state.users[uid];
+  if(!user) return;
+
+  const url = `${window.location.origin}${window.location.pathname}?u=${user.username}`;
+
+  try {
+    if(navigator.share){
+      await navigator.share({
+        title: `ملف ${user.name} على نكسوس`,
+        text: `شاهد ملف ${user.name} على نكسوس`,
+        url,
+      });
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast('✓ تم نسخ رابط الملف');
+    }
+  } catch(e){
+    if(e.name !== 'AbortError'){
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('✓ تم نسخ رابط الملف');
+      } catch(err){ toast('فشل المشاركة'); }
+    }
   }
 }
 
@@ -10674,68 +11814,696 @@ function renderSearchSuggestions(){
   return html;
 }
 
-function pageNotifs(){
-  state.notifRead = true;
-  renderTopbar();
-  const unread = state.notifs.filter(n=>!n.read);
-  if(unread.length){
-    Promise.all(unread.map(n =>
-      updateDoc(doc(db,'notifications',state.user.uid,'items',n.id), { read: true }).catch(()=>{})
-    ));
-  }
+/* ============================================================
+   🔔 صفحة الإشعارات — إعادة بناء كاملة
+   ============================================================ */
 
-  const icons = {
-    like:'heart', follow:'user', game:'gamepad',
-    comment:'comment', support:'star', challenge:'bolt',
-    team_request:'users', team_accepted:'check', team_rejected:'close',
-    team_kick:'logout', team_role:'crown',
-    achievement:'medal', war:'shield', game_invite:'bolt',
-  };
+/* ═══════════ الثوابت ═══════════ */
+const NOTIF_CATEGORIES = {
+  social: { label: 'اجتماعي', icon: 'heart',   types: ['like','follow','comment','support','reply','comment_like','trust','signature','gift'] },
+  games:  { label: 'ألعاب',   icon: 'gamepad', types: ['game','challenge','game_invite'] },
+  teams:  { label: 'فرق',     icon: 'users',   types: ['team_request','team_accepted','team_rejected','team_kick','team_role','war'] },
+  system: { label: 'نظام',    icon: 'shield',  types: ['achievement','warning','system','season_end','admin_action'] },
+};
+
+const NOTIF_ICONS = {
+  like:'heart', follow:'user', game:'gamepad',
+  comment:'comment', support:'star', challenge:'bolt',
+  team_request:'users', team_accepted:'check', team_rejected:'close',
+  team_kick:'logout', team_role:'crown',
+  achievement:'medal', war:'shield', game_invite:'bolt',
+  gift:'star', reply:'comment', comment_like:'heart',
+  trust:'shield', signature:'edit', warning:'shield',
+  system:'bell', season_end:'trophy', admin_action:'shield',
+};
+
+const NOTIF_PRIORITY = {
+  challenge:'high', game_invite:'high', warning:'high', trust:'high',
+  team_request:'high', team_kick:'high', war:'high',
+  gift:'normal', like:'normal', comment:'normal', follow:'normal',
+  support:'normal', reply:'normal', comment_like:'normal', signature:'normal',
+  achievement:'low', season_end:'low', system:'low',
+  team_accepted:'normal', team_rejected:'normal', team_role:'normal', game:'normal',
+};
+
+/* ═══════════ دوال مساعدة ═══════════ */
+function getNotifCategory(type){
+  for(const [k, cat] of Object.entries(NOTIF_CATEGORIES)){
+    if(cat.types.includes(type)) return k;
+  }
+  return 'system';
+}
+function getNotifPriority(type){ return NOTIF_PRIORITY[type] || 'normal'; }
+function notifIconFor(type){ return NOTIF_ICONS[type] || 'bell'; }
+function notifColorFor(type){
+  const cat = getNotifCategory(type);
+  return { social:'#ff3d71', games:'#f5b301', teams:'#6c5ce7', system:'#00d2ff' }[cat] || '#00d2ff';
+}
+
+/* ═══════════ الصفحة ═══════════ */
+function pageNotifs(){
+  const unreadCount = state.notifs.filter(n => !n.read).length;
+  const totalCount  = state.notifs.length;
+  const todayCount  = state.notifs.filter(n => {
+    if(!n.createdAt) return false;
+    const d = n.createdAt.toDate?.() || new Date(n.createdAt);
+    return d.toDateString() === new Date().toDateString();
+  }).length;
+  const highCount = state.notifs.filter(n =>
+    getNotifPriority(n.type) === 'high' && !n.read
+  ).length;
 
   const filters = [
-    {k:'all', l:'الكل'},
-    {k:'social', l:'اجتماعي', types:['like','follow','comment','support']},
-    {k:'games', l:'ألعاب', types:['game','challenge','game_invite','achievement']},
-    {k:'teams', l:'فرق', types:['team_request','team_accepted','team_rejected','team_kick','team_role','war']},
+    { k:'all',    label:'الكل',       icon:'bell' },
+    { k:'unread', label:'غير مقروء',  icon:'eye' },
+    { k:'social', label:'اجتماعي',    icon:'heart' },
+    { k:'games',  label:'ألعاب',      icon:'gamepad' },
+    { k:'teams',  label:'فرق',        icon:'users' },
+    { k:'system', label:'نظام',       icon:'shield' },
   ];
 
-  const activeFilter = filters.find(f => f.k === state.notifFilter) || filters[0];
-  const filtered = activeFilter.types
-    ? state.notifs.filter(n => activeFilter.types.includes(n.type))
-    : state.notifs;
+  const activeFilter = state.notifFilter || 'all';
 
-  const clickMap = {
-    challenge: 'data-action="show-challenges"',
-    war: 'data-nav="war"',
-    gift: 'data-nav="gifts"',
-    achievement: 'data-nav="achievements"',
-    team_request: 'data-nav="teams"',
-    game: 'data-nav="games"',
-    game_invite: 'data-nav="games"',
-    season_end: 'data-nav="season"',
+  return `
+    <!-- ═══ Hero ═══ -->
+    <div class="notifs-hero">
+      <div class="notifs-hero-top">
+        <div class="notifs-hero-icon">🔔</div>
+        <div class="notifs-hero-text">
+          <h1 class="notifs-hero-h">الإشعارات</h1>
+          <div class="notifs-hero-sub" id="notifsHeroSub">
+            ${unreadCount > 0 ? `${nf(unreadCount)} جديد` : 'كل شيء مقروء ✓'}
+          </div>
+        </div>
+        <div class="notifs-hero-actions" id="notifsHeroActions">
+          ${unreadCount > 0 ? `
+            <button class="notif-hero-btn" data-action="notifs-mark-all" title="تحديد الكل كمقروء" type="button">
+              ${ic('check','xs')}
+            </button>
+          ` : ''}
+          <button class="notif-hero-btn" data-action="notifs-settings" title="الإعدادات" type="button">
+            ${ic('settings','xs')}
+          </button>
+        </div>
+      </div>
+
+      <div class="notifs-stats-grid">
+        <div class="notifs-stat">
+          <div class="notifs-stat-v" id="nstat-total">${nf(totalCount)}</div>
+          <div class="notifs-stat-l">الإجمالي</div>
+        </div>
+        <div class="notifs-stat">
+          <div class="notifs-stat-v" id="nstat-unread" style="color:#ff3d71">${nf(unreadCount)}</div>
+          <div class="notifs-stat-l">غير مقروء</div>
+        </div>
+        <div class="notifs-stat">
+          <div class="notifs-stat-v" id="nstat-today" style="color:#00d2ff">${nf(todayCount)}</div>
+          <div class="notifs-stat-l">اليوم</div>
+        </div>
+        <div class="notifs-stat">
+          <div class="notifs-stat-v" id="nstat-high" style="color:#f5b301">${nf(highCount)}</div>
+          <div class="notifs-stat-l">أولوية</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ البحث ═══ -->
+    <div class="notifs-search-wrap">
+      ${ic('search','sm')}
+      <input type="text"
+             class="notifs-search-input"
+             id="notifsSearchInput"
+             placeholder="ابحث في الإشعارات…"
+             value="${esc(state.notifSearch || '')}"
+             autocomplete="off">
+      ${state.notifSearch ? `
+        <button class="notifs-search-clear" data-action="notifs-search-clear" type="button" aria-label="مسح">
+          ${ic('close','xs')}
+        </button>
+      ` : ''}
+    </div>
+
+    <!-- ═══ الفلاتر — 3 طبقات ═══ -->
+    <div class="nf-outer">
+      <div class="nf-inner" id="nfScrollTrack">
+        <div class="nf-flex" id="nfFlexRow">
+          ${filters.map(f => {
+            let count = 0;
+            if(f.k === 'all') count = totalCount;
+            else if(f.k === 'unread') count = unreadCount;
+            else if(NOTIF_CATEGORIES[f.k]) count = state.notifs.filter(n => NOTIF_CATEGORIES[f.k].types.includes(n.type)).length;
+            return `
+              <button type="button"
+                      class="nf-chip ${activeFilter === f.k ? 'active' : ''}"
+                      data-notif-filter="${f.k}">
+                ${ic(f.icon,'xs')}
+                <span>${f.label}</span>
+                ${count > 0 ? `<span class="nf-chip-count">${count > 99 ? '99+' : count}</span>` : ''}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ المجموعات ═══ -->
+    <div class="notifs-groups" id="notifsGroupsWrap">
+      ${renderNotifsGroupsContent()}
+    </div>
+  `;
+}
+
+/* ═══════════ محتوى المجموعات ═══════════ */
+function renderNotifsGroupsContent(){
+  let filtered = state.notifs;
+  const activeFilter = state.notifFilter || 'all';
+
+  if(activeFilter === 'unread'){
+    filtered = filtered.filter(n => !n.read);
+  } else if(NOTIF_CATEGORIES[activeFilter]){
+    filtered = filtered.filter(n => NOTIF_CATEGORIES[activeFilter].types.includes(n.type));
+  }
+
+  const search = (state.notifSearch || '').toLowerCase().trim();
+  if(search){
+    filtered = filtered.filter(n =>
+      (n.text || '').toLowerCase().includes(search) ||
+      (n.type || '').toLowerCase().includes(search)
+    );
+  }
+
+  const grouped = groupNotifsByDate(filtered);
+  if(!grouped.length){
+    return renderNotifsEmptyState(activeFilter, search);
+  }
+  return grouped.map(g => renderNotifGroup(g)).join('');
+}
+
+/* ═══════════ تجميع حسب التاريخ ═══════════ */
+function groupNotifsByDate(notifs){
+  const groups = { today:[], yesterday:[], thisWeek:[], thisMonth:[], older:[] };
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+  const weekStart  = new Date(todayStart.getTime() - 7 * 86400000);
+  const monthStart = new Date(todayStart.getTime() - 30 * 86400000);
+
+  notifs.forEach(n => {
+    if(!n.createdAt){ groups.older.push(n); return; }
+    const d = n.createdAt.toDate?.() || new Date(n.createdAt);
+    if(d >= todayStart)          groups.today.push(n);
+    else if(d >= yesterdayStart) groups.yesterday.push(n);
+    else if(d >= weekStart)      groups.thisWeek.push(n);
+    else if(d >= monthStart)     groups.thisMonth.push(n);
+    else                          groups.older.push(n);
+  });
+
+  return [
+    { id:'today',     label:'اليوم',       notifs:groups.today },
+    { id:'yesterday', label:'أمس',         notifs:groups.yesterday },
+    { id:'thisWeek',  label:'هذا الأسبوع', notifs:groups.thisWeek },
+    { id:'thisMonth', label:'هذا الشهر',   notifs:groups.thisMonth },
+    { id:'older',     label:'أقدم',        notifs:groups.older },
+  ].filter(g => g.notifs.length > 0);
+}
+
+function renderNotifGroup(group){
+  return `
+    <div class="notif-group">
+      <div class="notif-group-title">
+        <span>${group.label}</span>
+        <span class="notif-group-count">${group.notifs.length}</span>
+      </div>
+      <div class="notif-group-body">
+        ${group.notifs.map(renderNotifCard).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/* ═══════════ بطاقة الإشعار ═══════════ */
+function renderNotifCard(n){
+  const priority = getNotifPriority(n.type);
+  const color = notifColorFor(n.type);
+  const icon = notifIconFor(n.type);
+  const actions = renderNotifActions(n);
+  const actor = resolveNotifActor(n);
+
+  const iconBlock = actor
+    ? `<div class="notif-actor-wrap">
+         <div class="notif-actor-avatar">${avatar(actor, 40)}</div>
+         <div class="notif-actor-badge" style="background:${color};">${ic(icon,'xs')}</div>
+       </div>`
+    : `<div class="notif-card-icon" style="background:${color}18;color:${color};border-color:${color}44">
+         ${ic(icon,'sm')}
+       </div>`;
+
+  return `
+    <div class="notif-card ${n.read ? '' : 'unread'} priority-${priority}"
+         data-notif-id="${n.id}">
+      ${iconBlock}
+      <div class="notif-card-body">
+        <div class="notif-card-text">${n.text || 'إشعار جديد'}</div>
+        <div class="notif-card-meta">
+          <span class="notif-card-time">${timeAgo(n.createdAt)}</span>
+          ${!n.read ? '<span class="notif-card-dot"></span>' : ''}
+          ${priority === 'high' ? '<span class="notif-card-priority">⚡</span>' : ''}
+        </div>
+        ${actions}
+      </div>
+      <button class="notif-card-menu" data-notif-menu="${n.id}" type="button" title="خيارات">
+        ${ic('dots','sm')}
+      </button>
+    </div>
+  `;
+}
+
+/* ═══════════ جلب الفاعل ═══════════ */
+function resolveNotifActor(n){
+  if(n.actorId && state.users[n.actorId]) return state.users[n.actorId];
+
+  /* محاولة استخراج من النص (لإشعارات قديمة) */
+  if(n.text){
+    const m = n.text.match(/<b>(.*?)<\/b>/);
+    if(m){
+      const name = m[1];
+      return Object.values(state.users).find(u => u.name === name) || null;
+    }
+  }
+  return null;
+}
+
+/* ═══════════ إجراءات البطاقة ═══════════ */
+function renderNotifActions(n){
+  const actions = [];
+
+  if(n.type === 'challenge' && n.link){
+    actions.push(`<button class="notif-action-btn primary" data-notif-action="accept-challenge" data-link="${esc(n.link)}" type="button">${ic('check','xs')} قبول</button>`);
+    actions.push(`<button class="notif-action-btn" data-notif-action="reject-challenge" data-link="${esc(n.link)}" type="button">رفض</button>`);
+  }
+  if(n.type === 'game_invite' && n.link){
+    actions.push(`<button class="notif-action-btn primary" data-notif-action="join-room" data-link="${esc(n.link)}" type="button">${ic('play','xs')} انضمام</button>`);
+  }
+  if(n.type === 'team_request'){
+    actions.push(`<button class="notif-action-btn primary" data-notif-action="view-team" data-link="${esc(n.link || '')}" type="button">${ic('users','xs')} مراجعة</button>`);
+  }
+
+  return actions.length ? `<div class="notif-card-actions">${actions.join('')}</div>` : '';
+}
+
+function renderNotifsEmptyState(filter, search){
+  if(search){
+    return `<div class="notif-empty">
+      ${ic('search')}
+      <div>لا نتائج لـ «${esc(search)}»</div>
+      <button class="notif-empty-btn" data-action="notifs-search-clear" type="button">مسح البحث</button>
+    </div>`;
+  }
+  const m = {
+    all:    { icon:'bell',    text:'لا إشعارات بعد' },
+    unread: { icon:'check',   text:'كل الإشعارات مقروءة ✓' },
+    social: { icon:'heart',   text:'لا إشعارات اجتماعية' },
+    games:  { icon:'gamepad', text:'لا إشعارات ألعاب' },
+    teams:  { icon:'users',   text:'لا إشعارات فرق' },
+    system: { icon:'shield',  text:'لا إشعارات نظام' },
+  }[filter] || { icon:'bell', text:'لا إشعارات' };
+  return `<div class="notif-empty">${ic(m.icon)}<div>${m.text}</div></div>`;
+}
+
+/* ═══════════ تحديث الواجهة (بدون rebuild) ═══════════ */
+function refreshNotifsUI(){
+  if(state.page !== 'notifs') return;
+
+  const unreadCount = state.notifs.filter(n => !n.read).length;
+  const totalCount  = state.notifs.length;
+  const todayCount  = state.notifs.filter(n => {
+    if(!n.createdAt) return false;
+    const d = n.createdAt.toDate?.() || new Date(n.createdAt);
+    return d.toDateString() === new Date().toDateString();
+  }).length;
+  const highCount = state.notifs.filter(n =>
+    getNotifPriority(n.type) === 'high' && !n.read
+  ).length;
+
+  /* Stats */
+  const sT = document.getElementById('nstat-total');
+  const sU = document.getElementById('nstat-unread');
+  const sD = document.getElementById('nstat-today');
+  const sH = document.getElementById('nstat-high');
+  if(sT) sT.textContent = nf(totalCount);
+  if(sU) sU.textContent = nf(unreadCount);
+  if(sD) sD.textContent = nf(todayCount);
+  if(sH) sH.textContent = nf(highCount);
+
+  /* Subtitle */
+  const sub = document.getElementById('notifsHeroSub');
+  if(sub) sub.textContent = unreadCount > 0 ? `${nf(unreadCount)} جديد` : 'كل شيء مقروء ✓';
+
+  /* Actions */
+  const actions = document.getElementById('notifsHeroActions');
+  if(actions){
+    const markBtn = actions.querySelector('[data-action="notifs-mark-all"]');
+    if(unreadCount > 0 && !markBtn){
+      const btn = document.createElement('button');
+      btn.className = 'notif-hero-btn';
+      btn.setAttribute('data-action', 'notifs-mark-all');
+      btn.setAttribute('type', 'button');
+      btn.title = 'تحديد الكل كمقروء';
+      btn.innerHTML = ic('check', 'xs');
+      actions.insertBefore(btn, actions.firstChild);
+    } else if(unreadCount === 0 && markBtn){
+      markBtn.remove();
+    }
+  }
+
+  /* Filter counts */
+  document.querySelectorAll('.nf-chip').forEach(btn => {
+    const filter = btn.dataset.notifFilter;
+    let count = 0;
+    if(filter === 'all') count = totalCount;
+    else if(filter === 'unread') count = unreadCount;
+    else if(NOTIF_CATEGORIES[filter]) {
+      count = state.notifs.filter(n => NOTIF_CATEGORIES[filter].types.includes(n.type)).length;
+    }
+    let countEl = btn.querySelector('.nf-chip-count');
+    if(count > 0){
+      if(!countEl){
+        countEl = document.createElement('span');
+        countEl.className = 'nf-chip-count';
+        btn.appendChild(countEl);
+      }
+      countEl.textContent = count > 99 ? '99+' : count;
+    } else if(countEl){
+      countEl.remove();
+    }
+    btn.classList.toggle('active', filter === state.notifFilter);
+  });
+
+  /* Groups */
+  const groups = document.getElementById('notifsGroupsWrap');
+  if(groups){
+    groups.innerHTML = renderNotifsGroupsContent();
+  }
+}
+
+/* ═══════════ الإجراءات ═══════════ */
+async function markAllNotifsRead(){
+  const unread = state.notifs.filter(n => !n.read);
+  if(!unread.length) return toast('لا إشعارات غير مقروءة');
+  try {
+    await Promise.all(unread.map(n =>
+      updateDoc(doc(db,'notifications',state.user.uid,'items',n.id), { read: true }).catch(()=>{})
+    ));
+    state.notifs.forEach(n => n.read = true);
+    toast(`✓ تم تحديد ${unread.length} إشعار كمقروء`);
+    refreshNotifsUI();
+  } catch(e){ toast('فشل'); }
+}
+
+async function deleteNotif(notifId){
+  try {
+    await deleteDoc(doc(db,'notifications',state.user.uid,'items',notifId));
+    state.notifs = state.notifs.filter(n => n.id !== notifId);
+    toast('تم الحذف');
+    refreshNotifsUI();
+  } catch(e){ toast('فشل'); }
+}
+
+async function deleteAllReadNotifs(){
+  const read = state.notifs.filter(n => n.read);
+  if(!read.length) return toast('لا إشعارات مقروءة');
+  if(!confirm(`حذف ${read.length} إشعار مقروء؟`)) return;
+  try {
+    await Promise.all(read.map(n =>
+      deleteDoc(doc(db,'notifications',state.user.uid,'items',n.id)).catch(()=>{})
+    ));
+    state.notifs = state.notifs.filter(n => !n.read);
+    toast('✓ تم الحذف');
+    refreshNotifsUI();
+  } catch(e){ toast('فشل'); }
+}
+
+async function markNotifRead(id){
+  const n = state.notifs.find(x => x.id === id);
+  if(n && !n.read){
+    try {
+      await updateDoc(doc(db,'notifications',state.user.uid,'items',id), { read: true });
+      n.read = true;
+    } catch(e){}
+  }
+}
+
+/* ═══════════ المودالات ═══════════ */
+function openNotifMenuModal(notifId){
+  const n = state.notifs.find(x => x.id === notifId);
+  if(!n) return;
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">خيارات الإشعار</h3>
+      <button class="icon-btn" data-action="modal-close" type="button">${ic('close','sm')}</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${!n.read ? `
+        <button class="set-row" data-notif-mark-read="${n.id}" type="button">
+          ${ic('check','sm')} <span class="sr-txt"><span class="sr-n">تحديد كمقروء</span></span>
+        </button>
+      ` : `
+        <button class="set-row" data-notif-mark-unread="${n.id}" type="button">
+          ${ic('eye','sm')} <span class="sr-txt"><span class="sr-n">تحديد كغير مقروء</span></span>
+        </button>
+      `}
+      <button class="set-row" data-notif-delete="${n.id}" type="button" style="color:#ff7b9d">
+        ${ic('trash','sm')} <span class="sr-txt"><span class="sr-n" style="color:#ff7b9d">حذف الإشعار</span></span>
+      </button>
+      <button class="set-row" data-action="notifs-delete-read" type="button" style="color:#f5c451">
+        ${ic('trash','sm')} <span class="sr-txt">
+          <span class="sr-n" style="color:#f5c451">حذف كل المقروء</span>
+          <span class="sr-d">${state.notifs.filter(x => x.read).length} إشعار</span>
+        </span>
+      </button>
+    </div>
+  `);
+}
+
+function openNotifSettings(){
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">🔔 إعدادات الإشعارات</h3>
+      <button class="icon-btn" data-action="modal-close" type="button">${ic('close','sm')}</button>
+    </div>
+    <div class="sub">تحكم في الفئات التي تصلك</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      ${Object.entries(NOTIF_CATEGORIES).map(([k, cat]) => `
+        <div class="set-row">
+          <div class="sr-txt">
+            <div class="sr-n">${ic(cat.icon,'xs')} ${cat.label}</div>
+            <div class="sr-d">${cat.types.length} نوع إشعار</div>
+          </div>
+          <div class="switch on"></div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close" type="button">إغلاق</button>
+    </div>
+  `);
+}
+
+/* ═══════════ التوجيه عند النقر ═══════════ */
+function inferNotifTarget(n){
+  if(!n) return null;
+  if(n.targetType) return n.targetType;
+  if(!n.link) return null;
+
+  switch(n.type){
+    case 'like':
+      if(state.posts?.some(p => p.id === n.link)) return 'post';
+      if(state.users?.[n.link]) return 'user';
+      return 'post';
+    case 'comment': case 'reply': case 'comment_like': case 'reblog':
+      return 'post';
+    case 'follow': case 'trust': case 'support': case 'signature':
+      return 'user';
+    case 'gift':       return 'gifts';
+    case 'challenge':  return 'challenge';
+    case 'game': case 'game_invite': return 'room';
+    case 'team_request': case 'team_accepted': case 'team_role': return 'team';
+    case 'team_rejected': case 'team_kick': return 'teams-page';
+    case 'war':        return 'war';
+    case 'achievement':return 'achievements';
+    default:           return null;
+  }
+}
+
+async function handleNotifNavigation(n){
+  if(!n) return;
+
+  /* 1) تحديد كمقروء فوريًا */
+  if(!n.read){
+    n.read = true;
+    const card = document.querySelector(`[data-notif-id="${n.id}"]`);
+    if(card) card.classList.remove('unread');
+    try {
+      updateDoc(doc(db,'notifications',state.user.uid,'items',n.id), { read: true }).catch(()=>{});
+    } catch(e){}
+    refreshNotifsUI();
+  }
+
+  /* 2) التوجيه */
+  const targetType = inferNotifTarget(n);
+  const link = n.link;
+
+  if(!link){
+    const fallbacks = {
+      'challenge':    () => openChallengesModal(),
+      'gift':         () => go('gifts'),
+      'achievement':  () => go('achievements'),
+      'war':          () => go('war'),
+      'team_request': () => go('teams'),
+      'team_accepted':() => go('teams'),
+      'team_rejected':() => go('teams'),
+      'team_kick':    () => go('teams'),
+      'team_role':    () => go('teams'),
+      'game':         () => go('games'),
+      'game_invite':  () => go('games'),
+    };
+    if(fallbacks[n.type]){ fallbacks[n.type](); return; }
+    toast('لا يمكن فتح هذا الإشعار');
+    return;
+  }
+
+  try {
+    switch(targetType){
+      case 'post':
+        state.viewingPostId = link;
+        go('post');
+        return;
+
+      case 'user':
+        if(link === state.user.uid) go('profile');
+        else go('userprofile', { viewingUid: link });
+        return;
+
+      case 'challenge':
+        await openChallengesModal();
+        return;
+
+      case 'team':
+        if(state.teams?.some(t => t.id === link)){
+          state.viewingTeamId = link;
+          state.viewingTeamTab = 'info';
+          go('teams');
+        } else go('teams');
+        return;
+
+      case 'teams-page':
+        go('teams');
+        return;
+
+      case 'war':
+        state.viewingWarId = link;
+        go('war');
+        return;
+
+      case 'room':
+        await joinRoom(link);
+        return;
+
+      case 'gifts':
+        go('gifts');
+        return;
+
+      default:
+        if(state.posts?.some(p => p.id === link)){
+          state.viewingPostId = link;
+          go('post');
+        } else if(state.users?.[link]){
+          go('userprofile', { viewingUid: link });
+        } else {
+          toast('لا يمكن فتح هذا الإشعار');
+        }
+    }
+  } catch(e){
+    console.error('notif nav:', e);
+    toast('تعذر فتح الإشعار');
+  }
+}
+
+/* ═══════════ سحب الفلاتر بالماوس ═══════════ */
+function initNotifFiltersDrag(){
+  const track = document.getElementById('nfScrollTrack');
+  if(!track || track.dataset.dragInit === '1') return;
+  track.dataset.dragInit = '1';
+
+  let isDown = false, startX = 0, scrollStart = 0, moved = false;
+
+  track.addEventListener('mousedown', (e) => {
+    if(e.target.closest('button')) return;
+    isDown = true; moved = false;
+    track.classList.add('dragging');
+    startX = e.pageX;
+    scrollStart = track.scrollLeft;
+  });
+  track.addEventListener('mousemove', (e) => {
+    if(!isDown) return;
+    e.preventDefault();
+    const dx = e.pageX - startX;
+    if(Math.abs(dx) > 3) moved = true;
+    track.scrollLeft = scrollStart - dx;
+  });
+  const stop = () => {
+    if(!isDown) return;
+    isDown = false;
+    track.classList.remove('dragging');
   };
+  track.addEventListener('mouseup', stop);
+  track.addEventListener('mouseleave', stop);
 
-  const items = filtered.map(function(n){
-    const clickAttr = clickMap[n.type] ? clickMap[n.type] + ' style="cursor:pointer"' : '';
-    return '<div class="notif-item ' + (n.read ? '' : 'unread') + '" ' + clickAttr + '>'
-      + '<div class="notif-ic ' + (n.type || '') + '">' + ic(icons[n.type] || 'bell', 'sm') + '</div>'
-      + '<div style="flex:1;min-width:0">'
-      +   '<div class="notif-txt">' + (n.text || 'إشعار جديد') + '</div>'
-      +   '<div class="notif-time">' + timeAgo(n.createdAt) + '</div>'
-      + '</div>'
-      + '</div>';
-  }).join('');
+  /* منع النقر العرضي بعد السحب */
+  track.addEventListener('click', (e) => {
+    if(moved){ e.stopPropagation(); e.preventDefault(); moved = false; }
+  }, true);
+}
 
-  return ''
-    + '<div class="notif-filters">'
-    +   filters.map(function(f){
-          return '<button class="notif-filter-btn ' + (state.notifFilter === f.k ? 'active' : '')
-            + '" data-notif-filter="' + f.k + '">' + f.l + '</button>';
-        }).join('')
-    + '</div>'
-    + (filtered.length
-        ? '<div class="card pad0" style="padding:6px">' + items + '</div>'
-        : emptyState('لا إشعارات في هذه الفئة', 'bell'));
+/* ============================================================
+   🧭 توجيه ذكي عند نقر البطاقة
+   ============================================================ */
+function inferTargetType(n){
+  if(!n.link) return null;
+  switch(n.type){
+    case 'like':
+      /* التفريق بين إعجاب المنشور وإعجاب الملف */
+      return state.users[n.link] ? 'user' : 'post';
+    case 'comment':
+    case 'reply':
+    case 'comment_like':
+    case 'reblog':
+      return 'post';
+    case 'follow':
+    case 'trust':
+    case 'support':
+    case 'signature':
+      return 'user';
+    case 'challenge':
+      return 'challenge';
+    case 'game':
+    case 'game_invite':
+      return 'room';
+    case 'team_request':
+    case 'team_accepted':
+    case 'team_role':
+      return 'team';
+    case 'team_rejected':
+    case 'team_kick':
+      return 'teams-page';
+    case 'war':
+      return 'war';
+    case 'gift':
+      return 'gifts';
+    default:
+      return null;
+  }
 }
 
 function pageCloseFriends(){
@@ -11176,8 +12944,9 @@ const PAGES = {
   gifts: pageGifts,
   gamestats: pageGameStats,
   hashtag: pageHashtag,
-  posts: pagePosts,   /* ★ جديد */
-  post: pagePost,     /* ★ جديد */
+  posts: pagePosts,
+  post: pagePost,
+  relation: pageRelation,   /* ★ جديد */
 };
 
 function render(){
@@ -11225,17 +12994,20 @@ function render(){
   const result = fn();
 
 const afterRender = () => {
-  if(state.page === 'search') renderSearchResults();
-if(state.page === 'home'){
-  requestAnimationFrame(() => {
-    observePostElements();
-  });
+  if(state.page === 'notifs'){
+  setTimeout(initNotifFiltersDrag, 0);
 }
+  if(state.page === 'search') renderSearchResults();
+  if(state.page === 'home'){ requestAnimationFrame(() => { observePostElements(); }); }
   if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
     setTimeout(renderTeamChat, 50);
   }
   if(state.page === 'customization' && state.custActiveZone){
     tagSubtabsForZone(state.custActiveZone);
+  }
+  /* ★★ جديد: تهيئة سحب الفلاتر ★★ */
+  if(state.page === 'notifs'){
+    setTimeout(initFiltersDrag, 0);
   }
   restoreTabsScroll();
 };
@@ -12902,8 +14674,9 @@ async function sendGift(toUid, gift, message, anonymous){
     });
     
     // إشعار
-    await notify(toUid, 'gift',
-      `${anonymous ? 'مجهول' : `<b>${esc(state.profile.name)}</b>`} أرسل لك هدية ${gift.emoji}${message ? ' — ' + esc(message) : ''}`);
+await notify(toUid, 'gift',
+  `${anonymous ? 'مجهول' : `<b>${esc(state.profile.name)}</b>`} أرسل لك هدية ${gift.emoji}${message ? ' — ' + esc(message) : ''}`,
+  state.user.uid, 'user');
     
     // سجل نشاط
     await logActivity('gift_sent', `أرسلت ${gift.emoji} إلى ${state.users[toUid]?.name || 'لاعب'}`, '🎁');
@@ -13153,6 +14926,7 @@ function getZoneLabel(zone){
     card:     '🃏 البطاقة',
     level:    '🏅 المستوى',
     texts:    '🔤 النصوص',
+    mini: '📱 الملف المختصر',
   }[zone] || '';
 }
 
@@ -13984,6 +15758,76 @@ if(zone === 'effects'){
   `;
 }
 
+/* ══════════════════════════════════════════════════════════
+   📱 الملف الشخصي المختصر
+   ══════════════════════════════════════════════════════════ */
+if(zone === 'mini'){
+  const current = cust.miniStats || MINI_STATS_DEFAULT;
+  const count   = current.length;
+
+  return `
+    <!-- المعلومات المعروضة -->
+    <div class="cust-field" data-subtab="stats">
+      <label>
+        المعلومات المعروضة
+        <span class="range-val" id="miniStatsCount">${count}/${MINI_STATS_MAX}</span>
+      </label>
+      <div class="mini-stats-selector">
+        ${Object.entries(MINI_STAT_OPTIONS).map(([k,opt]) => {
+          const selected = current.includes(k);
+          const disabled = !selected && count >= MINI_STATS_MAX;
+          return `
+            <button type="button"
+                    class="cchip ${selected?'active':''} ${disabled?'is-disabled':''}"
+                    data-mini-stat="${k}"
+                    ${disabled?'disabled':''}>
+              ${opt.icon} ${opt.label}
+            </button>`;
+        }).join('')}
+      </div>
+      <div class="info-hint">
+        💡 اختر حتى <b>${MINI_STATS_MAX}</b> معلومات لعرضها في المودال المختصر.
+        عند الوصول للحد، أزل واحدة لإضافة أخرى.
+      </div>
+    </div>
+
+<!-- عناصر العرض -->
+<div class="cust-field" data-subtab="display">
+  <label>عناصر المودال</label>
+
+  <label class="mini-toggle-row">
+    <input type="checkbox" id="miniShowBioChk" ${cust.miniShowBio?'checked':''}>
+    <span>${ic('edit','xs')} عرض النبذة</span>
+  </label>
+
+  <label class="mini-toggle-row">
+    <input type="checkbox" id="miniShowFollowsChk" ${cust.miniShowFollows?'checked':''}>
+    <span>${ic('users','xs')} عرض المتابعين والمتابَعين</span>
+  </label>
+
+  <label class="mini-toggle-row">
+    <input type="checkbox" id="miniShowFollowStatusChk" ${cust.miniShowFollowStatus?'checked':''}>
+    <span>${ic('users','xs')} عرض حالة المتابعة</span>
+  </label>
+
+  <label class="mini-toggle-row">
+    <input type="checkbox" id="miniShowCoverChipsChk" ${cust.miniShowCoverChips?'checked':''}>
+    <span>${ic('eye','xs')} عرض المشاهدات والإعجابات في الغلاف</span>
+  </label>
+
+  <label class="mini-toggle-row">
+    <input type="checkbox" id="miniShowTeamChk" ${cust.miniShowTeam?'checked':''}>
+    <span>${ic('shield','xs')} عرض اسم الفريق</span>
+  </label>
+
+  <label class="mini-toggle-row">
+    <input type="checkbox" id="miniShowLocationChk" ${cust.miniShowLocation?'checked':''}>
+    <span>${ic('location','xs')} عرض الموقع</span>
+  </label>
+</div>
+  `;
+}
+
   return '';
 }
 
@@ -14002,7 +15846,7 @@ function getZoneIcon(zone){
 const ZONE_ICONS = {
   cover:'🖼️', avatar:'👤', name:'✏️', username:'@',
   bio:'📝', body:'🎨', card:'🃏', level:'🏅',
-  texts:'🔤', effects:'✨', signatures:'✍️', posts:'📰',
+  texts:'🔤', effects:'✨', signatures:'✍️', posts:'📰', mini: '📱',
 };
 
 const ZONE_SUBTABS = {
@@ -14076,6 +15920,10 @@ const ZONE_SUBTABS = {
     { id:'colors',  label:'الألوان', icon:'🎨' },
     { id:'glow',    label:'التوهج',  icon:'✨' },
   ],
+  mini: [
+  { id:'stats',   label:'المعلومات', icon:'📊' },
+  { id:'display', label:'العرض',     icon:'👁️' },
+],
 };
 
 /* حقول كل فئة — لإعادة التعيين */
@@ -14172,6 +16020,8 @@ const ZONE_FIELDS = {
     'postAvatarShape','postAvatarSize','postShowActions',
     'postNameColor','postTextColor',
   ],
+  mini: ['miniStats','miniShowBio','miniShowFollowStatus','miniShowFollows',
+       'miniShowCoverChips','miniShowTeam','miniShowLocation'],
 };
 
 /* ربط كل حقل بتبويبه الفرعي */
@@ -14287,6 +16137,15 @@ const SUBTAB_FIELD_MAP = {
     postBorderColor:'colors', postNameColor:'colors', postTextColor:'colors',
     postGlow:'glow',
   },
+  mini: {
+  miniStats: 'stats',
+  miniShowBio: 'display',
+  miniShowFollowStatus: 'display',
+  miniShowCoverChips: 'display',
+  miniShowTeam: 'display',
+  miniShowLocation: 'display',
+  miniShowFollows: 'display',
+},
 };
 
 /* ربط السلايدرز بالحقول */
@@ -14326,6 +16185,12 @@ const CHECKBOX_TO_FIELD = {
   sigShowNameChk:   'sigShowName',
   postShowActionsChk:'postShowActions',
   musicAutoplayChk: 'musicAutoplay',
+  miniShowBioChk:          'miniShowBio',
+miniShowFollowStatusChk: 'miniShowFollowStatus',
+miniShowCoverChipsChk:   'miniShowCoverChips',
+miniShowTeamChk:         'miniShowTeam',
+miniShowLocationChk:     'miniShowLocation',
+miniShowFollowsChk: 'miniShowFollows',
 };
 
 /* الحقول التي تحتاج إعادة رسم كامل عند التغيير */
@@ -14562,6 +16427,41 @@ function renderZonePreview(zone, p){
       </div>
     </div>`;
   }
+
+if(zone === 'mini'){
+  const stats = cust.miniStats || MINI_STATS_DEFAULT;
+  const frameClass = FRAME_STYLES[p.equipped?.frameId || p.frameId || 'none']?.class || '';
+  return `<div class="zone-preview-inner" style="padding:12px">
+    <div class="mini-preview-mock">
+      <div class="mini-preview-cover" style="${buildCoverStyle(p, cust, theme)}">
+        ${cust.miniShowCoverChips ? `
+          <div class="mini-cover-chips">
+            <div class="mini-cover-chip views">${ic('eye','xs')} ${nf(p.views || 0)}</div>
+            <div class="mini-cover-chip likes">${ic('heart','xs')} ${nf(p.likesProfile || 0)}</div>
+          </div>
+        ` : ''}
+      </div>
+      <div class="mini-preview-body">
+        <div class="mini-preview-avatar">${avatar(p, 52, frameClass)}</div>
+        <div class="mini-preview-name" style="${buildNameStyle(cust)}">${esc(p.name)}</div>
+        ${cust.miniShowFollows ? `
+          <div class="mini-preview-follows">
+            <span><b>0</b> متابع</span>
+            <span><b>0</b> متابَع</span>
+          </div>
+        ` : ''}
+        <div class="mini-preview-stats">
+          ${stats.map(k => {
+            const opt = MINI_STAT_OPTIONS[k];
+            if(!opt) return '';
+            return `<div class="mp-cell"><div class="v">0</div><div class="l">${opt.icon}</div></div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="info-hint" style="margin-top:10px">📱 معاينة مصغّرة للمودال</div>
+  </div>`;
+}
 
   return '';
 }
@@ -15364,6 +17264,72 @@ async function pageGameStats(){
 }
 
 /* ============================================================
+   🖱️ سحب الفلاتر بالماوس (سطح المكتب) + تحقق من التمرير
+   ============================================================ */
+function initFiltersDrag(){
+  const container = document.getElementById('notifsFiltersScroll');
+  if(!container) return;
+  if(container.dataset.dragInit === '1') return;
+  container.dataset.dragInit = '1';
+
+  let isDown = false;
+  let startX = 0;
+  let scrollLeftStart = 0;
+
+  const onMouseDown = (e) => {
+    /* تجاهل النقر على الأزرار */
+    if(e.target.closest('button')) return;
+
+    isDown = true;
+    container.classList.add('dragging');
+    startX = e.pageX - container.offsetLeft;
+    scrollLeftStart = container.scrollLeft;
+  };
+
+  const onMouseMove = (e) => {
+    if(!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    container.scrollLeft = scrollLeftStart - walk;
+  };
+
+  const onMouseUp = () => {
+    isDown = false;
+    container.classList.remove('dragging');
+  };
+
+  container.addEventListener('mousedown', onMouseDown);
+  container.addEventListener('mouseleave', onMouseUp);
+  container.addEventListener('mouseup', onMouseUp);
+  container.addEventListener('mousemove', onMouseMove);
+
+  /* ★ ضمان التمرير الأفقي */
+  requestAnimationFrame(() => {
+    const cs = getComputedStyle(container);
+    if(cs.overflowX !== 'auto' && cs.overflowX !== 'scroll'){
+      container.style.overflowX = 'auto';
+    }
+    /* تحقق من أن max-width غير مقيد */
+    if(container.scrollWidth > container.clientWidth){
+      container.style.cursor = 'grab';
+    }
+  });
+}
+
+/* تشغيل عند فتح صفحة الإشعارات */
+const _origRender = window.render;
+if(typeof window.render === 'function'){
+  window.render = function(){
+    const result = _origRender.apply(this, arguments);
+    if(state.page === 'notifs'){
+      setTimeout(initFiltersDrag, 0);
+    }
+    return result;
+  };
+}
+
+/* ============================================================
    🔑 استعادة كلمة المرور
    ============================================================ */
 document.getElementById('forgotPassBtn')?.addEventListener('click', async () => {
@@ -15442,7 +17408,7 @@ if(!e.target.closest('#editPostText') && !e.target.closest('#editAutocomplete'))
   /* ════════ 1) تحديد العنصر أولاً ════════ */
 const t = e.target.closest(
   '[data-edit-tab],[data-remove-edit-image],[data-alt-edit-image],' +
-'[data-add-edit-image],[data-insert-edit-emoji],[data-insert-edit-hashtag],' +
+  '[data-add-edit-image],[data-insert-edit-emoji],[data-insert-edit-hashtag],' +
   '[data-nav],[data-action],[data-tab],[data-ptab],[data-follow],' +
   '[data-like],[data-save],[data-chat],[data-open-chat],[data-game-open],' +
   '[data-join-room],[data-leave-room],[data-create-room],[data-scat],[data-lb],' +
@@ -15465,16 +17431,16 @@ const t = e.target.closest(
   '[data-toggle-trust],[data-warn-user],[data-warn-confirm],' +
   '[data-compose-tab],[data-compose-vis],[data-compose-panel],' +
   '[data-search-tab],[data-search-recent],[data-remove-search-recent],' +
-'[data-view-post],' +
+  '[data-view-post],' +
   '[data-add-compose-image],[data-remove-compose-image],[data-alt-compose-image],' +
   '[data-insert-emoji],[data-insert-hashtag],' +
   '[data-comment-sort],[data-like-comment],[data-reply-to],' +
-'[data-edit-comment],[data-save-edit-comment],[data-cancel-edit-comment],' +
-'[data-delete-comment-new],[data-toggle-thread],[data-action="cancel-reply"],' +
-  '[data-action="open-hashtag"],[data-action="open-mention"],' +   // ← ✅ هنا
-  '[data-action="open-game-mention"],' +                            // ← ✅ هنا
+  '[data-edit-comment],[data-save-edit-comment],[data-cancel-edit-comment],' +
+  '[data-delete-comment-new],[data-toggle-thread],[data-action="cancel-reply"],' +
+  '[data-action="open-hashtag"],[data-action="open-mention"],' +
+  '[data-action="open-game-mention"],' +
+  '[data-open-full-profile],' +     /* ★ جديد */
   'button'
-  
 );
 
   /* ════════ 2) معالج الصور — يعمل على e.target مباشرة ════════ */
@@ -15699,6 +17665,15 @@ if(t.dataset.action === 'view-post-media'){
   if(!t) return;
 
 if(t.dataset.closeModal) closeModal();
+
+/* ★★ فتح الملف الكامل من المودال المختصر ★★ */
+if(t.dataset.openFullProfile){
+  const uid = t.dataset.openFullProfile;
+  closeModal();
+  state.profileTab = 'posts';
+  go('userprofile', { viewingUid: uid });
+  return;
+}
 
 /* ★★ مناطق التخصيص التفاعلية (المستوى 1) ★★ */
 /* فئة نشطة */
@@ -15959,11 +17934,61 @@ if(t.dataset.action === 'go-back'){ goBack(); return; }
     return;
   }
 
-  /* ============================================================
-     11) نقر الأفاتار / الغلاف
-     ============================================================ */
-  if(t.dataset.action === 'avatar-click'){ openImageActionsModal('avatar'); return; }
-  if(t.dataset.action === 'cover-click'){  openImageActionsModal('cover');  return; }
+  /* ═══════════════════════════════════════════════════════
+   ★★★ معالجات جديدة — صفحة العلاقة والإجراءات ★★★
+   ═══════════════════════════════════════════════════════ */
+
+/* فتح صفحة العلاقة */
+if(t.dataset.action === 'view-relation'){
+  closeModal();
+  state.viewingRelationUid = t.dataset.uid;
+  state.relationData = null;
+  go('relation');
+  return;
+}
+
+/* مشاركة المنشور خارجياً */
+if(t.dataset.sharePost){
+  await sharePostExternal(t.dataset.sharePost);
+  closeModal();
+  return;
+}
+
+/* نسخ رابط المنشور */
+if(t.dataset.copyPostLink){
+  await copyPostLink(t.dataset.copyPostLink);
+  closeModal();
+  return;
+}
+
+/* إخفاء/إظهار المنشور */
+if(t.dataset.hideFromFeed){
+  toggleHideFromFeed(t.dataset.hideFromFeed);
+  closeModal();
+  return;
+}
+
+/* فتح مودال إرسال المنشور لصديق */
+if(t.dataset.sendPostTo){
+  await openSendPostToModal(t.dataset.sendPostTo);
+  return;
+}
+
+/* إرسال المنشور فعلياً */
+if(t.dataset.sendPostToUid){
+  const targetUid = t.dataset.sendPostToUid;
+  const postId = t.dataset.postId;
+  const postUrl = t.dataset.postUrl;
+  await sendPostToUser(targetUid, postId, postUrl);
+  return;
+}
+
+/* مشاركة ملف المستخدم */
+if(t.dataset.shareProfile){
+  await shareProfileExternal(t.dataset.shareProfile);
+  closeModal();
+  return;
+}
 
   /* ============================================================
      12) استوديو التخصيص (مع فحص الأذونات)
@@ -15994,6 +18019,43 @@ if(t.dataset.cust){
     if(CONDITIONAL_FIELDS.includes(field)){
       renderKeepScroll();
     }
+  }
+  return;
+}
+
+/* ★★ اختيار إحصائيات الملف المختصر ★★ */
+if(t.dataset.miniStat){
+  const stat = t.dataset.miniStat;
+  let current = [...(state.profile.miniStats || MINI_STATS_DEFAULT)];
+
+  if(current.includes(stat)){
+    if(current.length <= 1){
+      toast('يجب اختيار معلومة واحدة على الأقل');
+      return;
+    }
+    current = current.filter(x => x !== stat);
+  } else {
+    if(current.length >= MINI_STATS_MAX){
+      toast(`الحد الأقصى ${MINI_STATS_MAX} معلومات — أزل واحدة أولاً`);
+      return;
+    }
+    current.push(stat);
+  }
+
+  const ok = await saveCustomField('miniStats', current);
+  if(ok){
+    /* تحديث فوري للأزرار */
+    document.querySelectorAll('[data-mini-stat]').forEach(btn => {
+      const s = btn.dataset.miniStat;
+      const isSel = current.includes(s);
+      btn.classList.toggle('active', isSel);
+      const disabled = !isSel && current.length >= MINI_STATS_MAX;
+      btn.disabled = disabled;
+      btn.classList.toggle('is-disabled', disabled);
+    });
+    const counter = document.getElementById('miniStatsCount');
+    if(counter) counter.textContent = `${current.length}/${MINI_STATS_MAX}`;
+    updateZonePreview();
   }
   return;
 }
@@ -16032,15 +18094,26 @@ updateZonePreview();
   /* ============================================================
      15) إجراءات الصورة (عرض/تغيير/حذف)
      ============================================================ */
-  /* ============================================================
-     15) إجراءات الصورة (عرض/تغيير/حذف/اقتصاص)
-     ============================================================ */
-  if(t.dataset.viewImage){
-    const url = t.dataset.viewImage === 'avatar'
-      ? state.profile?.avatarUrl : state.profile?.coverUrl;
-    openImageViewerModal(url);
-    return;
-  }
+if(t.dataset.viewImage){
+  const uid = t.dataset.imageUid;
+  const profile = uid ? state.users[uid] : state.profile;
+  const url = t.dataset.viewImage === 'avatar'
+    ? profile?.avatarUrl
+    : profile?.coverUrl;
+  openImageViewerModal(url);
+  return;
+}
+
+if(t.dataset.action === 'avatar-click'){
+  const uid = t.dataset.avatarUid || state.user.uid;
+  openImageActionsModal('avatar', uid);
+  return;
+}
+if(t.dataset.action === 'cover-click'){
+  const uid = t.dataset.coverUid || state.user.uid;
+  openImageActionsModal('cover', uid);
+  return;
+}
   if(t.dataset.changeImage){ await changeProfileImage(t.dataset.changeImage); return; }
   if(t.dataset.deleteImage){ await deleteProfileImage(t.dataset.deleteImage); return; }
 
@@ -16437,14 +18510,23 @@ if(t.dataset.action === 'view-post-media'){
      29) عرض الملف الشخصي
      ============================================================ */
 if(t.dataset.viewProfile){
-  /* ★ هل نقر المستخدم على ملف من داخل مودال التعليقات؟ */
+  const isOwnProfile = t.dataset.viewProfile === state.user.uid;
+  const avatarEl = e.target.closest('.av, .av-wrap, .search-result-icon, .pc-avatar');
+  const clickedAvatar = avatarEl && t.contains(avatarEl);
+
+  /* ★ أي نقرة على صورة → مودال مختصر (إلا لو كان ملفك) */
+  if(clickedAvatar && !isOwnProfile){
+    openMiniProfileModal(t.dataset.viewProfile);
+    return;
+  }
+
+  /* ★ النقر على غير الصورة → الملف الكامل */
   const inCommentsModal =
     state.currentPostId &&
     document.getElementById('commentsListBody') &&
     document.querySelector('.comments-modal-inner');
 
   if(inCommentsModal){
-    /* حفظ الحالة للعودة إليها */
     const scrollBody = document.querySelector('.comments-body');
     state.returnToComments = {
       postId: state.currentPostId,
@@ -16455,12 +18537,11 @@ if(t.dataset.viewProfile){
     };
     closeModal();
   } else if(state.returnToComments){
-    /* الانتقال من ملف لملف آخر → إلغاء العودة للتعليقات */
     state.returnToComments = null;
   }
 
   state.profileTab = 'posts';
-  if(t.dataset.viewProfile === state.user.uid){ go('profile'); return; }
+  if(isOwnProfile){ go('profile'); return; }
   go('userprofile', { viewingUid: t.dataset.viewProfile });
   return;
 }
@@ -16591,10 +18672,91 @@ if(t.id === 'sendCommentBtn'){
     return;
   }
 
-  /* ============================================================
-     41) الإشعارات
-     ============================================================ */
-  if(t.dataset.notifFilter){ state.notifFilter = t.dataset.notifFilter; render(); return; }
+/* ============================================================
+   41) ★★★ الإشعارات المتطوّرة ★★★
+   ============================================================ */
+if(t.dataset.notifFilter){
+  state.notifFilter = t.dataset.notifFilter;
+  render();
+  return;
+}
+if(t.dataset.notifMarkAll){
+  await markAllNotifsRead();
+  return;
+}
+if(t.dataset.notifSettings){
+  openNotifSettings();
+  return;
+}
+if(t.dataset.notifSearchClear){
+  state.notifSearch = '';
+  render();
+  return;
+}
+if(t.dataset.notifMenu){
+  openNotifMenuModal(t.dataset.notifMenu);
+  return;
+}
+if(t.dataset.notifMarkRead){
+  await markNotifRead(t.dataset.notifMarkRead);
+  closeModal();
+  return;
+}
+if(t.dataset.notifMarkUnread){
+  try {
+    await updateDoc(doc(db,'notifications',state.user.uid,'items',t.dataset.notifMarkUnread), { read: false });
+    const n = state.notifs.find(x => x.id === t.dataset.notifMarkUnread);
+    if(n) n.read = false;
+    closeModal();
+    render();
+  } catch(e){ toast('فشل'); }
+  return;
+}
+if(t.dataset.notifDelete){
+  await deleteNotif(t.dataset.notifDelete);
+  closeModal();
+  return;
+}
+if(t.dataset.notifDeleteRead){
+  closeModal();
+  await deleteAllReadNotifs();
+  return;
+}
+if(t.dataset.notifAction){
+  const action = t.dataset.notifAction;
+  const link = t.dataset.link;
+
+  switch(action){
+    case 'accept-challenge':
+      if(link) await acceptChallenge(link);
+      break;
+    case 'reject-challenge':
+      if(link) await rejectChallenge(link);
+      break;
+    case 'view-team-requests':
+      go('teams');
+      break;
+    case 'join-room':
+      if(link) await joinRoom(link);
+      break;
+    case 'say-thanks':
+      toast('💖 شكراً لك!');
+      break;
+    case 'view-post':
+      if(link){ state.viewingPostId = link; go('post'); }
+      break;
+  }
+  return;
+}
+
+/* ═══ نقر على البطاقة (تحديد كمقروء + التوجيه) ═══ */
+const notifCard = e.target.closest('[data-notif-id]');
+if(notifCard && !e.target.closest('button, [data-notif-action], [data-follow], [data-notif-menu]')){
+  const notifId = notifCard.dataset.notifId;
+  const n = state.notifs.find(x => x.id === notifId);
+  if(n) await handleNotifNavigation(n);
+  return;
+}
 
   /* ============================================================
      42) الإعدادات
@@ -16681,6 +18843,88 @@ if(t.id === 'sendCommentBtn'){
     return;
   }
 
+/* ═══════════════════════════════════════════════════════
+   41) ★★★ الإشعارات — معالجات جديدة ★★★
+   ═══════════════════════════════════════════════════════ */
+
+/* أزرار الهيرو */
+if(t.dataset.action === 'notifs-mark-all'){ await markAllNotifsRead(); return; }
+if(t.dataset.action === 'notifs-settings'){ openNotifSettings(); return; }
+if(t.dataset.action === 'notifs-search-clear'){
+  state.notifSearch = '';
+  const input = document.getElementById('notifsSearchInput');
+  if(input) input.value = '';
+  refreshNotifsUI();
+  return;
+}
+if(t.dataset.action === 'notifs-delete-read'){
+  closeModal();
+  await deleteAllReadNotifs();
+  return;
+}
+
+/* فلتر */
+if(t.dataset.notifFilter){
+  const track = document.getElementById('nfScrollTrack');
+  const savedScroll = track ? track.scrollLeft : 0;
+
+  state.notifFilter = t.dataset.notifFilter;
+  refreshNotifsUI();
+
+  /* استعادة تمرير الفلاتر */
+  if(track){
+    requestAnimationFrame(() => {
+      const t2 = document.getElementById('nfScrollTrack');
+      if(t2) t2.scrollLeft = savedScroll;
+    });
+  }
+  return;
+}
+
+/* قائمة الإشعار */
+if(t.dataset.notifMenu){ openNotifMenuModal(t.dataset.notifMenu); return; }
+if(t.dataset.notifMarkRead){
+  await markNotifRead(t.dataset.notifMarkRead);
+  closeModal();
+  refreshNotifsUI();
+  return;
+}
+if(t.dataset.notifMarkUnread){
+  try {
+    await updateDoc(doc(db,'notifications',state.user.uid,'items',t.dataset.notifMarkUnread), { read: false });
+    const n = state.notifs.find(x => x.id === t.dataset.notifMarkUnread);
+    if(n) n.read = false;
+    closeModal();
+    refreshNotifsUI();
+  } catch(e){ toast('فشل'); }
+  return;
+}
+if(t.dataset.notifDelete){
+  await deleteNotif(t.dataset.notifDelete);
+  closeModal();
+  return;
+}
+
+/* إجراءات داخل البطاقة */
+if(t.dataset.notifAction){
+  const action = t.dataset.notifAction;
+  const link = t.dataset.link;
+  switch(action){
+    case 'accept-challenge': if(link) await acceptChallenge(link); break;
+    case 'reject-challenge': if(link) await rejectChallenge(link); break;
+    case 'join-room':        if(link) await joinRoom(link); break;
+    case 'view-team':        go('teams'); break;
+  }
+  return;
+}
+
+/* النقر على البطاقة نفسها */
+const notifCardEl = e.target.closest('[data-notif-id]');
+if(notifCardEl && !e.target.closest('button, [data-notif-action], [data-notif-menu]')){
+  const n = state.notifs.find(x => x.id === notifCardEl.dataset.notifId);
+  if(n){ await handleNotifNavigation(n); return; }
+}
+
 });  // ← الإغلاق النهائي
 
 /* Input events */
@@ -16693,6 +18937,37 @@ document.addEventListener('input', async (e)=>{
     window._searchTimer = setTimeout(renderSearchResults, 200);
     return;
   }
+
+/* ===== بحث الإشعارات ===== */
+if(e.target.id === 'notifSearchInput'){
+  state.notifSearch = e.target.value;
+  clearTimeout(window._notifSearchTimer);
+  window._notifSearchTimer = setTimeout(() => {
+    const groupsEl = document.getElementById('notifsGroupsWrap');
+    if(!groupsEl) return;
+
+    /* إعادة الفلترة والتجميع فقط */
+    let filtered = state.notifs;
+    const activeFilter = state.notifFilter || 'all';
+    if(activeFilter === 'unread') filtered = filtered.filter(n => !n.read);
+    else if(NOTIF_CATEGORIES[activeFilter]){
+      filtered = filtered.filter(n => NOTIF_CATEGORIES[activeFilter].types.includes(n.type));
+    }
+    const search = (state.notifSearch || '').toLowerCase().trim();
+    if(search){
+      filtered = filtered.filter(n =>
+        (n.text || '').toLowerCase().includes(search) ||
+        (n.type || '').toLowerCase().includes(search)
+      );
+    }
+
+    const grouped = groupNotifsByDate(filtered);
+    groupsEl.innerHTML = grouped.length === 0
+      ? renderNotifsEmptyState(activeFilter, search)
+      : grouped.map(g => renderNotifGroup(g)).join('');
+  }, 200);
+  return;
+}
 
   /* ===== منتقي لون الاسم ===== */
   if(e.target.id === 'nameColorPicker'){
@@ -16780,6 +19055,21 @@ updateZonePreview();
 updateZonePreview();
     return;
   }
+
+/* ═══════════════════════════════════════════════════════
+   🔍 بحث الإشعارات
+   ═══════════════════════════════════════════════════════ */
+if(e.target.id === 'notifsSearchInput'){
+  state.notifSearch = e.target.value;
+  clearTimeout(window._notifSearchTimer);
+  window._notifSearchTimer = setTimeout(() => {
+    const groups = document.getElementById('notifsGroupsWrap');
+    if(groups){
+      groups.innerHTML = renderNotifsGroupsContent();
+    }
+  }, 180);
+  return;
+}
 
 });  // ← لا تحذف هذا الإغلاق
 
