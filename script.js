@@ -17410,6 +17410,7 @@ const t = e.target.closest(
   '[data-edit-tab],[data-remove-edit-image],[data-alt-edit-image],' +
   '[data-add-edit-image],[data-insert-edit-emoji],[data-insert-edit-hashtag],' +
   '[data-nav],[data-action],[data-tab],[data-ptab],[data-follow],' +
+  '[data-notif-id],' +          // ← ★ أضف هذا
   '[data-like],[data-save],[data-chat],[data-open-chat],[data-game-open],' +
   '[data-join-room],[data-leave-room],[data-create-room],[data-scat],[data-lb],' +
   '[data-toggle],[data-view-profile],[data-open-comments],[data-delete-comment],' +
