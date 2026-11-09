@@ -60,6 +60,7 @@
     <div class="loader-logo-wrap">
       <div class="loader-logo-ring"></div>
       <div class="loader-logo-ring loader-logo-ring-2"></div>
+      <div class="loader-logo-ring loader-logo-ring-3"></div>
       <img class="loader-logo"
            src="assets/logo.png"
            alt="NEXUS"
@@ -73,34 +74,13 @@
       <span class="loader-brand-sub">NEXUS</span>
     </div>
 
-    <!-- حلقة التقدم الدائرية -->
-    <div class="loader-progress-wrap">
-      <svg class="loader-progress-svg" viewBox="0 0 120 120">
-        <defs>
-          <linearGradient id="loaderGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#6c5ce7"/>
-            <stop offset="50%" stop-color="#00d2ff"/>
-            <stop offset="100%" stop-color="#ff3d71"/>
-          </linearGradient>
-        </defs>
-        <circle cx="60" cy="60" r="52" class="loader-progress-bg"/>
-        <circle cx="60" cy="60" r="52"
-                class="loader-progress-bar"
-                id="loaderProgressBar"
-                stroke="url(#loaderGrad)"/>
-      </svg>
-      <div class="loader-percentage" id="loaderPercentage">0</div>
+    <!-- نص الحالة -->
+    <div class="loader-status" id="loaderStatus">
+      <span class="loader-status-dot"></span>
+      <span class="loader-status-text" id="loaderStatusText">تهيئة النظام…</span>
     </div>
 
-    <!-- نص الحالة المتغير -->
-    <div class="loader-status" id="loaderStatus">جاري التحميل…</div>
-
-    <!-- شريط تقدم خطي -->
-    <div class="loader-bar-wrap">
-      <div class="loader-bar" id="loaderBar"></div>
-    </div>
-
-    <!-- نقاط تحميل -->
+    <!-- نقاط تحميل غير محددة -->
     <div class="loader-dots" id="loaderDots">
       <span class="dot active"></span>
       <span class="dot"></span>
@@ -112,13 +92,7 @@
       <span class="loader-tip-icon">💡</span>
       <span id="loaderTipText">لعبة Quiz Clash — 7 أسئلة في 15 ثانية!</span>
     </div>
-
   </div>
-
-  <!-- زر تخطي -->
-  <button class="loader-skip" id="loaderSkip" type="button">
-    تخطي ⟵
-  </button>
 
   <!-- نسخة التطبيق -->
   <div class="loader-version">v3.0.0</div>
@@ -276,33 +250,30 @@
 
 <script>
 /* ============================================================
-   🎬 محرك شاشة البداية السينمائية
+   🎬 محرك شاشة البداية — نسخة أنيقة (بدون تقدم)
    ============================================================ */
 (function initLoader(){
-
-  const loader     = document.getElementById('loader');
-  const progressEl = document.getElementById('loaderProgressBar');
-  const percentEl  = document.getElementById('loaderPercentage');
-  const barEl      = document.getElementById('loaderBar');
-  const statusEl   = document.getElementById('loaderStatus');
-  const tipEl      = document.getElementById('loaderTipText');
-  const dotsEl     = document.getElementById('loaderDots');
-  const skipBtn    = document.getElementById('loaderSkip');
+  const loader       = document.getElementById('loader');
+  const statusTextEl = document.getElementById('loaderStatusText');
+  const tipEl        = document.getElementById('loaderTipText');
+  const dotsEl       = document.getElementById('loaderDots');
+  const skipBtn      = document.getElementById('loaderSkip');
 
   if (!loader) return;
 
-  /* ===== النصوص المتغيرة ===== */
+  /* ═══ نصوص الحالة — تتغير بالوقت ═══ */
   const STATUS_MESSAGES = [
-    { at: 0,   text: 'تهيئة النظام…' },
-    { at: 15,  text: 'تحميل الموارد…' },
-    { at: 30,  text: 'الاتصال بالخادم…' },
-    { at: 50,  text: 'تحضير الألعاب…' },
-    { at: 65,  text: 'تجديد بياناتك…' },
-    { at: 80,  text: 'تحميل التخصيصات…' },
-    { at: 92,  text: 'على وشك الانتهاء…' },
-    { at: 100, text: 'مرحباً بك في نكسوس ✨' },
+    'تهيئة النظام…',
+    'تحميل الموارد…',
+    'الاتصال بالخادم…',
+    'تحضير الألعاب…',
+    'تجديد بياناتك…',
+    'تحميل التخصيصات…',
+    'على وشك الانتهاء…',
+    'مرحباً بك في نكسوس ✨',
   ];
 
+  /* ═══ نصائح متغيرة ═══ */
   const TIPS = [
     '💡 لعبة Quiz Clash — 7 أسئلة في 15 ثانية!',
     '💎 اشترك في بلس لفتح ألوان الاسم والموسيقى',
@@ -314,18 +285,16 @@
     '🌟 الإطارات الحصرية تُشترى مباشرة',
   ];
 
-  /* ===== الحالة ===== */
-  let progress = 0;
-  let targetProgress = 0;
+  /* ═══ الحالة ═══ */
   let completed = false;
   let statusIdx = 0;
-  let tipIdx = Math.floor(Math.random() * TIPS.length);
-  let dotIdx = 0;
+  let tipIdx    = Math.floor(Math.random() * TIPS.length);
+  let dotIdx    = 0;
 
-  /* ===== إنشاء الجزيئات ===== */
+  /* ═══ إنشاء الجزيئات ═══ */
   const particlesContainer = document.getElementById('loaderParticles');
   if (particlesContainer) {
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 22; i++) {
       const p = document.createElement('span');
       p.style.cssText = `
         position:absolute;
@@ -335,7 +304,7 @@
         background:${['#00d2ff','#6c5ce7','#ff3d71','#f5b301','#fff'][Math.floor(Math.random()*5)]};
         left:${Math.random() * 100}%;
         top:${Math.random() * 100}%;
-        opacity:${0.3 + Math.random() * 0.5};
+        opacity:${0.25 + Math.random() * 0.5};
         box-shadow:0 0 ${4 + Math.random()*8}px currentColor;
         animation:floatParticle ${5 + Math.random() * 10}s ease-in-out infinite;
         animation-delay:${Math.random() * 5}s;
@@ -343,7 +312,6 @@
       particlesContainer.appendChild(p);
     }
 
-    // keyframe ديناميكي
     const style = document.createElement('style');
     style.textContent = `
       @keyframes floatParticle {
@@ -360,58 +328,47 @@
     document.head.appendChild(style);
   }
 
-  /* ===== تحديث شريط التقدم ===== */
-  function updateProgressUI() {
-    const p = Math.min(100, Math.round(progress));
+  /* ═══ تدوير نصوص الحالة (كل 1.5 ثانية) ═══ */
+  setInterval(() => {
+    if (completed || !statusTextEl) return;
+    statusIdx = (statusIdx + 1) % STATUS_MESSAGES.length;
+    statusTextEl.style.opacity = '0';
+    setTimeout(() => {
+      statusTextEl.textContent = STATUS_MESSAGES[statusIdx];
+      statusTextEl.style.transition = 'opacity .35s';
+      statusTextEl.style.opacity = '1';
+    }, 180);
+  }, 1500);
 
-    /* الرقم */
-    if (percentEl) percentEl.textContent = p;
+  /* ═══ تدوير النصائح (كل 4 ثواني) ═══ */
+  setInterval(() => {
+    if (completed || !tipEl) return;
+    tipIdx = (tipIdx + 1) % TIPS.length;
+    tipEl.style.opacity = '0';
+    setTimeout(() => {
+      tipEl.textContent = TIPS[tipIdx];
+      tipEl.style.transition = 'opacity .45s';
+      tipEl.style.opacity = '1';
+    }, 200);
+  }, 4000);
 
-    /* حلقة دائرية */
-    if (progressEl) {
-      const circumference = 327;
-      progressEl.style.strokeDashoffset = circumference - (p / 100) * circumference;
-    }
-
-    /* شريط خطي */
-    if (barEl) barEl.style.width = p + '%';
-
-    /* نص الحالة */
-    const msg = [...STATUS_MESSAGES].reverse().find(m => p >= m.at);
-    if (msg && statusEl && statusEl.textContent !== msg.text) {
-      statusEl.style.opacity = '0';
-      setTimeout(() => {
-        statusEl.textContent = msg.text;
-        statusEl.style.transition = 'opacity .3s';
-        statusEl.style.opacity = '1';
-      }, 200);
-    }
-  }
-
-  /* ===== محاكاة تقدم واقعي (يصل لـ 90% بسرعة ثم ينتظر) ===== */
-  function simulateProgress() {
+  /* ═══ تدوير النقاط (كل 0.55 ثانية) ═══ */
+  setInterval(() => {
     if (completed) return;
+    const dots = dotsEl?.querySelectorAll('.dot');
+    if (!dots || !dots.length) return;
+    dots.forEach(d => d.classList.remove('active'));
+    dotIdx = (dotIdx + 1) % dots.length;
+    dots[dotIdx]?.classList.add('active');
+  }, 550);
 
-    // كل 100ms يزيد بمقدار يناسب مرحلة "الانتظار"
-    const increment = progress < 60 ? 2 + Math.random() * 4
-                    : progress < 85 ? 1 + Math.random() * 2
-                    : 0.3 + Math.random() * 0.8;
-
-    progress = Math.min(90, progress + increment);
-    updateProgressUI();
-
-    if (progress < 90) {
-      setTimeout(simulateProgress, 120 + Math.random() * 100);
-    }
-  }
-
-  /* ===== الانتقال النهائي ===== */
+  /* ═══ الانتقال النهائي ═══ */
   function finishLoader() {
     if (completed) return;
     completed = true;
 
-    progress = 100;
-    updateProgressUI();
+    /* أظهر الحالة النهائية بسرعة */
+    if (statusTextEl) statusTextEl.textContent = 'مرحباً بك في نكسوس ✨';
 
     setTimeout(() => {
       loader.style.opacity = '0';
@@ -419,61 +376,30 @@
         loader.classList.add('hidden');
         document.body.style.overflow = '';
       }, 700);
-    }, 500);
+    }, 350);
   }
 
-  /* ===== API عام للتحكم ===== */
+  /* ═══ API عام (يُستدعى من script.js) ═══ */
   window.NexusLoader = {
-    setProgress(p) {
-      if (completed) return;
-      targetProgress = Math.max(targetProgress, p);
-      progress = Math.max(progress, Math.min(95, targetProgress));
-      updateProgressUI();
-    },
+    /* ★ setProgress أصبح لا يفعل شيئاً — للتوافق فقط */
+    setProgress(_p) { /* no-op */ },
     finish() { finishLoader(); },
     isActive() { return !completed; }
   };
 
-  /* ===== زر التخطي ===== */
-  skipBtn?.addEventListener('click', () => {
-    finishLoader();
-  });
+  /* ═══ زر التخطي ═══ */
+  skipBtn?.addEventListener('click', finishLoader);
 
-  /* ===== تدوير النصائح ===== */
-  setInterval(() => {
-    tipIdx = (tipIdx + 1) % TIPS.length;
-    if (tipEl) {
-      tipEl.style.opacity = '0';
-      setTimeout(() => {
-        tipEl.textContent = TIPS[tipIdx];
-        tipEl.style.transition = 'opacity .4s';
-        tipEl.style.opacity = '1';
-      }, 200);
-    }
-  }, 4000);
-
-  /* ===== تدوير النقاط ===== */
-  setInterval(() => {
-    const dots = dotsEl?.querySelectorAll('.dot');
-    if (!dots || !dots.length) return;
-    dots.forEach(d => d.classList.remove('active'));
-    dotIdx = (dotIdx + 1) % dots.length;
-    dots[dotIdx]?.classList.add('active');
-  }, 500);
-
-  /* ===== البدء ===== */
+  /* ═══ بدء ═══ */
   document.body.style.overflow = 'hidden';
-  updateProgressUI();
-  setTimeout(simulateProgress, 400);
 
-  /* ===== حد أقصى 20 ثانية قسرياً ===== */
+  /* ═══ حد أقصى 15 ثانية قسرياً ═══ */
   setTimeout(() => {
     if (!completed) {
       console.warn('Loader timeout — forcing finish');
       finishLoader();
     }
-  }, 20000);
-
+  }, 15000);
 
 })();
 </script>

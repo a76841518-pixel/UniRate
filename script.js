@@ -505,59 +505,182 @@ const ACCENT_COLORS = [
   '#22c55e', '#a78bfa', '#ff8a00', '#ec4899',
 ];
 
-/* ============ خطط الاشتراك ============ */
+/* ═══════════════════════════════════════════════
+   💎 خطط الاشتراك — 4 مستويات
+   ═══════════════════════════════════════════════ */
 const SUBSCRIPTION_PLANS = {
-  free: {
-    id: 'free', name: 'مجاني', emoji: '🆓',
-    price: 0, durationDays: 0, color: '#8a95ad',
-    features: {
-      maxCustomColors: 0,
-      hasMusic: false,
-      hasBannerEffect: false,
-      hasLayoutCustomization: false,
-      hasNameColor: false,
-      hasUsernameColor: false,
-      hasTitleColor: false,
-      maxFrames: 1,
-      canCustomizeShape: false,   // ★ Plus فقط
-      canCustomizeBorder: false,  // ★ Plus فقط
-      canCustomizeTheme: false,   // ★ Plus فقط
-    }
-  },
   plus: {
-    id: 'plus', name: 'بلس', emoji: '💎',
+    id: 'plus', name: 'نكسوس +', tier: 1, emoji: '💎',
     price: 1500, durationDays: 30, color: '#00d2ff',
-    features: {
-      maxCustomColors: 3,
-      hasMusic: true,
-      hasBannerEffect: true,
-      hasLayoutCustomization: false,
-      hasNameColor: true,
-      hasUsernameColor: true,
-      hasTitleColor: false,
-      maxFrames: 5,
-      canCustomizeShape: true,
-      canCustomizeBorder: true,
-      canCustomizeTheme: true,
-    }
   },
   plus2: {
-    id: 'plus2', name: 'بلس دبل', emoji: '👑',
-    price: 3500, durationDays: 60, color: '#f5b301',
-    features: {
-      maxCustomColors: 8,
-      hasMusic: true,
-      hasBannerEffect: true,
-      hasLayoutCustomization: true,
-      hasNameColor: true,
-      hasUsernameColor: true,
-      hasTitleColor: true,
-      maxFrames: 8,
-      canCustomizeShape: true,
-      canCustomizeBorder: true,
-      canCustomizeTheme: true,
-    }
+    id: 'plus2', name: 'نكسوس ++', tier: 2, emoji: '👑',
+    price: 2500, durationDays: 30, color: '#a78bfa',
   },
+  vip: {
+    id: 'vip', name: 'نكسوس VIP', tier: 3, emoji: '⭐',
+    price: 4000, durationDays: 30, color: '#f5b301',
+  },
+  vip2: {
+    id: 'vip2', name: 'نكسوس VIP+', tier: 4, emoji: '🌟',
+    price: 7500, durationDays: 30, color: '#ec4899',
+  },
+};
+
+/* الأشكال الأساسية — متاحة من tier 1 */
+const BASIC_SHAPES = ['circle', 'rounded', 'square'];
+
+/* ═══════════════════════════════════════════════
+   🎯 ربط كل حقل بمستواه المطلوب
+   'special' = يعتمد على القيمة (avatarShape)
+   ═══════════════════════════════════════════════ */
+const FIELD_TIERS = {
+  /* ═══ الغلاف ═══ */
+  /* تبويب الصورة → 1 */
+  coverPreset: 1, coverBlur: 1, coverZoom: 1,
+  coverBrightnessNew: 1, coverContrast: 1, coverSaturation: 1,
+  coverHue: 1, coverOpacity: 1, coverPosition: 1, coverTint: 1,
+  /* تبويب النمط → 2 */
+  coverPattern: 2, coverPatternColor: 2, coverPatternSize: 2, coverPatternOpacity: 2,
+  coverOverlayStyle: 2, coverVignette: 2, coverRadius: 2, coverOverlap: 2,
+  /* تبويب التأثير → 3 */
+  bannerEffect: 3, coverEffectColor: 3,
+  /* تبويب الحركة → 4 */
+  coverAnimType: 4, coverAnimSpeed: 4,
+
+  /* ═══ الأفاتار ═══ */
+  /* شكل — أساسي=1، متقدم=2 */
+  avatarShape: 'special',
+  avatarBorder: 1, avatarBorderStyle: 1, avatarBorderWidth: 1,
+  avatarBorderColor: 1, avatarBorderColor2: 1, avatarSize: 1,
+  /* الإطار → 1 */
+  frameColor1: 1, frameColor2: 1, frameThickness: 1, frameGlowIntensity: 1,
+  /* التأثيرات → 2 */
+  avatarFilter: 2, avatarRotation: 2, avatarScale: 2,
+  avatarOffsetX: 2, avatarOffsetY: 2, avatarGlowColor: 2, avatarGlowIntensity: 2,
+  /* الحركة — النوع=2، السرعة=3 */
+  avatarMovement: 2, avatarMovementSpeed: 3,
+  /* الزخرفة — الأساسي=2، الباقي=3 */
+  avatarDecoration: 2, avatarDecorationColor: 2,
+  avatarDecorationPosition: 3, avatarDecorationSize: 3,
+  avatarBgPattern: 3, avatarBgColor: 3,
+
+  /* ═══ الاسم ═══ */
+  /* اللون → 1 */
+  nameColor: 1, nameGradient2: 1, nameEffectColor: 1, nameShadowColor: 1,
+  /* الخط → 2 */
+  nameWeight: 2, nameSize: 2, nameFont: 2, nameFontStyle: 2,
+  nameTransform: 2, nameUnderline: 2, nameUnderlineColor: 2,
+  nameLetterSpacing: 2, nameLineHeight: 2,
+  /* التأثير والحركة → 3 */
+  nameEffect: 3, nameAnimation: 3, nameAnimationSpeed: 3,
+  /* الشارة → 4 */
+  nameBadge: 4, nameBadgeColor: 4, nameBadgeEffect: 4,
+
+  /* ═══ اسم المستخدم → 3 ═══ */
+  usernameColor: 3, usernameGradient: 3, usernameOpacity: 3,
+  usernameWeight: 3, usernameSize: 3, usernameFont: 3,
+  usernameLetterSpacing: 3, usernameShowAt: 3, usernameItalic: 3,
+  usernameEffect: 3, usernameAnimation: 3, usernameAnimationSpeed: 3,
+
+  /* ═══ النبذة ═══ */
+  /* النمط واللون → 2 */
+  bioStyle: 2, bioColor: 2, bioGradient: 2, bioEffect: 2,
+  bioEffectColor: 2, bioBorderColor: 2,
+  /* التنسيق والأيقونة → 3 */
+  bioFontSize: 3, bioFontWeight: 3, bioAlign: 3,
+  bioBg: 3, bioBgOpacity: 3, bioBorderWidth: 3,
+  bioLineHeight: 3, bioLetterSpacing: 3,
+  bioFontFamily: 3, bioMaxWidth: 3, bioItalic: 3,
+  bioIcon: 3, bioIconColor: 3,
+
+  /* ═══ الثيم ═══ */
+  /* الثيم → 2 */
+  themeGradientAngle: 2, themeOpacity: 2,
+  themeHue: 2, themeSaturation: 2, themeBrightness: 2, themeBlur: 2,
+  themePattern: 2, themePatternColor: 2, themePatternSize: 2, themePatternOpacity: 2,
+  themeGlow: 2, themeGlowColor: 2,
+  /* التخطيط واللون المميز والموسيقى → 3 */
+  profileLayout: 3,
+  accentColor: 3, accentColor2: 3,
+  musicUrl: 3, musicVolume: 3, musicAutoplay: 3,
+
+  /* ═══ البطاقة → 3 ═══ */
+  cardBorderColor: 3, cardBorderWidth: 3, cardBorderStyle: 3, cardCorner: 3,
+  cardPadding: 3, cardRotate: 3,
+  cardGlow: 3, cardGlowColor: 3, cardShadow: 3,
+  cardHoverEffect: 3, cardPressEffect: 3, cardEntrance: 3,
+  cardOpacity: 3, cardBackdropBlur: 3, cardBlendMode: 3, cardMaxWidth: 3,
+
+  /* ═══ المستوى → 2 ═══ */
+  levelBadgeShape: 2, levelBadgeColor1: 2, levelBadgeColor2: 2,
+  levelBadgePosition: 2, levelBadgeSize: 2, levelIcon: 2,
+  levelBarStyle: 2, levelBarColor1: 2, levelBarColor2: 2,
+  levelBarHeight: 2, levelBarSpeed: 2,
+  levelLabelText: 2, levelShowLabel: 2, levelTextSize: 2, levelTextColor: 2,
+
+  /* ═══ النصوص ═══ */
+  /* الألوان → 3 */
+  joinDateColor: 3, followersBtnColor: 3, followersBtnBg: 3,
+  locationColor: 3, teamTextColor: 3, statusTextColor: 3,
+  pronounsTextColor: 3, textShadowColor: 3, textShadowBlur: 3,
+  bioTextColor: 3, joinedTextColor: 3,
+  /* الخطوط → 4 */
+  globalFont: 4, textLetterSpacing: 4, textTransform: 4,
+
+  /* ═══ التأثيرات → 3 ═══ */
+  showParticles: 3, particleColor: 3, particleCount: 3, particleSpeed: 3,
+  showSparkles: 3, sparkleColor: 3, sparkleCount: 3,
+  bgVignette: 3, customCursor: 3,
+
+  /* ═══ التواقيع → 4 ═══ */
+  sigStyle: 4, sigShowAvatar: 4, sigShowTime: 4, sigShowName: 4,
+  sigColor: 4, sigGradient: 4, sigEffect: 4, sigBg: 4, sigBgOpacity: 4, sigBorderColor: 4,
+  sigFontSize: 4, sigFontWeight: 4, sigFontFamily: 4, sigFontStyle: 4,
+  sigAlign: 4, sigPadding: 4, sigBorderWidth: 4, sigBorderRadius: 4,
+  sigLetterSpacing: 4, sigLineHeight: 4, sigShadow: 4,
+  sigAnimation: 4, sigDisplayCount: 4,
+
+  /* ═══ المنشورات → 4 ═══ */
+  postCardStyle: 4, postShowActions: 4, postLayout: 4,
+  postAvatarShape: 4, postAvatarSize: 4, postBorderRadius: 4, postBorderWidth: 4,
+  postBgColor: 4, postBgOpacity: 4, postBorderColor: 4,
+  postNameColor: 4, postTextColor: 4, postGlow: 4,
+
+  /* ═══ الملف المختصر → 4 ═══ */
+  miniStats: 4, miniShowBio: 4, miniShowFollowStatus: 4,
+  miniShowCoverChips: 4, miniShowTeam: 4, miniShowLocation: 4, miniShowFollows: 4,
+};
+
+/* ═══════════════════════════════════════════════
+   🎯 ربط كل تبويب فرعي بأدنى مستوى يسمح بدخوله
+   (min من مستويات حقوله)
+   ═══════════════════════════════════════════════ */
+const SUBTAB_TIERS = {
+  cover:      { image: 1, style: 2, effect: 3, anim: 4 },
+  avatar:     { shape: 1, frame: 1, effects: 2, movement: 2, decoration: 2 },
+  name:       { color: 1, font: 2, effect: 3, animation: 3, badge: 4 },
+  username:   { color: 3, font: 3, effect: 3 },
+  bio:        { style: 2, color: 2, layout: 3, icon: 3 },
+  body:       { theme: 2, layout: 3, accent: 3, music: 3 },
+  card:       { border: 3, shadow: 3, effect: 3, pattern: 3 },
+  level:      { badge: 2, bar: 2, label: 2 },
+  texts:      { colors: 3, fonts: 4 },
+  effects:    { visual: 3, cursor: 3 },
+  signatures: { style: 4, color: 4, font: 4, layout: 4, animation: 4, display: 4 },
+  posts:      { style: 4, layout: 4, colors: 4, glow: 4 },
+  mini:       { stats: 4, display: 4 },
+};
+
+/* ربط حقول الإدخال النصية بأسمائها */
+const INPUT_TO_FIELD = {
+  levelLabelTextInput: 'levelLabelText',
+  musicUrlInput: 'musicUrl',
+  nameColorPicker: 'nameColor',
+  usernameColorPicker: 'usernameColor',
+  titleColorPicker: 'titleColor',
+  avatarBorderColorPicker: 'avatarBorderColor',
+  accentColorPicker: 'accentColor',
 };
 
 /* ============================================================
@@ -816,10 +939,6 @@ const FRAME_STYLES = {
   holographic: { name:'هولوغرام',      class:'frame-holo' },
 };
 
-/* دالة موحدة: كل الإطارات مجانية */
-function canUseFrame(_profile, frameId){
-  return !!FRAME_STYLES[frameId];
-}
 function getFrameTier(_frameId){ return 'free'; }
 
 /* ============================================================
@@ -1223,57 +1342,105 @@ const SCROLL_EFFECTS = {
   pulse: { label:'نبض',   emoji:'💓' },
 };
 
-/* ============ دوال الاشتراك ============ */
 function getSubscription(profile){
-  if(!profile) return { plan:'free', expiresAt:null, active:false };
+  if(!profile){
+    return { plan:null, rawPlan:null, tier:0, active:false,
+             expiresAt:null, planData:null, features:{} };
+  }
   const sub = profile.subscription || {};
-  const plan = sub.plan || 'free';
+  const plan = sub.plan || null;
   const expiresAt = sub.expiresAt?.toDate?.() || null;
-  const active = plan !== 'free' && expiresAt && expiresAt > new Date();
+  const active = !!(plan && plan !== 'free' && expiresAt && expiresAt > new Date());
+  const planData = active ? SUBSCRIPTION_PLANS[plan] : null;
+  const tier = planData?.tier || 0;
+
+  /* features للتوافق الخلفي فقط */
   return {
-    plan: active ? plan : 'free',
-    rawPlan: plan,
+    plan:        active ? plan : null,
+    rawPlan:     plan,
+    tier,
+    active,
     expiresAt,
-    active: !!active,
-    features: SUBSCRIPTION_PLANS[active ? plan : 'free'].features,
+    planData,
+    features: {
+      maxCustomColors:        tier * 2,
+      maxFrames:              30,
+      hasNameColor:           tier >= 1,
+      hasUsernameColor:       tier >= 3,
+      hasTitleColor:          tier >= 4,
+      hasMusic:               tier >= 3,
+      hasBannerEffect:        tier >= 3,
+      hasLayoutCustomization: tier >= 3,
+      canCustomizeShape:      tier >= 2,
+      canCustomizeBorder:     tier >= 1,
+      canCustomizeTheme:      tier >= 2,
+    },
   };
+}
+
+/* ═══ تحديد مستوى حقل ═══ */
+function getFieldTier(field, value){
+  const t = FIELD_TIERS[field];
+  if(t === 'special'){
+    /* avatarShape: أساسي=1، غيره=2 */
+    return BASIC_SHAPES.includes(value) ? 1 : 2;
+  }
+  return typeof t === 'number' ? t : 0;
+}
+
+function getSubtabTier(zone, subtab){
+  return SUBTAB_TIERS[zone]?.[subtab] || 0;
+}
+
+function canAccessTier(tier){
+  return getSubscription(state.profile).tier >= tier;
+}
+
+function canAccessField(field, value){
+  return canAccessTier(getFieldTier(field, value));
+}
+
+/* ═══ فحص كل دوال canCustomize* ═══ */
+function canCustomizeNameColor(p){     return getSubscription(p).tier >= 1; }
+function canCustomizeUsernameColor(p){ return getSubscription(p).tier >= 3; }
+function canCustomizeTitleColor(p){    return getSubscription(p).tier >= 4; }
+function canUseMusic(p){               return getSubscription(p).tier >= 3; }
+function canUseBannerEffect(p){        return getSubscription(p).tier >= 3; }
+function canUseLayoutCustomization(p){ return getSubscription(p).tier >= 3; }
+function canCustomizeShape(p){         return getSubscription(p).tier >= 2; }
+function canCustomizeBorder(p){        return getSubscription(p).tier >= 1; }
+function canCustomizeTheme(p){         return getSubscription(p).tier >= 2; }
+function canUseFrame(p, _id){          return getSubscription(p).tier >= 1; }
+
+/* ═══ مودال الترقية ═══ */
+function showUpsellModal(requiredTier){
+  const plan = Object.values(SUBSCRIPTION_PLANS).find(p => p.tier === requiredTier);
+  if(!plan) return;
+
+  openModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:52px">${plan.emoji}</div>
+      <h3 style="margin:8px 0 4px">هذه الميزة تتطلب</h3>
+      <div style="font-size:20px;font-weight:900;color:${plan.color}">${plan.name}</div>
+      <div class="muted" style="margin-top:6px;font-size:12px">
+        ${nf(plan.price)} عملة / ${plan.durationDays} يوم
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:8px" data-buy-plan="${plan.id}">
+      ${ic('crown','sm')} اشترك الآن
+    </button>
+    <button class="btn btn-ghost" style="width:100%;margin-bottom:8px" data-action="show-plans">
+      عرض جميع الخطط
+    </button>
+    <button class="btn btn-ghost" style="width:100%" data-action="modal-close">
+      إلغاء
+    </button>
+  `);
 }
 
 function getOwnedItems(profile){
   return profile?.ownedItems || [];
 }
-
-/* هل يمكنه تغيير لون الاسم؟ */
-function canCustomizeNameColor(profile){
-  const sub = getSubscription(profile);
-  return sub.features.hasNameColor;
-}
-
-function canCustomizeUsernameColor(profile){
-  const sub = getSubscription(profile);
-  return sub.features.hasUsernameColor;
-}
-
-function canCustomizeTitleColor(profile){
-  const sub = getSubscription(profile);
-  return sub.features.hasTitleColor;
-}
-
-function canUseMusic(profile){
-  return getSubscription(profile).features.hasMusic;
-}
-
-function canUseBannerEffect(profile){
-  return getSubscription(profile).features.hasBannerEffect;
-}
-
-function canUseLayoutCustomization(profile){
-  return getSubscription(profile).features.hasLayoutCustomization;
-}
-
-function canCustomizeShape(p){ return getSubscription(p).features.canCustomizeShape; }
-function canCustomizeBorder(p){ return getSubscription(p).features.canCustomizeBorder; }
-function canCustomizeTheme(p){ return getSubscription(p).features.canCustomizeTheme; }
 
 /* ============ حظر ============ */
 const BAN_REASONS = [
@@ -1422,6 +1589,18 @@ custFieldTab: null,   // ★ جديد: التبويب الثالث (التخصي
   viewingRelationUid: null,
   relationData: null,
   hiddenFromFeed: new Set(),
+
+  /* ابحث عن state وقم بإضافة هذه الحقول */
+closeFriendsData: null,   // { _uid, _loading, friends:[], stats:{} }
+cfFilter: 'all',          // 'all' | 'top' | 'mutual' | 'trust' | 'active'
+/* ابحث عن state وأضف: */
+relationTab: 'relation',   // 'relation' | 'cooperation' | 'competition'
+/* ابحث عن state وأضف: */
+lbFilter: 'all',     // 'all' | 'following'
+lbSearch: '',
+/* ابحث عن state وأضف: */
+supportFilter: 'all',      // 'all' | 'admin' | 'moderator' | 'games' | 'content' | 'users' | 'data'
+supportSearch: '',
 };
 
 /* استعادة المنشورات المخفية من localStorage */
@@ -2141,7 +2320,23 @@ await setDoc(userRef, {
 }
 async function handleLogout(){
   if(!confirm('هل تريد تسجيل الخروج؟')) return;
-  await signOut(auth);
+
+  try {
+    await signOut(auth);
+  } catch(e){
+    console.warn('logout:', e);
+  }
+
+  /* ★ مسح الجلسة — يمنع أي بقايا محلية */
+  try {
+    sessionStorage.clear();
+  } catch(e){}
+
+  /* ★ إعادة تحميل الصفحة كصفحة نظيفة تماماً
+     — يمسح state.page وكل المتغيرات، ويفتح دائماً على شاشة الدخول */
+  setTimeout(() => {
+    window.location.reload();
+  }, 80);
 }
 
 /* ============ Auth State ============ */
@@ -2221,15 +2416,28 @@ await setDoc(doc(db, 'users', user.uid), {
       }
     }, 1000);
 
-  } else {
-    state.user = null;
-    state.profile = null;
-    detachListeners();
-    showScreen('authScreen');
+} else {
+  state.user = null;
+  state.profile = null;
+  detachListeners();
+  showScreen('authScreen');
 
-    // ★★★ حالة عدم تسجيل الدخول — إغلاق شاشة التحميل ★★★
-    window.NexusLoader?.finish?.();
-  }
+  /* ★ إعادة تعيين الصفحة الحالية — يمنع ظهور أي صفحة داخلية بعد الدخول */
+  state.page = 'home';
+  state.navStack = [];
+  state.viewingUid = null;
+  state.viewingPostId = null;
+  state.viewingTeamId = null;
+  state.viewingRelationUid = null;
+  state.viewingTournamentId = null;
+  state.viewingWarId = null;
+  state.relationData = null;
+  state.activeGame = null;
+  state.chatWith = null;
+
+  // ★★★ حالة عدم تسجيل الدخول — إغلاق شاشة التحميل ★★★
+  window.NexusLoader?.finish?.();
+}
 });
 } else {
   showScreen('setupScreen');
@@ -5354,25 +5562,29 @@ function renderRelationSkeleton(me, other){
 /* ============================================================
    ⚡ تحميل البيانات — في الخلفية
    ============================================================ */
+/* ============================================================
+   ⚡ تحميل بيانات العلاقة — محدّث (مع دعم/تواقيع متبادلة)
+   ============================================================ */
 async function loadRelationData(otherUid){
   const meUid = state.user.uid;
 
   try {
     const chatId = [meUid, otherUid].sort().join('_');
 
-    /* ★ كل الاستعلامات بالتوازي — بدون حلقات متسلسلة */
     const [
       myMatchesSnap,
       otherMatchesSnap,
       chatSnap,
       giftsSentSnap,
       giftsReceivedSnap,
-      supportsSnap,
+      supportsSentSnap,        // ★ جديد
+      supportsReceivedSnap,    // ★ جديد
       iFollowSnap,
       theyFollowSnap,
       trustSnap,
       reverseTrustSnap,
-      signaturesSnap,
+      signaturesSentSnap,      // ★ جديد
+      signaturesReceivedSnap,  // ★ جديد
     ] = await Promise.all([
       getDocs(collection(db, 'users', meUid, 'matchHistory')).catch(()=>({size:0, docs:[]})),
       getDocs(collection(db, 'users', otherUid, 'matchHistory')).catch(()=>({size:0, docs:[]})),
@@ -5380,50 +5592,73 @@ async function loadRelationData(otherUid){
       getDocs(query(collection(db, 'gifts'), where('from','==',meUid), where('to','==',otherUid))).catch(()=>({size:0, docs:[]})),
       getDocs(query(collection(db, 'gifts'), where('from','==',otherUid), where('to','==',meUid))).catch(()=>({size:0, docs:[]})),
       getDocs(query(collection(db, 'supports'), where('from','==',meUid), where('to','==',otherUid))).catch(()=>({size:0})),
+      getDocs(query(collection(db, 'supports'), where('from','==',otherUid), where('to','==',meUid))).catch(()=>({size:0})),
       getDoc(doc(db, 'follows', `${meUid}_${otherUid}`)).catch(()=>({exists:()=>false})),
       getDoc(doc(db, 'follows', `${otherUid}_${meUid}`)).catch(()=>({exists:()=>false})),
-      getDoc(doc(db, 'trusts', `${meUid}_${otherUid}`)).catch(()=>({exists:()=>false})),
-      getDoc(doc(db, 'trusts', `${otherUid}_${meUid}`)).catch(()=>({exists:()=>false})),
+      getDoc(doc(db, 'trusts',  `${meUid}_${otherUid}`)).catch(()=>({exists:()=>false})),
+      getDoc(doc(db, 'trusts',  `${otherUid}_${meUid}`)).catch(()=>({exists:()=>false})),
       getDocs(query(collection(db, 'users', otherUid, 'signatures'), where('fromId','==',meUid))).catch(()=>({size:0})),
+      getDocs(query(collection(db, 'users', meUid, 'signatures'), where('fromId','==',otherUid))).catch(()=>({size:0})),
     ]);
 
-    /* ★ حماية من race condition */
     if(state.viewingRelationUid !== otherUid) return;
 
-    /* ─── المباريات ─── */
-    const myMatches = myMatchesSnap.docs.map(d => d.data());
+    const myMatches    = myMatchesSnap.docs.map(d => d.data());
     const otherMatches = otherMatchesSnap.docs.map(d => d.data());
-    const vsThem = myMatches.filter(m => m.opponent === otherUid);
+    const vsThem       = myMatches.filter(m => m.opponent === otherUid);
 
-    /* ─── بناء الإحصائيات ─── */
+    /* ★ حساب آخر وقت محادثة */
+    let chatLastTime = null;
+    if(chatSnap.docs?.length){
+      const times = chatSnap.docs
+        .map(d => d.data().createdAt)
+        .filter(Boolean)
+        .map(t => t.seconds ? t.seconds * 1000 : (t.toDate?.().getTime?.() || 0))
+        .filter(t => t > 0);
+      if(times.length) chatLastTime = new Date(Math.max(...times));
+    }
+
+    /* ★ المباريات الأخيرة */
+    const recentMatches = vsThem
+      .sort((a,b) => (b.playedAt?.seconds || 0) - (a.playedAt?.seconds || 0))
+      .slice(0, 5);
+
     const stats = {
       _uid: otherUid,
       _loading: false,
-      /* المشتركة */
+
+      /* ── التنافس ── */
       matchesTogether: vsThem.length,
-      winsAgainst: vsThem.filter(m => m.result === 'win').length,
-      lossesAgainst: vsThem.filter(m => m.result === 'loss').length,
+      winsAgainst:    vsThem.filter(m => m.result === 'win').length,
+      lossesAgainst:  vsThem.filter(m => m.result === 'loss').length,
+      recentMatches,
+
+      /* ── التعاون ── */
       teamwork: 0,
-      competition: vsThem.length,
       chatMessages: chatSnap.size || 0,
-      giftsSent: giftsSentSnap.size || 0,
-      giftsReceived: giftsReceivedSnap.size || 0,
-      supports: supportsSnap.size || 0,
-      signedTimes: signaturesSnap.size || 0,
-      /* الحالة */
+      chatLastTime,
+      giftsSent:         giftsSentSnap.size || 0,
+      giftsReceived:     giftsReceivedSnap.size || 0,
+      supportsSent:      supportsSentSnap.size || 0,
+      supportsReceived:  supportsReceivedSnap.size || 0,
+      signedTimes:       signaturesSentSnap.size || 0,
+      theirSignedTimes:  signaturesReceivedSnap.size || 0,
+
+      /* ── الحالة ── */
       isMutualFollow: iFollowSnap.exists() && theyFollowSnap.exists(),
-      iFollowThem: iFollowSnap.exists(),
-      theyFollowMe: theyFollowSnap.exists(),
-      hasTrusted: trustSnap.exists(),
-      isTrustedBy: reverseTrustSnap.exists(),
-      /* إجماليات كل مستخدم */
-      myTotalMatches: myMatchesSnap.size || myMatches.length,
-      myTotalWins: myMatches.filter(m => m.result === 'win').length,
+      iFollowThem:    iFollowSnap.exists(),
+      theyFollowMe:   theyFollowSnap.exists(),
+      hasTrusted:     trustSnap.exists(),
+      isTrustedBy:    reverseTrustSnap.exists(),
+
+      /* ── إجماليات ── */
+      myTotalMatches:    myMatchesSnap.size || myMatches.length,
+      myTotalWins:       myMatches.filter(m => m.result === 'win').length,
       theirTotalMatches: otherMatchesSnap.size || otherMatches.length,
-      theirTotalWins: otherMatches.filter(m => m.result === 'win').length,
+      theirTotalWins:    otherMatches.filter(m => m.result === 'win').length,
     };
 
-    /* ─── حساب النقاط ─── */
+    /* ── نقاط العلاقة ── */
     stats.relationScore =
       (stats.hasTrusted ? 100 : 0) +
       (stats.isTrustedBy ? 100 : 0) +
@@ -5433,16 +5668,14 @@ async function loadRelationData(otherUid){
       (stats.giftsReceived * 5) +
       (stats.matchesTogether * 3) +
       (stats.signedTimes * 10) +
-      (stats.supports * 5);
+      (stats.theirSignedTimes * 10) +
+      (stats.supportsSent * 5) +
+      (stats.supportsReceived * 5);
 
-    /* ★ حماية مزدوجة قبل الحفظ */
     if(state.viewingRelationUid !== otherUid) return;
 
     state.relationData = stats;
-
-    if(state.page === 'relation' && state.viewingRelationUid === otherUid){
-      render();
-    }
+    if(state.page === 'relation' && state.viewingRelationUid === otherUid) render();
   } catch(e){
     console.error('relation load:', e);
     if(state.viewingRelationUid !== otherUid) return;
@@ -5454,105 +5687,92 @@ async function loadRelationData(otherUid){
 /* ============================================================
    🎨 محتوى الصفحة الكامل
    ============================================================ */
+/* ============================================================
+   🎨 محتوى صفحة العلاقة — 3 تبويبات
+   ============================================================ */
 function renderRelationContent(me, other, stats){
   if(stats._error){
     return emptyState('تعذّر تحميل البيانات — حاول مجدداً','close');
   }
 
-  /* حساب المستوى */
+  /* ─── الحسابات الأساسية ─── */
   const score = stats.relationScore;
-  let level = { emoji: '❔', name: 'غرباء', color: '#8a95ad' };
-  if(score >= 2000)      level = { emoji: '💎', name: 'رفيق درب', color: '#a78bfa' };
-  else if(score >= 1000) level = { emoji: '🔥', name: 'صديق مقرب', color: '#ff3d71' };
-  else if(score >= 500)  level = { emoji: '⭐', name: 'صديق', color: '#f5b301' };
-  else if(score >= 200)  level = { emoji: '🤝', name: 'معارف', color: '#22c55e' };
-  else if(score >= 50)   level = { emoji: '👋', name: 'تعارف', color: '#00d2ff' };
-  else if(score > 0)     level = { emoji: '🌱', name: 'بداية', color: '#10b981' };
+  let level = { emoji:'❔', name:'غرباء', color:'#8a95ad' };
+  if(score >= 2000)      level = { emoji:'💎', name:'رفيق درب',   color:'#a78bfa' };
+  else if(score >= 1000) level = { emoji:'🔥', name:'صديق مقرب',  color:'#ff3d71' };
+  else if(score >= 500)  level = { emoji:'⭐', name:'صديق',       color:'#f5b301' };
+  else if(score >= 200)  level = { emoji:'🤝', name:'معارف',      color:'#22c55e' };
+  else if(score >= 50)   level = { emoji:'👋', name:'تعارف',      color:'#00d2ff' };
+  else if(score > 0)     level = { emoji:'🌱', name:'بداية',      color:'#10b981' };
 
   const pct = Math.min(100, (score / 2000) * 100);
 
   /* ─── بيانات المقارنة ─── */
   const meStats = {
-    level: me.level || 1,
-    fame: me.fame || 0,
-    power: me.power || 0,
-    support: me.support || 0,
-    heba: calculateHeba(me),
+    level: me.level || 1, fame: me.fame || 0, power: me.power || 0,
+    support: me.support || 0, heba: calculateHeba(me),
     reputation: typeof me.reputation === 'number' ? me.reputation : calculateReputationFromData(me),
-    followers: me.followers || 0,
-    following: me.following || 0,
-    likesProfile: me.likesProfile || 0,
-    trustReceived: me.trustReceived || 0,
+    followers: me.followers || 0, following: me.following || 0,
+    likesProfile: me.likesProfile || 0, trustReceived: me.trustReceived || 0,
     views: me.views || 0,
-    matches: stats.myTotalMatches || 0,
-    wins: stats.myTotalWins || 0,
+    matches: stats.myTotalMatches || 0, wins: stats.myTotalWins || 0,
   };
-
   const otherStats = {
-    level: other.level || 1,
-    fame: other.fame || 0,
-    power: other.power || 0,
-    support: other.support || 0,
-    heba: calculateHeba(other),
+    level: other.level || 1, fame: other.fame || 0, power: other.power || 0,
+    support: other.support || 0, heba: calculateHeba(other),
     reputation: typeof other.reputation === 'number' ? other.reputation : calculateReputationFromData(other),
-    followers: other.followers || 0,
-    following: other.following || 0,
-    likesProfile: other.likesProfile || 0,
-    trustReceived: other.trustReceived || 0,
+    followers: other.followers || 0, following: other.following || 0,
+    likesProfile: other.likesProfile || 0, trustReceived: other.trustReceived || 0,
     views: other.views || 0,
-    matches: stats.theirTotalMatches || 0,
-    wins: stats.theirTotalWins || 0,
+    matches: stats.theirTotalMatches || 0, wins: stats.theirTotalWins || 0,
   };
 
   const comparisonRows = [
-    { key: 'level',        label: 'المستوى',        icon: '🏅', format: v => v },
-    { key: 'heba',         label: 'الهيبة',         icon: '👑', format: nf },
-    { key: 'reputation',   label: 'السمعة',         icon: '🤝', format: nf },
-    { key: 'fame',         label: 'الشهرة',         icon: '⭐', format: nf },
-    { key: 'power',        label: 'القوة',          icon: '⚡', format: nf },
-    { key: 'support',      label: 'الدعم',          icon: '💎', format: nf },
-    { key: 'matches',      label: 'المباريات',      icon: '🎮', format: nf },
-    { key: 'wins',         label: 'الانتصارات',     icon: '🏆', format: nf },
-    { key: 'followers',    label: 'المتابعون',      icon: '👥', format: nf },
-    { key: 'following',    label: 'يتابع',          icon: '➡️', format: nf },
-    { key: 'likesProfile', label: 'إعجابات الملف',  icon: '❤️', format: nf },
-    { key: 'trustReceived',label: 'الثقات',         icon: '🛡️', format: nf },
-    { key: 'views',        label: 'الزيارات',       icon: '👁️', format: nf },
+    { key:'level',         label:'المستوى',       icon:'🏅', format:v=>v },
+    { key:'heba',          label:'الهيبة',        icon:'👑', format:nf },
+    { key:'reputation',    label:'السمعة',        icon:'🤝', format:nf },
+    { key:'fame',          label:'الشهرة',        icon:'⭐', format:nf },
+    { key:'power',         label:'القوة',         icon:'⚡', format:nf },
+    { key:'support',       label:'الدعم',         icon:'💎', format:nf },
+    { key:'matches',       label:'المباريات',     icon:'🎮', format:nf },
+    { key:'wins',          label:'الانتصارات',    icon:'🏆', format:nf },
+    { key:'followers',     label:'المتابعون',     icon:'👥', format:nf },
+    { key:'trustReceived', label:'الثقات',        icon:'🛡️', format:nf },
+    { key:'likesProfile',  label:'إعجابات الملف', icon:'❤️', format:nf },
   ];
 
-  /* حساب عدد الانتصارات في المقارنة */
   let meAhead = 0, otherAhead = 0;
   const comparisonHTML = comparisonRows.map(row => {
-    const meVal = Number(meStats[row.key]) || 0;
+    const meVal    = Number(meStats[row.key]) || 0;
     const otherVal = Number(otherStats[row.key]) || 0;
-    const iWon = meVal > otherVal;
+    const iWon     = meVal > otherVal;
     const otherWon = otherVal > meVal;
     if(iWon) meAhead++;
     if(otherWon) otherAhead++;
     return `
       <div class="relation-compare-row">
         <div class="rc-value ${iWon?'win':''}">
-          ${row.format(meVal)}
-          ${iWon ? ' <span class="rc-crown">👑</span>' : ''}
+          ${row.format(meVal)}${iWon?' <span class="rc-crown">👑</span>':''}
         </div>
         <div class="rc-label">
           <span class="rc-icon">${row.icon}</span>
           <span>${row.label}</span>
         </div>
         <div class="rc-value ${otherWon?'win':''}">
-          ${otherWon ? '<span class="rc-crown">👑</span> ' : ''}
-          ${row.format(otherVal)}
+          ${otherWon?'<span class="rc-crown">👑</span> ':''}${row.format(otherVal)}
         </div>
       </div>
     `;
   }).join('');
 
-  /* شريط المقارنة الإجمالي */
   const totalComp = meAhead + otherAhead || 1;
-  const mePct = Math.round((meAhead / totalComp) * 100);
-  const otherPct = 100 - mePct;
+  const mePct     = Math.round((meAhead / totalComp) * 100);
+  const otherPct  = 100 - mePct;
+
+  const tab = state.relationTab || 'relation';
 
   return `
+    <!-- ═══ Header ═══ -->
     <div class="relation-header">
       <div class="relation-user" data-view-profile="${me.uid || state.user.uid}">
         ${avatar(me, 60)}
@@ -5569,8 +5789,8 @@ function renderRelationContent(me, other, stats){
       </div>
     </div>
 
-    <!-- شريط مستوى العلاقة -->
-    <div class="card" style="margin-bottom:16px">
+    <!-- ═══ Level progress ═══ -->
+    <div class="card" style="margin-bottom:14px">
       <div class="relation-progress-title">مستوى العلاقة</div>
       <div class="relation-progress">
         <span style="width:${pct}%;background:${level.color};box-shadow:0 0 14px ${level.color};"></span>
@@ -5581,10 +5801,57 @@ function renderRelationContent(me, other, stats){
       </div>
     </div>
 
-    <!-- ═══ المقارنة المباشرة ═══ -->
+    <!-- ═══ Tabs ═══ -->
+    <div class="relation-tabs-wrap">
+      <div class="relation-tabs">
+        <button type="button" class="rel-tab ${tab==='relation'?'active':''}" data-rel-tab="relation">
+          <span class="rel-tab-icon">💞</span>
+          <span class="rel-tab-label">العلاقة</span>
+        </button>
+        <button type="button" class="rel-tab ${tab==='cooperation'?'active':''}" data-rel-tab="cooperation">
+          <span class="rel-tab-icon">🤝</span>
+          <span class="rel-tab-label">التعاون</span>
+        </button>
+        <button type="button" class="rel-tab ${tab==='competition'?'active':''}" data-rel-tab="competition">
+          <span class="rel-tab-icon">⚔️</span>
+          <span class="rel-tab-label">التنافس</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Tab Content ═══ -->
+    <div class="relation-tab-content">
+      ${tab === 'relation'    ? renderRelTabRelation(me, other, stats, level, meAhead, otherAhead, mePct, otherPct, comparisonHTML) : ''}
+      ${tab === 'cooperation' ? renderRelTabCooperation(me, other, stats) : ''}
+      ${tab === 'competition' ? renderRelTabCompetition(me, other, stats) : ''}
+    </div>
+
+    <!-- ═══ Quick Actions ═══ -->
+    <div class="relation-section-title">🎯 إجراءات سريعة</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <button class="btn btn-primary" data-open-chat="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('message','sm')} مراسلة
+      </button>
+      <button class="btn btn-ghost" data-send-gift="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('crown','sm')} إهداء
+      </button>
+      <button class="btn btn-ghost" data-send-challenge="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('bolt','sm')} تحدي
+      </button>
+      <button class="btn btn-ghost" data-action="profile-actions" data-uid="${other.uid}" style="flex:1;min-width:120px">
+        ${ic('dots','sm')} خيارات
+      </button>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   💞 تبويب "العلاقة" — نظرة عامة + مقارنة
+   ══════════════════════════════════════════════ */
+function renderRelTabRelation(me, other, stats, level, meAhead, otherAhead, mePct, otherPct, comparisonHTML){
+  return `
+    <!-- شريط التفوق -->
     <div class="relation-section-title">⚖️ المقارنة المباشرة</div>
-    
-    <!-- شريط تفوق -->
     <div class="relation-battle-bar">
       <div class="rbb-side left" style="width:${mePct}%">
         <span>${meAhead} تفوق</span>
@@ -5593,7 +5860,7 @@ function renderRelationContent(me, other, stats){
         <span>${otherAhead} تفوق</span>
       </div>
     </div>
-    
+
     <div class="relation-compare-table">
       <div class="relation-compare-header">
         <div class="rc-huser">
@@ -5609,52 +5876,7 @@ function renderRelationContent(me, other, stats){
       ${comparisonHTML}
     </div>
 
-    <!-- ═══ الإحصائيات المتبادلة ═══ -->
-    <div class="relation-section-title">📊 الإحصائيات المتبادلة</div>
-    <div class="relation-stats">
-      <div class="relation-stat">
-        <div class="rs-icon">🎮</div>
-        <div class="rs-value">${stats.matchesTogether}</div>
-        <div class="rs-label">مباريات معاً</div>
-      </div>
-      <div class="relation-stat">
-        <div class="rs-icon">🏆</div>
-        <div class="rs-value" style="color:var(--ok)">${stats.winsAgainst}</div>
-        <div class="rs-label">فزت عليه</div>
-      </div>
-      <div class="relation-stat">
-        <div class="rs-icon">💔</div>
-        <div class="rs-value" style="color:var(--pink)">${stats.lossesAgainst}</div>
-        <div class="rs-label">خسرت منه</div>
-      </div>
-      <div class="relation-stat">
-        <div class="rs-icon">💬</div>
-        <div class="rs-value">${nf(stats.chatMessages)}</div>
-        <div class="rs-label">رسالة</div>
-      </div>
-      <div class="relation-stat">
-        <div class="rs-icon">🎁</div>
-        <div class="rs-value">${stats.giftsSent + stats.giftsReceived}</div>
-        <div class="rs-label">هدايا متبادلة</div>
-      </div>
-      <div class="relation-stat">
-        <div class="rs-icon">⭐</div>
-        <div class="rs-value">${stats.supports}</div>
-        <div class="rs-label">دعم</div>
-      </div>
-      <div class="relation-stat">
-        <div class="rs-icon">✍️</div>
-        <div class="rs-value">${stats.signedTimes}</div>
-        <div class="rs-label">تواقيع</div>
-      </div>
-      <div class="relation-stat">
-        <div class="rs-icon">🎯</div>
-        <div class="rs-value">${stats.competition}</div>
-        <div class="rs-label">تنافس</div>
-      </div>
-    </div>
-
-    <!-- ═══ الحالة الحالية ═══ -->
+    <!-- الحالة الحالية -->
     <div class="relation-section-title">🤝 الحالة الحالية</div>
     <div class="relation-status-grid">
       <div class="relation-status ${stats.isMutualFollow ? 'active' : ''}">
@@ -5676,45 +5898,227 @@ function renderRelationContent(me, other, stats){
       </div>
     </div>
 
-    <!-- ═══ التفاصيل التنافسية ═══ -->
-    ${stats.matchesTogether > 0 ? `
-      <div class="relation-section-title">⚔️ التفاصيل التنافسية</div>
-      <div class="card">
-        <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
-          <span style="font-size:16px">⚔️</span>
-          <div style="flex:1;font-size:12.5px;font-weight:800">عدد التنافس</div>
-          <div class="pill">${stats.competition} مباراة</div>
-        </div>
-        <div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)">
-          <span style="font-size:16px">👥</span>
-          <div style="flex:1;font-size:12.5px;font-weight:800">عدد التعاون</div>
-          <div class="pill">${stats.teamwork} مباراة</div>
-        </div>
-        <div class="row" style="padding:8px 0">
-          <span style="font-size:16px">📊</span>
-          <div style="flex:1;font-size:12.5px;font-weight:800">نسبة الفوز</div>
-          <div class="pill ${stats.winsAgainst > stats.lossesAgainst ? 'ok' : 'pink'}">
-            ${stats.matchesTogether ? Math.round(stats.winsAgainst / stats.matchesTogether * 100) : 0}%
-          </div>
+    <!-- ملخص سريع -->
+    <div class="relation-section-title">📊 ملخص سريع</div>
+    <div class="rel-quick-summary">
+      <div class="rqs-item">
+        <div class="rqs-icon">💬</div>
+        <div class="rqs-value">${nf(stats.chatMessages)}</div>
+        <div class="rqs-label">رسالة</div>
+      </div>
+      <div class="rqs-item">
+        <div class="rqs-icon">🎮</div>
+        <div class="rqs-value">${nf(stats.matchesTogether)}</div>
+        <div class="rqs-label">مباراة</div>
+      </div>
+      <div class="rqs-item">
+        <div class="rqs-icon">🎁</div>
+        <div class="rqs-value">${nf(stats.giftsSent + stats.giftsReceived)}</div>
+        <div class="rqs-label">هدية</div>
+      </div>
+      <div class="rqs-item">
+        <div class="rqs-icon">✍️</div>
+        <div class="rqs-value">${nf(stats.signedTimes + stats.theirSignedTimes)}</div>
+        <div class="rqs-label">توقيع</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   🤝 تبويب "التعاون" — التفاعلات الودية
+   ══════════════════════════════════════════════ */
+function renderRelTabCooperation(me, other, stats){
+  const coopScore =
+    stats.chatMessages * 2 +
+    (stats.giftsSent + stats.giftsReceived) * 8 +
+    (stats.supportsSent + stats.supportsReceived) * 3 +
+    (stats.signedTimes + stats.theirSignedTimes) * 5 +
+    (stats.isMutualFollow ? 20 : 0) +
+    (stats.hasTrusted ? 40 : 0) +
+    (stats.isTrustedBy ? 40 : 0);
+
+  const chatLastTxt = stats.chatLastTime
+    ? timeAgo(stats.chatLastTime)
+    : null;
+
+  return `
+    <!-- Cooperation Score -->
+    <div class="coop-hero">
+      <div class="coop-hero-icon">🤝</div>
+      <div class="coop-hero-value">${nf(coopScore)}</div>
+      <div class="coop-hero-label">نقطة تعاون</div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="relation-section-title">💬 المحادثات</div>
+    <div class="coop-metric">
+      <div class="coop-metric-icon">💬</div>
+      <div class="coop-metric-body">
+        <div class="coop-metric-title">إجمالي الرسائل</div>
+        <div class="coop-metric-value">
+          ${nf(stats.chatMessages)} <small>رسالة</small>
+          ${chatLastTxt ? `<span style="font-size:10px;color:var(--muted);font-weight:600;margin-inline-start:8px">· آخر رسالة ${chatLastTxt}</span>` : ''}
         </div>
       </div>
-    ` : ''}
+    </div>
 
-    <!-- ═══ إجراءات سريعة ═══ -->
-    <div class="relation-section-title">🎯 إجراءات سريعة</div>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:20px">
-      <button class="btn btn-primary" data-open-chat="${other.uid}" style="flex:1;min-width:120px">
-        ${ic('message','sm')} مراسلة
-      </button>
-      <button class="btn btn-ghost" data-send-gift="${other.uid}" style="flex:1;min-width:120px">
-        ${ic('crown','sm')} إهداء
-      </button>
-      <button class="btn btn-ghost" data-send-challenge="${other.uid}" style="flex:1;min-width:120px">
-        ${ic('bolt','sm')} تحدي
-      </button>
-      <button class="btn btn-ghost" data-action="profile-actions" data-uid="${other.uid}" style="flex:1;min-width:120px">
-        ${ic('dots','sm')} خيارات
-      </button>
+    <div class="relation-section-title">🎁 الهدايا</div>
+    <div class="coop-metric">
+      <div class="coop-metric-icon">📤</div>
+      <div class="coop-metric-body">
+        <div class="coop-metric-title">أرسلت له</div>
+        <div class="coop-metric-value" style="color:#f5c451">${nf(stats.giftsSent)} <small>هدية</small></div>
+      </div>
+    </div>
+    <div class="coop-metric">
+      <div class="coop-metric-icon">📥</div>
+      <div class="coop-metric-body">
+        <div class="coop-metric-title">استلمت منه</div>
+        <div class="coop-metric-value" style="color:#22c55e">${nf(stats.giftsReceived)} <small>هدية</small></div>
+      </div>
+    </div>
+
+    <div class="relation-section-title">⭐ الدعم</div>
+    <div class="coop-metric">
+      <div class="coop-metric-icon">📤</div>
+      <div class="coop-metric-body">
+        <div class="coop-metric-title">دعمته</div>
+        <div class="coop-metric-value" style="color:#f5b301">${nf(stats.supportsSent)} <small>مرة</small></div>
+      </div>
+    </div>
+    <div class="coop-metric">
+      <div class="coop-metric-icon">📥</div>
+      <div class="coop-metric-body">
+        <div class="coop-metric-title">دعمك</div>
+        <div class="coop-metric-value" style="color:#34d399">${nf(stats.supportsReceived)} <small>مرة</small></div>
+      </div>
+    </div>
+
+    <div class="relation-section-title">✍️ التواقيع</div>
+    <div class="coop-metric">
+      <div class="coop-metric-icon">✍️</div>
+      <div class="coop-metric-body">
+        <div class="coop-metric-title">وقعت على ملفه</div>
+        <div class="coop-metric-value" style="color:#ec4899">${nf(stats.signedTimes)} <small>مرة</small></div>
+      </div>
+    </div>
+    <div class="coop-metric">
+      <div class="coop-metric-icon">📝</div>
+      <div class="coop-metric-body">
+        <div class="coop-metric-title">وقع على ملفك</div>
+        <div class="coop-metric-value" style="color:#a78bfa">${nf(stats.theirSignedTimes)} <small>مرة</small></div>
+      </div>
+    </div>
+
+    <!-- Trust Status -->
+    <div class="relation-section-title">🛡️ الثقة والمتابعة</div>
+    <div class="relation-status-grid">
+      <div class="relation-status ${stats.isMutualFollow ? 'active' : ''}">
+        <span class="rss-icon">${stats.isMutualFollow ? '🤝' : '👤'}</span>
+        <span class="rss-text">${stats.isMutualFollow ? 'متابعة متبادلة' : 'غير متبادل'}</span>
+      </div>
+      <div class="relation-status ${stats.hasTrusted ? 'active' : ''}">
+        <span class="rss-icon">${stats.hasTrusted ? '✅' : '⚪'}</span>
+        <span class="rss-text">${stats.hasTrusted ? 'أنت تثق به' : 'لم تمنحه الثقة'}</span>
+      </div>
+      <div class="relation-status ${stats.isTrustedBy ? 'active' : ''}">
+        <span class="rss-icon">${stats.isTrustedBy ? '🛡️' : '⚪'}</span>
+        <span class="rss-text">${stats.isTrustedBy ? 'هو يثق بك' : 'لم يمنحك الثقة'}</span>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   ⚔️ تبويب "التنافس" — المباريات والانتصارات
+   ══════════════════════════════════════════════ */
+function renderRelTabCompetition(me, other, stats){
+  const total = stats.matchesTogether;
+  const wins   = stats.winsAgainst;
+  const losses = stats.lossesAgainst;
+  const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+  /* حالة النسبة */
+  const winCls = winRate >= 60 ? 'winner' : winRate < 40 ? 'loser' : 'neutral';
+
+  /* شريط التواجه */
+  const totalBattles = wins + losses || 1;
+  const myBarPct   = Math.round((wins   / totalBattles) * 100);
+  const theirBarPct = 100 - myBarPct;
+
+  /* آخر المباريات */
+  const recentHTML = stats.recentMatches?.length
+    ? stats.recentMatches.map(m => {
+        const isWin = m.result === 'win';
+        return `
+          <div class="comp-match ${isWin?'win':'loss'}">
+            <div class="comp-match-icon">${isWin?'🏆':'💔'}</div>
+            <div class="comp-match-body">
+              <div class="comp-match-name">${esc(m.gameName || 'Quiz Clash')}</div>
+              <div class="comp-match-time">${timeAgo(m.playedAt)}</div>
+            </div>
+            <div class="comp-match-score">
+              <span class="cms-mine ${isWin?'winner':''}">${m.myScore||0}</span>
+              <span class="cms-sep">-</span>
+              <span class="cms-opp">${m.opponentScore||0}</span>
+            </div>
+          </div>
+        `;
+      }).join('')
+    : `<div class="comp-empty">لم تلعبا سوياً بعد — ابدأ تحدياً الآن!</div>`;
+
+  return `
+    <!-- Win Rate -->
+    <div class="comp-winrate">
+      <div class="comp-winrate-icon">⚔️</div>
+      <div class="comp-winrate-value ${winCls}">${winRate}%</div>
+      <div class="comp-winrate-label">
+        ${total > 0
+          ? `نسبة فوزك في ${nf(total)} مباراة`
+          : 'لا مباريات بعد'}
+      </div>
+    </div>
+
+    <!-- Battle Bar -->
+    <div class="relation-section-title">⚔️ المواجهة</div>
+    <div class="comp-battle-bar">
+      <div class="cbb-side left" style="width:${myBarPct}%">
+        <span class="cbb-label">${wins} فوز</span>
+      </div>
+      <div class="cbb-side right" style="width:${theirBarPct}%">
+        <span class="cbb-label">${losses} خسارة</span>
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div class="comp-details">
+      <div class="comp-detail">
+        <div class="cd-icon">🎮</div>
+        <div class="cd-value">${nf(total)}</div>
+        <div class="cd-label">إجمالي</div>
+      </div>
+      <div class="comp-detail win">
+        <div class="cd-icon">🏆</div>
+        <div class="cd-value">${nf(wins)}</div>
+        <div class="cd-label">فوز</div>
+      </div>
+      <div class="comp-detail loss">
+        <div class="cd-icon">💔</div>
+        <div class="cd-value">${nf(losses)}</div>
+        <div class="cd-label">خسارة</div>
+      </div>
+      <div class="comp-detail rate">
+        <div class="cd-icon">📊</div>
+        <div class="cd-value">${winRate}%</div>
+        <div class="cd-label">نسبة</div>
+      </div>
+    </div>
+
+    <!-- Recent Matches -->
+    <div class="relation-section-title">🕐 آخر المباريات</div>
+    <div class="comp-recent">
+      ${recentHTML}
     </div>
   `;
 }
@@ -8205,7 +8609,13 @@ async function loadMatchStats(uid, elemId){
     };
     updateMatchStatsUI(elemId, stats);
   } catch(e){
-    console.warn('match stats:', e);
+    /* صامت — لا log إلا في debug */
+    if(e.code !== 'permission-denied'){
+      console.warn('match stats:', e);
+    }
+    /* fallback: اعرض شرطات */
+    const el = document.getElementById(elemId);
+    if(el) el.innerHTML = `<div class="pms-item"><span class="pms-icon">🎮</span><span class="pms-val">—</span></div>`;
   }
 }
 
@@ -9499,20 +9909,41 @@ function buildAvatarFrameHTML(p, size, frameClass){
 /* ============================================================
    🎵 تشغيل موسيقى الملف الشخصي
    ============================================================ */
+/* ============================================================
+   🎵 تشغيل موسيقى الملف الشخصي — مع التحقق من الرابط
+   ============================================================ */
 function playProfileMusic(profile){
   const audio = document.getElementById('profileMusicAudio');
   if(!audio) return;
 
-  const url = profile?.musicUrl || '';
+  const url = (profile?.musicUrl || '').trim();
   const cust = getProfileCustomization(profile);
 
+  /* ★ لا رابط — أوقف */
   if(!url){
     audio.pause();
-    audio.src = '';
+    audio.removeAttribute('src');
+    audio.dataset.currentUrl = '';
     return;
   }
 
-  /* إذا نفس الرابط — لا تعيد التحميل */
+  /* ★ فحص الرابط — يجب أن يكون رابط صوتي مباشر */
+  const isValidAudioUrl =
+    /^https?:\/\//i.test(url) &&
+    (
+      /\.(mp3|wav|ogg|m4a|aac|flac|opus|webm)(\?|#|$)/i.test(url) ||
+      /(sndcdn\.com|soundhelix|pixabay\.com|archive\.org|cdn\.)/i.test(url)
+    );
+
+  if(!isValidAudioUrl){
+    console.debug('🎵 رابط موسيقى غير مدعوم — تم تجاهله');
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.dataset.currentUrl = '';
+    return;
+  }
+
+  /* ★ نفس الرابط — لا تعيد التحميل */
   if(audio.dataset.currentUrl === url){
     audio.volume = (cust.musicVolume ?? 70) / 100;
     audio.loop = true;
@@ -9522,13 +9953,19 @@ function playProfileMusic(profile){
     return;
   }
 
+  /* ★ تحميل رابط جديد */
   audio.dataset.currentUrl = url;
   audio.src = url;
   audio.volume = (cust.musicVolume ?? 70) / 100;
   audio.loop = true;
+  audio.load();
 
   if(cust.musicAutoplay){
-    audio.play().catch(e => console.warn('autoplay blocked:', e.message));
+    const playPromise = audio.play();
+    if(playPromise && typeof playPromise.catch === 'function'){
+      /* صامت — تفشل تلقائياً في المتصفحات التي تحظر autoplay */
+      playPromise.catch(() => {});
+    }
   }
 }
 
@@ -12506,19 +12943,484 @@ function inferTargetType(n){
   }
 }
 
+/* ============================================================
+   🧡 صفحة المقربين — نسخة شاملة
+   ============================================================ */
 function pageCloseFriends(){
-  const list = Object.values(state.users).filter(u=>u.uid !== state.user.uid).slice(0,10);
+  const me = state.user.uid;
+
+  // ★ تحميل عند أول دخول
+  if(!state.closeFriendsData || state.closeFriendsData._uid !== me){
+    if(!state.closeFriendsData?._loading){
+      state.closeFriendsData = { _uid: me, _loading: true };
+      setTimeout(loadCloseFriendsData, 50);
+    }
+    return renderCloseFriendsSkeleton();
+  }
+
+  if(state.closeFriendsData._loading) return renderCloseFriendsSkeleton();
+  if(state.closeFriendsData._error) return emptyState('تعذّر تحميل بيانات المقربين — حاول لاحقاً', 'close');
+
+  return renderCloseFriendsContent();
+}
+
+/* ──────────────────────────────────────────────
+   💀 Skeleton — عرض فوري أثناء التحميل
+   ────────────────────────────────────────────── */
+function renderCloseFriendsSkeleton(){
   return `
-    <div class="card" style="margin-bottom:14px"><div class="muted" style="line-height:1.85">
-      أقرب 10 لاعبين إليك — احتساب التفاعل والتعاون والتنافس.
-    </div></div>
-    ${list.length ? list.map((u,i)=>`<div class="card" style="margin-bottom:8px;padding:12px"><div class="row">
-      <div class="lb-rank ${i<3?'r'+(i+1):''}">${i+1}</div>
-      ${avatar(u,44)}
-      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.name)}</div>
-      <div class="muted" style="font-size:10.5px">${esc(u.bio||'')}</div></div>
-      <button class="btn btn-primary btn-sm" data-open-chat="${u.uid}">تواصل</button>
-    </div></div>`).join('') : emptyState('لا يوجد لاعبون بعد','users')}`;
+    <div class="cf-hero">
+      <div class="cf-hero-header">
+        <div class="cf-hero-icon">🧡</div>
+        <div class="cf-hero-text">
+          <h1 class="cf-hero-h">المقربون</h1>
+          <div class="cf-hero-sub">نحلل تفاعلاتك لنجد أقرب اللاعبين إليك…</div>
+        </div>
+      </div>
+      <div class="cf-stats-grid">
+        ${[1,2,3,4].map(() => `
+          <div class="cf-stat" style="opacity:.4">
+            <div class="skeleton" style="width:30px;height:20px;margin:0 auto 4px"></div>
+            <div class="skeleton" style="width:60%;height:9px;margin:0 auto"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="cf-loading-hint">
+      <div class="spinner"></div>
+      <div>نجمع: متابعات · ثقات · محادثات · مباريات · هدايا · دعم</div>
+    </div>
+
+    ${[1,2,3,4,5].map(() => `
+      <div class="cf-card skeleton-card" style="opacity:.3">
+        <div class="cf-card-head">
+          <div class="skeleton" style="width:56px;height:56px;border-radius:50%;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="skeleton" style="width:50%;height:14px;margin-bottom:8px"></div>
+            <div class="skeleton" style="width:35%;height:10px;margin-bottom:6px"></div>
+            <div class="skeleton" style="width:60%;height:10px"></div>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+/* ──────────────────────────────────────────────
+   🧮 خوارزمية درجة القرب
+   ────────────────────────────────────────────── */
+function computeClosenessScore(s){
+  let score = 0;
+
+  // 1) المتابعة
+  if(s.mutualFollow)               score += 50;
+  else if(s.iFollow || s.theyFollow) score += 15;
+
+  // 2) الثقة (الأهم)
+  if(s.hasTrusted)                 score += 100;
+  if(s.isTrustedBy)                score += 100;
+
+  // 3) المحادثات
+  if(s.hasChat)                    score += 40;
+  if(s.recentChat)                 score += 30;
+
+  // 4) المباريات المشتركة
+  score += Math.min(s.gamesPlayed * 15, 150);
+
+  // 5) الهدايا المتبادلة
+  score += Math.min((s.giftsSent + s.giftsReceived) * 10, 100);
+
+  // 6) الدعم المتبادل
+  score += Math.min((s.supportsSent + s.supportsReceived) * 5, 50);
+
+  // 7) إعجاب الملف
+  if(s.profileLike)    score += 30;
+  if(s.gotProfileLike) score += 30;
+
+  return Math.round(score);
+}
+
+function getClosenessLevel(score){
+  if(score >= 800) return { emoji:'💎', name:'رفيق درب',    color:'#a78bfa' };
+  if(score >= 500) return { emoji:'🔥', name:'صديق مقرب',   color:'#ff3d71' };
+  if(score >= 250) return { emoji:'⭐', name:'صديق',        color:'#f5b301' };
+  if(score >= 100) return { emoji:'🤝', name:'معارف',       color:'#22c55e' };
+  if(score >=  30) return { emoji:'👋', name:'تعارف',       color:'#00d2ff' };
+  return                  { emoji:'🌱', name:'بداية',       color:'#10b981' };
+}
+
+/* ──────────────────────────────────────────────
+   📡 تحميل البيانات — في الخلفية
+   ────────────────────────────────────────────── */
+async function loadCloseFriendsData(){
+  const me = state.user.uid;
+
+  try {
+    const [
+      followersSnap, followingSnap,
+      trustsSentSnap, trustsReceivedSnap,
+      chatsSnap,
+      supportSentSnap, supportReceivedSnap,
+      giftsSentSnap, giftsReceivedSnap,
+      profileLikesSentSnap, profileLikesReceivedSnap,
+      matchesSnap,
+    ] = await Promise.all([
+      getDocs(query(collection(db,'follows'),      where('followingId','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'follows'),      where('followerId','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'trusts'),       where('from','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'trusts'),       where('to','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'chats'),        where('participants','array-contains',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'supports'),     where('from','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'supports'),     where('to','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'gifts'),        where('from','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'gifts'),        where('to','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'profileLikes'), where('from','==',me))).catch(()=>({docs:[]})),
+      getDocs(query(collection(db,'profileLikes'), where('to','==',me))).catch(()=>({docs:[]})),
+      getDocs(collection(db,'users',me,'matchHistory')).catch(()=>({docs:[]})),
+    ]);
+
+    /* حماية من race */
+    if(state.user?.uid !== me) return;
+
+    const followers              = new Set(followersSnap.docs.map(d=>d.data().followerId));
+    const following              = new Set(followingSnap.docs.map(d=>d.data().followingId));
+    const trustSent              = new Set(trustsSentSnap.docs.map(d=>d.data().to));
+    const trustReceived          = new Set(trustsReceivedSnap.docs.map(d=>d.data().from));
+    const likesSent              = new Set(profileLikesSentSnap.docs.map(d=>d.data().to));
+    const likesReceived          = new Set(profileLikesReceivedSnap.docs.map(d=>d.data().from));
+
+    const userStats = new Map();
+    const getOrCreate = (uid) => {
+      if(!uid || uid === me) return null;
+      if(!userStats.has(uid)){
+        userStats.set(uid, {
+          uid,
+          gamesPlayed: 0,
+          giftsSent: 0, giftsReceived: 0,
+          supportsSent: 0, supportsReceived: 0,
+          hasChat: false, recentChat: false,
+          mutualFollow: false,
+          iFollow: false, theyFollow: false,
+          hasTrusted: false, isTrustedBy: false,
+          profileLike: false, gotProfileLike: false,
+          lastChatTime: null, lastGameTime: null,
+        });
+      }
+      return userStats.get(uid);
+    };
+
+    following.forEach(uid => { const s=getOrCreate(uid); if(s) s.iFollow = true; });
+    followers.forEach(uid => { const s=getOrCreate(uid); if(s) s.theyFollow = true; });
+    trustSent.forEach(uid => { const s=getOrCreate(uid); if(s) s.hasTrusted = true; });
+    trustReceived.forEach(uid => { const s=getOrCreate(uid); if(s) s.isTrustedBy = true; });
+    likesSent.forEach(uid => { const s=getOrCreate(uid); if(s) s.profileLike = true; });
+    likesReceived.forEach(uid => { const s=getOrCreate(uid); if(s) s.gotProfileLike = true; });
+
+    /* Chats */
+    const sevenDaysAgo = Date.now() - 7 * 86400000;
+    chatsSnap.docs.forEach(doc => {
+      const data = doc.data();
+      const otherUid = (data.participants || []).find(p => p !== me);
+      if(!otherUid) return;
+      const s = getOrCreate(otherUid);
+      if(!s) return;
+      s.hasChat = true;
+      const t = data.lastTime?.toDate?.() || null;
+      if(t){
+        s.lastChatTime = t;
+        if(t.getTime() > sevenDaysAgo) s.recentChat = true;
+      }
+    });
+
+    /* Gifts */
+    giftsSentSnap.docs.forEach(doc => {
+      const s = getOrCreate(doc.data().to);
+      if(s) s.giftsSent++;
+    });
+    giftsReceivedSnap.docs.forEach(doc => {
+      const s = getOrCreate(doc.data().from);
+      if(s) s.giftsReceived++;
+    });
+
+    /* Supports */
+    supportSentSnap.docs.forEach(doc => {
+      const s = getOrCreate(doc.data().to);
+      if(s) s.supportsSent++;
+    });
+    supportReceivedSnap.docs.forEach(doc => {
+      const s = getOrCreate(doc.data().from);
+      if(s) s.supportsReceived++;
+    });
+
+    /* Match history */
+    matchesSnap.docs.forEach(doc => {
+      const m = doc.data();
+      const opp = m.opponent;
+      if(!opp) return;
+      const s = getOrCreate(opp);
+      if(!s) return;
+      s.gamesPlayed++;
+      const t = m.playedAt?.toDate?.() || null;
+      if(t && (!s.lastGameTime || t > s.lastGameTime)){
+        s.lastGameTime = t;
+      }
+    });
+
+    /* حساب النقاط والفلترة */
+    const friends = [];
+    for(const [uid, s] of userStats){
+      const user = state.users[uid];
+      if(!user) continue;
+
+      s.mutualFollow = s.iFollow && s.theyFollow;
+
+      const hasTie =
+        s.mutualFollow || s.hasTrusted || s.isTrustedBy ||
+        s.hasChat || s.gamesPlayed > 0 ||
+        s.giftsSent > 0 || s.giftsReceived > 0 ||
+        s.profileLike || s.gotProfileLike;
+
+      if(!hasTie) continue;
+
+      s.score = computeClosenessScore(s);
+      s.user = user;
+
+      /* آخر تفاعل (chat أو game) */
+      const times = [s.lastChatTime, s.lastGameTime].filter(Boolean);
+      s.lastInteraction = times.length ? new Date(Math.max(...times.map(t=>t.getTime()))) : null;
+
+      friends.push(s);
+    }
+
+    friends.sort((a,b) => b.score - a.score);
+
+    /* إحصائيات المجموع */
+    const stats = {
+      total:   friends.length,
+      mutual:  friends.filter(f => f.mutualFollow).length,
+      trust:   friends.filter(f => f.hasTrusted || f.isTrustedBy).length,
+      games:   friends.reduce((sum,f) => sum + f.gamesPlayed, 0),
+      gifts:   friends.reduce((sum,f) => sum + f.giftsSent + f.giftsReceived, 0),
+      recent:  friends.filter(f => f.recentChat).length,
+    };
+
+    if(state.user?.uid !== me) return;
+
+    state.closeFriendsData = {
+      _uid: me,
+      _loading: false,
+      friends,
+      stats,
+    };
+
+    if(state.page === 'closefriends') render();
+
+  } catch(e){
+    console.error('close friends load:', e);
+    if(state.user?.uid !== me) return;
+    state.closeFriendsData = {
+      _uid: me, _loading: false, _error: true,
+      friends: [], stats: {},
+    };
+    if(state.page === 'closefriends') render();
+  }
+}
+
+/* ──────────────────────────────────────────────
+   🎨 المحتوى الرئيسي
+   ────────────────────────────────────────────── */
+function renderCloseFriendsContent(){
+  const data = state.closeFriendsData;
+  const friends = data.friends;
+  const stats = data.stats;
+  const filter = state.cfFilter || 'all';
+
+  /* فلترة */
+  let filtered = [...friends];
+  if(filter === 'top'){
+    filtered = filtered.slice(0, 5);
+  } else if(filter === 'mutual'){
+    filtered = filtered.filter(f => f.mutualFollow);
+  } else if(filter === 'trust'){
+    filtered = filtered.filter(f => f.hasTrusted || f.isTrustedBy);
+  } else if(filter === 'active'){
+    filtered = filtered.filter(f => f.recentChat);
+  }
+
+  return `
+    <!-- ═══ Hero ═══ -->
+    <div class="cf-hero">
+      <button type="button" class="cf-refresh-btn" data-action="cf-refresh" title="تحديث">
+        ${ic('bolt','xs')}
+      </button>
+      <div class="cf-hero-header">
+        <div class="cf-hero-icon">🧡</div>
+        <div class="cf-hero-text">
+          <h1 class="cf-hero-h">المقربون</h1>
+          <div class="cf-hero-sub">دائرتك الخاصة — الأصدقاء الأوثق واللاعبون الأقرب إليك</div>
+        </div>
+      </div>
+
+      <div class="cf-stats-grid">
+        <div class="cf-stat">
+          <div class="cf-stat-v">${nf(stats.total)}</div>
+          <div class="cf-stat-l">مقرب</div>
+        </div>
+        <div class="cf-stat">
+          <div class="cf-stat-v" style="color:#22c55e">${nf(stats.mutual)}</div>
+          <div class="cf-stat-l">متبادل</div>
+        </div>
+        <div class="cf-stat">
+          <div class="cf-stat-v" style="color:#00d2ff">${nf(stats.trust)}</div>
+          <div class="cf-stat-l">ثقة</div>
+        </div>
+        <div class="cf-stat">
+          <div class="cf-stat-v" style="color:#f5b301">${nf(stats.games)}</div>
+          <div class="cf-stat-l">مباراة</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Filters ═══ -->
+    ${friends.length > 0 ? `
+      <div class="cf-filters-outer">
+        <div class="cf-filters">
+          <button class="nf-chip ${filter==='all'?'active':''}" data-cf-filter="all">
+            ${ic('users','xs')} <span>الكل</span>
+            <span class="nf-chip-count">${stats.total}</span>
+          </button>
+          <button class="nf-chip ${filter==='top'?'active':''}" data-cf-filter="top">
+            ${ic('trophy','xs')} <span>الأقرب</span>
+          </button>
+          <button class="nf-chip ${filter==='mutual'?'active':''}" data-cf-filter="mutual">
+            ${ic('users','xs')} <span>متبادل</span>
+            <span class="nf-chip-count">${stats.mutual}</span>
+          </button>
+          <button class="nf-chip ${filter==='trust'?'active':''}" data-cf-filter="trust">
+            ${ic('shield','xs')} <span>ثقة</span>
+            <span class="nf-chip-count">${stats.trust}</span>
+          </button>
+          <button class="nf-chip ${filter==='active'?'active':''}" data-cf-filter="active">
+            ${ic('bolt','xs')} <span>نشط</span>
+            <span class="nf-chip-count">${stats.recent}</span>
+          </button>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- ═══ Empty state ═══ -->
+    ${!friends.length ? `
+      <div class="cf-empty">
+        <div class="cf-empty-icon">🧡</div>
+        <div class="cf-empty-title">دائرتك فارغة حالياً</div>
+        <div class="cf-empty-sub">
+          ابدأ بتكوين دائرة المقربين:<br>
+          • تابع لاعباً لمتابعتك المتبادلة<br>
+          • امنح الثقة لمن تثق به<br>
+          • العب مباريات مع أصدقائك<br>
+          • أرسل هدايا وتعليقات
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px;padding:11px 22px" data-nav="home">
+          ${ic('search','sm')} استكشف المجتمع
+        </button>
+      </div>
+    ` : filtered.length === 0 ? `
+      ${emptyState('لا مقربين في هذه الفئة — جرّب فلتر آخر', 'users')}
+    ` : filtered.map((f, i) => renderCloseFriendCard(f, i, filter === 'all' ? i : -1)).join('')}
+  `;
+}
+
+/* ──────────────────────────────────────────────
+   🃏 بطاقة الصديق المقرب
+   ────────────────────────────────────────────── */
+function renderCloseFriendCard(f, displayIdx, realIdx){
+  const u = f.user;
+  const isTop3 = realIdx >= 0 && realIdx < 3;
+  const rank = realIdx >= 0 ? realIdx + 1 : displayIdx + 1;
+  const level = getClosenessLevel(f.score);
+  const pct = Math.min(100, (f.score / 1000) * 100);
+  const status = PLAYER_STATUSES[u.status || 'available'] || PLAYER_STATUSES.available;
+
+  /* بناء شبكة التفاعلات */
+  const items = [];
+  if(f.gamesPlayed > 0)        items.push({ i:'🎮', v:f.gamesPlayed, l:'مباراة' });
+  if(f.hasChat)                items.push({ i:'💬', l:'محادثة' });
+  if(f.giftsSent + f.giftsReceived > 0)
+                               items.push({ i:'🎁', v:f.giftsSent + f.giftsReceived, l:'هدية' });
+  if(f.mutualFollow)           items.push({ i:'🤝', l:'متبادل' });
+  if(f.hasTrusted)             items.push({ i:'🛡️', l:'تثق به' });
+  if(f.isTrustedBy)            items.push({ i:'✅', l:'يثق بك' });
+  if(f.supportsSent + f.supportsReceived > 0)
+                               items.push({ i:'⭐', v:f.supportsSent + f.supportsReceived, l:'دعم' });
+
+  /* آخر تفاعل */
+  const lastTxt = f.lastInteraction ? `آخر تفاعل ${timeAgo(f.lastInteraction)}` : null;
+
+  return `
+    <div class="cf-card ${isTop3 ? 'cf-top-'+rank : ''}">
+      ${isTop3 ? `<div class="cf-card-crown">${rank===1?'🥇':rank===2?'🥈':'🥉'}</div>` : ''}
+
+      <!-- Head -->
+      <div class="cf-card-head" data-view-profile="${u.uid}">
+        <div class="cf-avatar-wrap">
+          ${avatar(u, 56)}
+          <span class="cf-status-dot" style="background:${status.color}" title="${status.label}"></span>
+        </div>
+        <div class="cf-info">
+          <div class="cf-name">
+            ${esc(u.name)}
+            ${getAdminBadge(u)}
+          </div>
+          <div class="cf-meta">
+            <span class="cf-level">LV ${u.level || 1}</span>
+            <span class="cf-dot">·</span>
+            <span class="cf-status-label">${status.icon} ${status.label}</span>
+            ${lastTxt ? `<span class="cf-dot">·</span><span>${lastTxt}</span>` : ''}
+          </div>
+          <div class="cf-score">
+            <span class="cf-level-badge" style="color:${level.color}">
+              ${level.emoji} ${level.name}
+            </span>
+            <span class="cf-score-val">${nf(f.score)} نقطة</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="cf-progress">
+        <span style="width:${pct}%;background:${level.color};box-shadow:0 0 12px ${level.color}"></span>
+      </div>
+
+      <!-- Interactions -->
+      <div class="cf-interactions">
+        ${items.length
+          ? items.map(it => `
+              <div class="cf-int-item">
+                <span class="cf-int-icon">${it.i}</span>
+                ${it.v !== undefined ? `<span class="cf-int-val">${nf(it.v)}</span>` : ''}
+                <span class="cf-int-lbl">${it.l}</span>
+              </div>`).join('')
+          : `<div class="cf-int-empty">🌱 علاقتكما في بدايتها — ابدأ التفاعل الآن!</div>`}
+      </div>
+
+      <!-- Actions -->
+      <div class="cf-actions">
+        <button class="cf-act primary" data-open-chat="${u.uid}">
+          ${ic('message','sm')} <span>مراسلة</span>
+        </button>
+        <button class="cf-act" data-send-gift="${u.uid}">
+          ${ic('crown','sm')} <span>إهداء</span>
+        </button>
+        <button class="cf-act" data-send-challenge="${u.uid}">
+          ${ic('bolt','sm')} <span>تحدي</span>
+        </button>
+        <button class="cf-act icon-only" data-action="view-relation" data-uid="${u.uid}" title="العلاقة الكاملة">
+          ${ic('chart','sm')}
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 function pageStats(){
@@ -12572,58 +13474,386 @@ function pageAchievements(){
   `;
 }
 
-function pageLeaderboard(){
-  const tabs = [
-    ['heba',       'الهيبة'],
-    ['fame',       'الشهرة'],
-    ['power',      'القوة'],
-    ['reputation', 'السمعة'],
-    ['followers',  'المتابعون'],
-  ];
+/* ============================================================
+   🏆 لوحة الصدارة — نسخة شاملة ومتطورة
+   ============================================================ */
 
-  /* ★ ترتيب حسب القيمة المطلوبة */
-  const users = Object.values(state.users).sort((a, b) => {
-    if(state.lbTab === 'heba'){
-      return calculateHeba(b) - calculateHeba(a);
+/* تصنيفات لوحة الصدارة */
+const LB_CATEGORIES = {
+  heba: {
+    label:'الهيبة', emoji:'👑', icon:'crown', color:'#f5b301',
+    format: (u) => calculateHeba(u),
+    desc: 'الشهرة + القوة + السمعة',
+  },
+  fame: {
+    label:'الشهرة', emoji:'⭐', icon:'star', color:'#a78bfa',
+    format: (u) => u.fame || 0,
+    desc: 'انتشارك وسمعتك',
+  },
+  power: {
+    label:'القوة', emoji:'⚡', icon:'bolt', color:'#00d2ff',
+    format: (u) => u.power || 0,
+    desc: 'مهارتك في الألعاب',
+  },
+  reputation: {
+    label:'السمعة', emoji:'🤝', icon:'shield', color:'#22c55e',
+    format: (u) => typeof u.reputation === 'number' ? u.reputation : calculateReputationFromData(u),
+    desc: 'ثقة المجتمع بك',
+  },
+  followers: {
+    label:'المتابعون', emoji:'👥', icon:'users', color:'#ec4899',
+    format: (u) => u.followers || 0,
+    desc: 'شعبيتك',
+  },
+  trust: {
+    label:'الثقات', emoji:'🛡️', icon:'check', color:'#10b981',
+    format: (u) => u.trustReceived || 0,
+    desc: 'من يثق بك',
+  },
+  level: {
+    label:'المستوى', emoji:'🏅', icon:'medal', color:'#ff8a00',
+    format: (u) => u.level || 1,
+    desc: 'تقدمك العام',
+  },
+  likes: {
+    label:'الإعجابات', emoji:'❤️', icon:'heart', color:'#ff3d71',
+    format: (u) => (u.likesProfile || 0) + (u.likesGames || 0),
+    desc: 'تفاعل المجتمع معك',
+  },
+};
+
+const LB_TABS_ORDER = ['heba','fame','power','reputation','followers','trust','level','likes'];
+
+/* ──────────────────────────────────────────────
+   📊 تتبع تغيّر الترتيب (بين زيارتين)
+   ────────────────────────────────────────────── */
+function getRankDeltas(categoryKey, rankedUsers){
+  const storageKey = `nexus_lb_ranks_${categoryKey}`;
+  let prevRanks = {};
+  try { prevRanks = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch(e){}
+
+  const deltas = {};
+  const newRanks = {};
+
+  rankedUsers.forEach((u, i) => {
+    const curRank = i + 1;
+    newRanks[u.uid] = curRank;
+    const prevRank = prevRanks[u.uid];
+
+    if(prevRank !== undefined && prevRank !== curRank){
+      const delta = prevRank - curRank;
+      if(delta !== 0) deltas[u.uid] = delta;
+    } else if(prevRank === undefined && curRank <= 100){
+      deltas[u.uid] = 'new';
     }
-    return (b[state.lbTab] || 0) - (a[state.lbTab] || 0);
   });
 
-  /* ★ قيمة العرض */
-  const getValue = (u) => {
-    if(state.lbTab === 'heba') return calculateHeba(u);
-    if(state.lbTab === 'reputation') {
-      return typeof u.reputation === 'number'
-        ? u.reputation
-        : calculateReputationFromData(u);
-    }
-    return u[state.lbTab] || 0;
-  };
+  try { localStorage.setItem(storageKey, JSON.stringify(newRanks)); } catch(e){}
+  return deltas;
+}
+
+/* ──────────────────────────────────────────────
+   🥇 ميداليات المراكز
+   ────────────────────────────────────────────── */
+function getRankEmoji(rank){
+  if(rank === 1) return '🥇';
+  if(rank === 2) return '🥈';
+  if(rank === 3) return '🥉';
+  return null;
+}
+
+/* ──────────────────────────────────────────────
+   🏅 Podium — التوب 3
+   ────────────────────────────────────────────── */
+function renderLBPodium(top3, category, showHebaRank){
+  if(!top3.length) return '';
+
+  /* ترتيب العرض: [2nd, 1st, 3rd] — الكلاسيكي */
+  const order = [1, 0, 2].filter(i => top3[i]);
+  const heights = { 0: 70, 1: 95, 2: 55 };   /* idx → base height */
 
   return `
-    <div class="chips" style="margin-bottom:14px">
-      ${tabs.map(([k, l]) =>
-        `<button class="chip ${state.lbTab === k ? 'active' : ''}" data-lb="${k}">${l}</button>`
-      ).join('')}
-    </div>
-    ${users.length ? users.map((u, i) => {
-      const value = getValue(u);
-      const rank = state.lbTab === 'heba' ? getHebaRank(value) : null;
-      return `
-        <div class="lb-row ${u.uid === state.user.uid ? 'me' : ''}" data-view-profile="${u.uid}" style="cursor:pointer">
-          <div class="lb-rank ${i < 3 ? 'r' + (i + 1) : ''}">${i + 1}</div>
-          ${avatar(u, 40)}
-          <div class="lb-mid">
-            <div class="lb-n">
-              ${esc(u.name)}
-              ${u.uid === state.user.uid ? '<span class="pill" style="font-size:9px">أنت</span>' : ''}
-              ${rank ? `<span style="font-size:11px;color:${rank.color}">${rank.emoji}</span>` : ''}
+    <div class="lb-podium">
+      ${order.map(idx => {
+        const u = top3[idx];
+        if(!u) return '';
+        const rank = idx + 1;
+        const value = category.format(u);
+        const isMe = u.uid === state.user.uid;
+        const hebaRank = showHebaRank ? getHebaRank(value) : null;
+
+        return `
+          <div class="lb-podium-item rank-${rank} ${isMe ? 'me' : ''}" data-view-profile="${u.uid}">
+            ${rank === 1 ? '<div class="lb-podium-crown">👑</div>' : ''}
+            <div class="lb-podium-avatar">
+              ${avatar(u, rank === 1 ? 56 : 48)}
+              <div class="lb-podium-medal">${getRankEmoji(rank)}</div>
             </div>
-            <div class="lb-s">@${esc(u.username)}</div>
+            <div class="lb-podium-name">
+              ${esc((u.name || '').split(' ')[0] || 'لاعب')}
+              ${isMe ? '<span class="pill" style="font-size:8px;padding:1px 5px">أنت</span>' : ''}
+            </div>
+            <div class="lb-podium-value">
+              <span class="lb-pv-icon">${category.emoji}</span>
+              <span class="lb-pv-num">${nf(value)}</span>
+            </div>
+            ${hebaRank ? `<div class="lb-podium-rank-tag" style="color:${hebaRank.color}">${hebaRank.emoji} ${hebaRank.label}</div>` : ''}
+            <div class="lb-podium-base" style="height:${heights[idx]}px"></div>
           </div>
-          <div class="lb-v">${nf(value)}</div>
-        </div>`;
-    }).join('') : emptyState('لا يوجد لاعبون بعد', 'trophy')}`;
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+/* ──────────────────────────────────────────────
+   📋 صف في القائمة (بدءاً من #4)
+   ────────────────────────────────────────────── */
+function renderLBRow(u, rank, category, delta, topValue, showHebaRank){
+  const value = category.format(u);
+  const isMe = u.uid === state.user.uid;
+  const pct = topValue > 0 ? Math.min(100, (value / topValue) * 100) : 0;
+  const hebaRank = showHebaRank ? getHebaRank(value) : null;
+
+  /* Delta badge */
+  const deltaHTML = (() => {
+    if(delta === 'new') return `<span class="lb-delta new">جديد</span>`;
+    if(typeof delta === 'number' && delta !== 0){
+      if(delta > 0) return `<span class="lb-delta up" title="صعد ${delta}">▲${delta}</span>`;
+      return `<span class="lb-delta down" title="هبط ${Math.abs(delta)}">▼${Math.abs(delta)}</span>`;
+    }
+    return `<span class="lb-delta same">—</span>`;
+  })();
+
+  return `
+    <div class="lb-row-v2 ${isMe ? 'me' : ''}" data-view-profile="${u.uid}">
+      <div class="lb-rank-v2">#${rank}</div>
+
+      <div class="lb-avatar-v2">
+        ${avatar(u, 42)}
+        ${deltaHTML}
+      </div>
+
+      <div class="lb-info-v2">
+        <div class="lb-name-v2">
+          ${esc(u.name || 'لاعب')}
+          ${isMe ? '<span class="pill" style="font-size:9px;padding:1px 6px">أنت</span>' : ''}
+          ${getAdminBadge(u)}
+        </div>
+        <div class="lb-sub-v2">
+          <span>@${esc(u.username || '')}</span>
+          <span class="lb-dot">·</span>
+          <span class="lb-level-chip">LV ${u.level || 1}</span>
+          ${hebaRank ? `<span class="lb-heba-tag" style="color:${hebaRank.color}">${hebaRank.emoji}</span>` : ''}
+        </div>
+        <div class="lb-progress-v2">
+          <span style="width:${pct}%;background:${category.color};box-shadow:0 0 8px ${category.color}88"></span>
+        </div>
+      </div>
+
+      <div class="lb-value-v2" style="color:${category.color}">
+        <span class="lb-value-icon">${category.emoji}</span>
+        <span class="lb-value-num">${nf(value)}</span>
+      </div>
+    </div>
+  `;
+}
+
+/* ──────────────────────────────────────────────
+   🎯 بطاقة "مركزك"
+   ────────────────────────────────────────────── */
+function renderLBMyCard(me, myRank, total, myValue, category, topValue, showHebaRank){
+  if(!me || !myRank){
+    return `
+      <div class="lb-my-card empty">
+        <div class="lb-my-empty-icon">📍</div>
+        <div class="lb-my-empty-text">
+          <div class="lb-my-title">لم تظهر في الترتيب بعد</div>
+          <div class="lb-my-sub">ابدأ بالتفاعل للظهور في لوحة الصدارة</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const pct = topValue > 0 ? Math.min(100, (myValue / topValue) * 100) : 0;
+  const gap = topValue - myValue;
+  const hebaRank = showHebaRank ? getHebaRank(myValue) : null;
+  const topMsg = myRank === 1
+    ? '🎉 أنت في القمة!'
+    : `تحتاج ${nf(gap)} للوصول للقمة`;
+
+  return `
+    <div class="lb-my-card" style="--cat-color:${category.color}">
+      <div class="lb-my-header">
+        <div class="lb-my-icon">${category.emoji}</div>
+        <div class="lb-my-text">
+          <div class="lb-my-title">مركزك في ${category.label}</div>
+          <div class="lb-my-sub">${category.desc}</div>
+        </div>
+        <div class="lb-my-rank-badge">
+          <span class="lb-my-rank-num">#${myRank}</span>
+          <span class="lb-my-rank-of">من ${total}</span>
+        </div>
+      </div>
+
+      <div class="lb-my-bar-wrap">
+        <div class="lb-my-bar">
+          <span style="width:${pct}%;background:${category.color};box-shadow:0 0 12px ${category.color}"></span>
+        </div>
+        <div class="lb-my-value-row">
+          <span class="lb-my-value" style="color:${category.color}">
+            ${category.emoji} ${nf(myValue)}
+          </span>
+          <span class="lb-my-gap">${topMsg}</span>
+        </div>
+      </div>
+
+      ${hebaRank ? `
+        <div class="lb-my-status" style="color:${hebaRank.color}">
+          <span>${hebaRank.emoji}</span>
+          <span>${hebaRank.label}</span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+/* ──────────────────────────────────────────────
+   🏆 الصفحة الرئيسية
+   ────────────────────────────────────────────── */
+function pageLeaderboard(){
+  const meUid = state.user.uid;
+  const tab = state.lbTab || 'heba';
+  const category = LB_CATEGORIES[tab] || LB_CATEGORIES.heba;
+  const filter = state.lbFilter || 'all';
+  const search = (state.lbSearch || '').toLowerCase().trim();
+  const showHebaRank = (tab === 'heba');
+
+  /* المرشحون */
+  let candidates = Object.values(state.users || {}).filter(u => u && u.uid);
+
+  /* فلترة */
+  if(filter === 'following'){
+    candidates = candidates.filter(u => u.uid === meUid || state.followed.has(u.uid));
+  }
+
+  /* بحث */
+  if(search){
+    candidates = candidates.filter(u =>
+      (u.name || '').toLowerCase().includes(search) ||
+      (u.username || '').toLowerCase().includes(search)
+    );
+  }
+
+  /* ترتيب */
+  candidates.sort((a, b) => category.format(b) - category.format(a));
+
+  /* بياناتي */
+  const me = state.profile;
+  const myIdx = candidates.findIndex(u => u.uid === meUid);
+  const myRank = myIdx >= 0 ? myIdx + 1 : null;
+  const myValue = myIdx >= 0 ? category.format(candidates[myIdx]) : 0;
+  const total = candidates.length;
+  const topValue = total > 0 ? category.format(candidates[0]) : 0;
+
+  /* Podium + rest */
+  const top3 = candidates.slice(0, 3);
+  const rest = candidates.slice(3);
+
+  /* Deltas */
+  const deltas = getRankDeltas(tab, candidates);
+
+  /* Tabs */
+  const tabsHTML = LB_TABS_ORDER.map(k => {
+    const c = LB_CATEGORIES[k];
+    if(!c) return '';
+    return `
+      <button type="button" class="lb-tab ${tab === k ? 'active' : ''}"
+              data-lb="${k}" style="--tab-color:${c.color}">
+        <span class="lb-tab-icon">${c.emoji}</span>
+        <span class="lb-tab-label">${c.label}</span>
+      </button>
+    `;
+  }).join('');
+
+  return `
+    <!-- ═══ Hero ═══ -->
+    <div class="lb-hero">
+      <div class="lb-hero-icon">🏆</div>
+      <div class="lb-hero-text">
+        <h1 class="lb-hero-h">لوحة الصدارة</h1>
+        <div class="lb-hero-sub">
+          ${category.emoji} ترتيب حسب <b>${category.label}</b>
+          <span class="lb-dot">·</span>
+          ${nf(total)} لاعب
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ مركزك ═══ -->
+    ${renderLBMyCard(me, myRank, total, myValue, category, topValue, showHebaRank)}
+
+    <!-- ═══ التبويبات ═══ -->
+    <div class="lb-tabs-wrap">
+      <div class="lb-tabs" id="lbTabsScroll">
+        ${tabsHTML}
+      </div>
+    </div>
+
+    <!-- ═══ فلاتر + بحث ═══ -->
+    <div class="lb-filters-row">
+      <div class="lb-filters-outer">
+        <div class="lb-filters">
+          <button type="button" class="nf-chip ${filter === 'all' ? 'active' : ''}" data-lb-filter="all">
+            ${ic('globe','xs')} <span>الكل</span>
+          </button>
+          <button type="button" class="nf-chip ${filter === 'following' ? 'active' : ''}" data-lb-filter="following">
+            ${ic('users','xs')} <span>متابَعون</span>
+          </button>
+        </div>
+      </div>
+      <div class="lb-search-wrap">
+        ${ic('search','xs')}
+        <input type="text" class="lb-search-input" id="lbSearchInput"
+               placeholder="ابحث…"
+               value="${esc(state.lbSearch || '')}"
+               autocomplete="off">
+        ${state.lbSearch ? `
+          <button type="button" class="lb-search-clear" data-action="lb-search-clear" aria-label="مسح">
+            ${ic('close','xs')}
+          </button>` : ''}
+      </div>
+    </div>
+
+    <!-- ═══ Podium ═══ -->
+    ${top3.length > 0 ? renderLBPodium(top3, category, showHebaRank) : ''}
+
+    <!-- ═══ القائمة ═══ -->
+    ${candidates.length === 0
+      ? (search
+          ? `<div class="lb-no-results">
+               ${ic('search')}
+               <div class="lb-no-results-title">لا نتائج لـ «${esc(search)}»</div>
+               <div class="lb-no-results-sub">جرّب كلمة أخرى</div>
+             </div>`
+          : emptyState('لا يوجد لاعبون بعد', 'trophy'))
+      : (rest.length > 0
+          ? `<div class="lb-list-v2">
+               ${rest.map((u, i) => {
+                 const rank = i + 4;
+                 return renderLBRow(u, rank, category, deltas[u.uid], topValue, showHebaRank);
+               }).join('')}
+             </div>`
+          : '')
+    }
+
+    <!-- ═══ تلميح إذا كان المستخدم في Top 3 ═══ -->
+    ${myRank && myRank <= 3 ? `
+      <div class="lb-top-note">
+        🎉 أنت في المركز <b>#${myRank}</b> — استمر بالتقدم!
+      </div>
+    ` : ''}
+  `;
 }
 
 function pageSettings(){
@@ -12663,18 +13893,366 @@ function pageSettings(){
     </div>`;
 }
 
+/* ============================================================
+   🛡️ فريق الدعم — التعريفات
+   ============================================================ */
+const SUPPORT_ROLE_TYPES = {
+  admin: {
+    label: 'المشرف العام',
+    emoji: '👑',
+    color: '#f5b301',
+    desc: 'صلاحيات كاملة على النظام — المسؤول الأعلى',
+  },
+  games: {
+    label: 'مشرف ألعاب',
+    emoji: '🎮',
+    color: '#00d2ff',
+    desc: 'إدارة البطولات والغرف والألعاب',
+  },
+  content: {
+    label: 'مشرف محتوى',
+    emoji: '📝',
+    color: '#ff3d71',
+    desc: 'مراقبة المنشورات والتعليقات والبلاغات',
+  },
+  users: {
+    label: 'مشرف مستخدمين',
+    emoji: '👥',
+    color: '#22c55e',
+    desc: 'إدارة الحسابات والتحقق والمشاكل',
+  },
+  data: {
+    label: 'مشرف بيانات',
+    emoji: '📊',
+    color: '#a78bfa',
+    desc: 'تحليل الإحصائيات ومراقبة النزاهة',
+  },
+};
+
+/* استخراج مفتاح الدور من بيانات المستخدم */
+function getSupportRoleKey(u){
+  if(!u) return null;
+  if(u.role === 'admin') return 'admin';
+  if(u.role === 'moderator') return u.adminTask || 'content';
+  return null;
+}
+
+/* ============================================================
+   🛡️ صفحة فريق الدعم — نسخة شاملة
+   ============================================================ */
 function pageSupport(){
-  const admins = Object.values(state.users).filter(u=>u.role==='admin' || u.role==='moderator');
+  const meUid = state.user.uid;
+  const filter = state.supportFilter || 'all';
+  const search = (state.supportSearch || '').toLowerCase().trim();
+
+  /* جمع كل المشرفين */
+  const staff = Object.values(state.users || {})
+    .filter(u => u && (u.role === 'admin' || u.role === 'moderator'))
+    .map(u => {
+      const roleKey = getSupportRoleKey(u);
+      return {
+        ...u,
+        _roleKey: roleKey,
+        _role: SUPPORT_ROLE_TYPES[roleKey] || SUPPORT_ROLE_TYPES.content,
+      };
+    });
+
+  /* إحصائيات */
+  const stats = {
+    total:      staff.length,
+    admins:     staff.filter(s => s._roleKey === 'admin').length,
+    moderators: staff.filter(s => s._roleKey !== 'admin').length,
+    online:     staff.filter(s => ['available','playing'].includes(s.status || 'available')).length,
+  };
+
+  /* فلترة */
+  let filtered = staff;
+  if(filter === 'admin'){
+    filtered = filtered.filter(s => s._roleKey === 'admin');
+  } else if(filter === 'moderator'){
+    filtered = filtered.filter(s => s._roleKey !== 'admin');
+  } else if(filter !== 'all'){
+    filtered = filtered.filter(s => s._roleKey === filter);
+  }
+
+  /* بحث */
+  if(search){
+    filtered = filtered.filter(s =>
+      (s.name || '').toLowerCase().includes(search) ||
+      (s.username || '').toLowerCase().includes(search)
+    );
+  }
+
+  /* ترتيب: admin أولاً، ثم حسب المستوى تنازلياً */
+  filtered.sort((a, b) => {
+    if(a._roleKey === 'admin' && b._roleKey !== 'admin') return -1;
+    if(b._roleKey === 'admin' && a._roleKey !== 'admin') return 1;
+    return (b.level || 1) - (a.level || 1);
+  });
+
   return `
-    <div class="card" style="margin-bottom:14px"><div class="muted" style="line-height:1.85">
-      المشرفون مسؤولون عن تنظيم المجتمع. الترقية من قِبل المشرف العام.
-    </div></div>
-    ${admins.length ? admins.map(u=>`<div class="staff-item">
-      ${avatar(u,46)}
-      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.name)}</div>
-      <div class="muted" style="font-size:10.5px;margin-top:2px">@${esc(u.username)}</div></div>
-      <span class="role-badge ${u.role}">${u.role==='admin'?'المشرف العام':'مشرف'}</span>
-    </div>`).join('') : emptyState('لا يوجد مشرفون بعد','shield')}`;
+    <!-- ═══ Hero ═══ -->
+    <div class="support-hero">
+      <div class="support-hero-icon">🛡️</div>
+      <div class="support-hero-text">
+        <h1 class="support-hero-h">فريق الدعم</h1>
+        <div class="support-hero-sub">
+          فريقنا متاح لمساعدتك وضمان تجربة آمنة وممتعة للجميع
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Stats ═══ -->
+    ${staff.length > 0 ? `
+      <div class="support-stats-grid">
+        <div class="support-stat">
+          <div class="support-stat-v">${nf(stats.total)}</div>
+          <div class="support-stat-l">إجمالي</div>
+        </div>
+        <div class="support-stat">
+          <div class="support-stat-v" style="color:#f5b301">${nf(stats.admins)}</div>
+          <div class="support-stat-l">👑 إدارة</div>
+        </div>
+        <div class="support-stat">
+          <div class="support-stat-v" style="color:#00d2ff">${nf(stats.moderators)}</div>
+          <div class="support-stat-l">🛡️ مشرفون</div>
+        </div>
+        <div class="support-stat">
+          <div class="support-stat-v" style="color:#22c55e">${nf(stats.online)}</div>
+          <div class="support-stat-l">🟢 متاحون</div>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- ═══ Filters ═══ -->
+    ${staff.length > 0 ? `
+      <div class="support-filters-outer">
+        <div class="support-filters">
+          <button type="button" class="nf-chip ${filter==='all'?'active':''}" data-support-filter="all">
+            ${ic('users','xs')} <span>الكل</span>
+            <span class="nf-chip-count">${stats.total}</span>
+          </button>
+          <button type="button" class="nf-chip ${filter==='admin'?'active':''}" data-support-filter="admin">
+            👑 <span>الإدارة</span>
+            ${stats.admins > 0 ? `<span class="nf-chip-count">${stats.admins}</span>` : ''}
+          </button>
+          <button type="button" class="nf-chip ${filter==='moderator'?'active':''}" data-support-filter="moderator">
+            🛡️ <span>مشرفون</span>
+            ${stats.moderators > 0 ? `<span class="nf-chip-count">${stats.moderators}</span>` : ''}
+          </button>
+          ${['games','content','users','data'].map(k => {
+            const r = SUPPORT_ROLE_TYPES[k];
+            const count = staff.filter(s => s._roleKey === k).length;
+            if(count === 0) return '';
+            return `
+              <button type="button" class="nf-chip ${filter===k?'active':''}" data-support-filter="${k}">
+                ${r.emoji} <span>${r.label.replace('مشرف ','')}</span>
+                <span class="nf-chip-count">${count}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- ═══ Search ═══ -->
+    ${staff.length > 0 ? `
+      <div class="support-search-wrap">
+        ${ic('search','xs')}
+        <input type="text" class="support-search-input" id="supportSearchInput"
+               placeholder="ابحث عن مشرف…"
+               value="${esc(state.supportSearch || '')}"
+               autocomplete="off">
+        ${state.supportSearch ? `
+          <button type="button" class="support-search-clear" data-action="support-search-clear" aria-label="مسح">
+            ${ic('close','xs')}
+          </button>
+        ` : ''}
+      </div>
+    ` : ''}
+
+    <!-- ═══ Cards / Empty ═══ -->
+    ${filtered.length === 0
+      ? (search
+          ? `<div class="support-no-results">
+               ${ic('search')}
+               <div class="support-no-results-title">لا نتائج لـ «${esc(search)}»</div>
+               <div class="support-no-results-sub">جرّب كلمة أخرى</div>
+             </div>`
+          : staff.length === 0
+            ? emptyState('لا يوجد مشرفون حالياً — سيُعيَّن فريق قريباً', 'shield')
+            : emptyState('لا مشرفون في هذه الفئة', 'shield'))
+      : `<div class="support-list">
+           ${filtered.map(u => renderSupportCard(u, meUid)).join('')}
+         </div>`
+    }
+
+    <!-- ═══ Guidelines ═══ -->
+    <div class="support-info-card">
+      <div class="support-info-header">
+        <div class="support-info-icon">💡</div>
+        <div class="support-info-title">قبل أن تتواصل</div>
+      </div>
+      <ul class="support-info-list">
+        <li>${ic('check','xs')} اذكر المشكلة بوضوح مع أدلة (لقطات شاشة)</li>
+        <li>${ic('check','xs')} اختر المشرف المختص بموضوعك</li>
+        <li>${ic('check','xs')} كن صبوراً — الردود قد تتأخر خارج أوقات العمل</li>
+        <li>${ic('check','xs')} اقرأ قواعد المجتمع قبل تقديم شكوى</li>
+      </ul>
+    </div>
+
+    <!-- ═══ CTA ═══ -->
+    ${staff.length > 0 ? `
+      <div class="support-cta">
+        <div class="support-cta-icon">🚨</div>
+        <div class="support-cta-text">
+          <div class="support-cta-title">هل تحتاج مساعدة عاجلة؟</div>
+          <div class="support-cta-sub">تواصل مع مشرف متاح الآن</div>
+        </div>
+        <button type="button" class="support-cta-btn" data-action="support-quick-report">
+          ${ic('bolt','xs')} ابدأ
+        </button>
+      </div>
+    ` : ''}
+  `;
+}
+
+/* ──────────────────────────────────────────────
+   🃏 بطاقة المشرف
+   ────────────────────────────────────────────── */
+function renderSupportCard(u, meUid){
+  const roleKey = u._roleKey;
+  const role    = u._role;
+  const isMe    = u.uid === meUid;
+  const isAdmin = roleKey === 'admin';
+  const status  = PLAYER_STATUSES[u.status || 'available'] || PLAYER_STATUSES.available;
+
+  return `
+    <div class="support-card ${isAdmin ? 'is-admin' : ''}" style="--role-color:${role.color}">
+      <div class="support-card-bg" aria-hidden="true"></div>
+
+      <div class="support-card-head" data-view-profile="${u.uid}">
+        <div class="support-card-avatar">
+          ${avatar(u, 56)}
+          <span class="support-card-status" style="background:${status.color}" title="${status.label}"></span>
+        </div>
+        <div class="support-card-info">
+          <div class="support-card-name">
+            ${esc(u.name)}
+            ${isMe ? '<span class="pill" style="font-size:8px;padding:1px 5px">أنت</span>' : ''}
+          </div>
+          <div class="support-card-username">@${esc(u.username)}</div>
+          <div class="support-card-role" style="color:${role.color}">
+            <span class="scr-emoji">${role.emoji}</span>
+            <span class="scr-label">${role.label}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="support-card-desc">${role.desc}</div>
+
+      <div class="support-card-stats">
+        <div class="support-card-stat">
+          <div class="scs-icon">🏅</div>
+          <div class="scs-val">${u.level || 1}</div>
+          <div class="scs-lbl">مستوى</div>
+        </div>
+        <div class="support-card-stat">
+          <div class="scs-icon">🛡️</div>
+          <div class="scs-val">${nf(u.trustReceived || 0)}</div>
+          <div class="scs-lbl">ثقة</div>
+        </div>
+        <div class="support-card-stat">
+          <div class="scs-icon">👥</div>
+          <div class="scs-val">${nf(u.followers || 0)}</div>
+          <div class="scs-lbl">متابع</div>
+        </div>
+      </div>
+
+      <div class="support-card-actions">
+        <button type="button" class="support-act primary" data-open-chat="${u.uid}" ${isMe ? 'disabled' : ''}>
+          ${ic('message','sm')} <span>${isMe ? 'أنت' : 'مراسلة'}</span>
+        </button>
+        <button type="button" class="support-act" data-view-profile="${u.uid}">
+          ${ic('user','sm')} <span>الملف</span>
+        </button>
+        ${isAdmin
+          ? `<button type="button" class="support-act icon-only" disabled
+                     title="لا يمكن الإبلاغ عن المشرف العام">
+               ${ic('shield','sm')}
+             </button>`
+          : `<button type="button" class="support-act icon-only"
+                     data-report-target="${u.uid}" data-report-type="user"
+                     title="إبلاغ">
+               ${ic('shield','sm')}
+             </button>`}
+      </div>
+    </div>
+  `;
+}
+
+/* ──────────────────────────────────────────────
+   🚨 مودال "تواصل سريع" — يعرض المتاحين فقط
+   ────────────────────────────────────────────── */
+function openQuickSupportModal(){
+  const meUid = state.user.uid;
+
+  const onlineStaff = Object.values(state.users || {})
+    .filter(u => u && (u.role === 'admin' || u.role === 'moderator'))
+    .filter(u => ['available','playing'].includes(u.status || 'available'))
+    .sort((a, b) => {
+      if(a.role === 'admin' && b.role !== 'admin') return -1;
+      if(b.role === 'admin' && a.role !== 'admin') return 1;
+      return (b.level || 1) - (a.level || 1);
+    });
+
+  if(onlineStaff.length === 0){
+    return toast('لا يوجد مشرفون متاحون الآن — جرّب لاحقاً');
+  }
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">🚨 تواصل سريع</h3>
+      <button class="icon-btn" data-action="modal-close" type="button" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+    <div class="sub" style="margin-bottom:14px">
+      ${nf(onlineStaff.length)} مشرف متاح الآن — اختر من تريد مراسلته
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${onlineStaff.map(u => {
+        const roleKey = getSupportRoleKey(u);
+        const role = SUPPORT_ROLES_DISPLAY(roleKey);
+        const isMe = u.uid === meUid;
+        return `
+          <div class="support-quick-row ${isMe?'me':''}"
+               ${isMe ? '' : `data-open-chat="${u.uid}" data-close-modal="1"`}
+               style="--role-color:${role.color}">
+            ${avatar(u, 42)}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px">
+                ${esc(u.name)}
+                ${isMe ? '<span class="pill" style="font-size:8px;padding:1px 5px">أنت</span>' : ''}
+              </div>
+              <div style="font-size:10px;color:${role.color};font-weight:700;margin-top:2px">
+                ${role.emoji} ${role.label}
+              </div>
+            </div>
+            ${isMe ? '' : `<span style="color:var(--brand-2);flex-shrink:0">${ic('message','sm')}</span>`}
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close" type="button">إغلاق</button>
+    </div>
+  `);
+}
+
+/* helper صغير للوصول لتعريف الدور */
+function SUPPORT_ROLES_DISPLAY(roleKey){
+  return SUPPORT_ROLE_TYPES[roleKey] || SUPPORT_ROLE_TYPES.content;
 }
 
 async function pageAdmin(){
@@ -13002,9 +14580,10 @@ const afterRender = () => {
   if(state.page === 'teams' && state.viewingTeamTab === 'chat' && state.viewingTeamId){
     setTimeout(renderTeamChat, 50);
   }
-  if(state.page === 'customization' && state.custActiveZone){
-    tagSubtabsForZone(state.custActiveZone);
-  }
+if(state.page === 'customization' && state.custActiveZone){
+  tagSubtabsForZone(state.custActiveZone);
+  tagTierLocks(state.custActiveZone);   // ← أضف هذا السطر
+}
   /* ★★ جديد: تهيئة سحب الفلاتر ★★ */
   if(state.page === 'notifs'){
     setTimeout(initFiltersDrag, 0);
@@ -13935,7 +15514,8 @@ async function syncUserComments(updates){
     );
     console.log(`✅ synced ${snap.size} comments`);
   } catch(e){
-    console.warn('syncUserComments failed:', e);
+    /* ★ صامت — الميزة اختيارية ولا تؤثر على الوظائف الأساسية */
+    console.debug('syncUserComments skipped:', e.code);
   }
 }
 
@@ -14946,41 +16526,126 @@ function refreshCustOptions(){
     : '';
 }
 
-/* ============================================================
-   💎 مودال الاشتراكات
-   ============================================================ */
 function openSubscriptionPlansModal(){
   const p = state.profile;
   if(!p) return;
   const sub = getSubscription(p);
+  const plans = Object.values(SUBSCRIPTION_PLANS);
 
   openModal(`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h3 style="margin:0">💎 الاشتراكات</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">💎 خطط الاشتراك</h3>
       <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
         ${ic('close','sm')}
       </button>
     </div>
-    <div class="sub-plans-grid">
-      ${Object.entries(SUBSCRIPTION_PLANS).filter(([k])=>k!=='free').map(([k, pl])=>{
-        const isActive = sub.plan === k;
+    <div class="sub-plans-scroll">
+      ${plans.map(pl => {
+        const isActive = sub.plan === pl.id;
         return `
-          <button class="sub-plan-card ${isActive?'active':''}" data-buy-plan="${k}">
-            <div class="sp-top" style="background:${pl.color}20;border-color:${pl.color}50">
-              <div style="font-size:28px">${pl.emoji}</div>
-              <div style="font-size:14px;font-weight:900;color:${pl.color}">${pl.name}</div>
-              <div style="font-size:11px;color:var(--muted)">${pl.durationDays} يوم</div>
+          <div class="sub-plan-new ${isActive ? 'active' : ''}" style="--plan-color:${pl.color}">
+            <div class="spn-badge" style="background:${pl.color}20;border-color:${pl.color}50">
+              <div class="spn-emoji">${pl.emoji}</div>
+              <div class="spn-name" style="color:${pl.color}">${pl.name}</div>
+              <div class="spn-tier">المستوى ${pl.tier}</div>
             </div>
-            <div class="sp-body">
-              <div style="font-size:16px;font-weight:900;color:var(--gold)">${nf(pl.price)} عملة</div>
-              ${isActive
-                ? `<span class="pill ok" style="font-size:9px;margin-top:6px">✓ نشط</span>`
-                : `<span class="btn btn-primary btn-sm" style="margin-top:6px;width:100%;font-size:11px">شراء</span>`}
+            <div class="spn-body">
+              <div class="spn-price">
+                <span>${nf(pl.price)}</span><small>عملة</small>
+              </div>
+              <div class="spn-duration">${pl.durationDays} يوم</div>
+              ${isActive ? `<div class="spn-active-badge">✓ نشط</div>` : ''}
+              <div class="spn-buttons">
+                <button class="btn btn-primary btn-sm" data-buy-plan="${pl.id}" ${isActive ? 'disabled' : ''}>
+                  ${isActive ? 'نشط' : 'اشتراك'}
+                </button>
+                <button class="btn btn-ghost btn-sm" data-plan-info="${pl.id}">
+                  معلومات
+                </button>
+              </div>
             </div>
-          </button>
+          </div>
         `;
       }).join('')}
     </div>
+  `);
+}
+
+function openPlanInfoModal(planId){
+  const plan = SUBSCRIPTION_PLANS[planId];
+  if(!plan) return;
+
+  /* ميزات كل مستوى */
+  const featuresByTier = {
+    1: [
+      'تبويب الصورة في الغلاف',
+      'الأشكال الأساسية للصورة الشخصية (دائرية/مستديرة/مربعة)',
+      'حدود الصورة الشخصية وحجمها',
+      'الإطارات المتحركة',
+      'تبويب اللون للاسم',
+    ],
+    2: [
+      'كل ما في المستوى الأول +',
+      'نمط الغلاف',
+      'كل أشكال الصورة الشخصية',
+      'تأثيرات الصورة الشخصية',
+      'نوع حركة الصورة الشخصية',
+      'الزخرفة ولونها',
+      'تبويب الخط للاسم',
+      'نمط النبذة ولونها',
+      'الثيم',
+      'جميع تخصيصات المستوى',
+    ],
+    3: [
+      'كل ما في المستوى الثاني +',
+      'تأثير الغلاف',
+      'سرعة حركة الصورة',
+      'موضع وحجم وخلفية الزخرفة',
+      'تأثير وحركة الاسم',
+      'جميع تخصيصات اسم المستخدم',
+      'تنسيق النبذة وأيقونتها',
+      'تخطيط الثيم واللون المميز والموسيقى',
+      'جميع تخصيصات البطاقة',
+      'ألوان النصوص',
+      'جميع التأثيرات (جزيئات/بريق/مؤشر)',
+    ],
+    4: [
+      'كل ما في المستوى الثالث +',
+      'حركة الغلاف',
+      'شارة الاسم',
+      'خطوط النصوص',
+      'جميع تخصيصات التواقيع',
+      'جميع تخصيصات المنشورات',
+      'جميع تخصيصات الملف المختصر',
+    ],
+  };
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">${plan.emoji} ${plan.name}</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+    <div style="text-align:center;padding:16px;border-radius:14px;
+                background:${plan.color}15;border:1px solid ${plan.color}40;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:900;color:${plan.color}">المستوى ${plan.tier}</div>
+      <div style="font-size:26px;font-weight:900;color:var(--gold);margin-top:6px">
+        ${nf(plan.price)} <small style="font-size:12px;color:var(--muted)">عملة</small>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">${plan.durationDays} يوم</div>
+    </div>
+    <div class="plan-info-features">
+      ${featuresByTier[plan.tier].map(f => `
+        <div class="plan-info-item">
+          <span class="pii-check">✓</span>
+          <span>${f}</span>
+        </div>
+      `).join('')}
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:16px" data-buy-plan="${plan.id}">
+      ${ic('crown','sm')} اشترك في ${plan.name}
+    </button>
   `);
 }
 
@@ -16547,60 +18212,53 @@ async function resetZone(zone){
    🔄 إعادة تعيين كل التخصيصات
    ============================================================ */
 async function resetAllCustomizations(){
-  if(!confirm('إعادة تعيين جميع تخصيصات البطاقة؟ (لن تُحذف الصور)')) return;
+  if(!confirm('إعادة تعيين جميع تخصيصات البطاقة؟')) return;
 
-  /* ═══════════ 1) جمع الحقول ═══════════ */
   const allFields = new Set();
   Object.values(ZONE_FIELDS).forEach(arr => arr.forEach(f => allFields.add(f)));
   const defaults = getProfileCustomization({});
-
   const updates = {};
   allFields.forEach(f => {
-    if(f in defaults && state.profile[f] !== defaults[f]){
-      updates[f] = defaults[f];
-    }
+    if(f in defaults && state.profile[f] !== defaults[f]) updates[f] = defaults[f];
   });
 
-  /* معالجة الإطارات والثيم */
-  const currentEquipped = state.profile.equipped || {};
-  const newEquipped = { ...currentEquipped, themeId: 'default' };
-  delete newEquipped.frameId;
+  const curEq = state.profile.equipped || {};
+  const newEq = { ...curEq, themeId: 'default' };
+  delete newEq.frameId;
 
-  if(state.profile.frameId && state.profile.frameId !== 'none'){
-    updates.frameId = 'none';
-  }
-  if(state.profile.themeId && state.profile.themeId !== 'default'){
-    updates.themeId = 'default';
+  if(Object.keys(updates).length === 0 && !curEq.frameId && curEq.themeId === 'default'){
+    return toast('البطاقة بالفعل بالإعدادات الافتراضية ✓');
   }
 
-  const entries = Object.entries(updates);
-  const hasEquippedChange = currentEquipped.frameId || currentEquipped.themeId !== 'default';
-
-  if(entries.length === 0 && !hasEquippedChange){
-    toast('البطاقة بالفعل بالإعدادات الافتراضية ✓');
-    return;
-  }
-
-  /* ═══════════ 2) ★ ارفع العلم أولاً — قبل أي شيء ═══════════ */
   state._resettingAll = true;
-
   try {
-    /* ═══════════ 3) تطبيق محلي فوري + render واحد ═══════════ */
+    /* ★ طلب واحد فقط — يطابق قاعدة RESET */
+    const payload = { ...updates, equipped: newEq };
+
     Object.assign(state.profile, updates);
-    state.profile.equipped = newEquipped;
+    state.profile.equipped = newEq;
     render();
 
-    /* ═══════════ 4) ★ كتابة واحدة لكل الحقول بدل 100+ كتابة ═══════════ */
-    const payload = { ...updates, equipped: newEquipped };
     await updateDoc(doc(db, 'users', state.user.uid), payload);
 
-    toast('البطاقة أصبحت بالإعدادات الافتراضية ✓');
+    const count = Object.keys(updates).length + 1;
+    toast(`✓ أُعيد تعيين ${count} حقل بنجاح`);
   } catch(e){
     console.error('❌ resetAllCustomizations:', e);
-    toast('فشل الحفظ: ' + (e.message || e.code || ''));
+    if(e.code === 'permission-denied'){
+      /* محاولة احتياطية: بدون equipped */
+      try {
+        await updateDoc(doc(db, 'users', state.user.uid), updates);
+        toast(`✓ أُعيد تعيين ${Object.keys(updates).length} حقل`);
+      } catch(e2){
+        console.error('❌ fallback also failed:', e2);
+        toast('فشل الحفظ — راجع Console');
+      }
+    } else {
+      toast('فشل الحفظ: ' + (e.message || ''));
+    }
   } finally {
-    /* ═══════════ 5) ★ أبقِ العلم مرفوعاً 2 ثانية لتغطية onSnapshot ═══════════ */
-    setTimeout(() => { state._resettingAll = false; }, 2000);
+    setTimeout(() => { state._resettingAll = false; }, 1500);
   }
 }
 
@@ -16682,6 +18340,84 @@ function applyFieldVisibility(fields){
   });
   document.querySelectorAll('.cust-field-tab').forEach(b => {
     b.classList.toggle('active', b.dataset.fieldTab === state.custFieldTab);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   🔒 وسم العناصر المقفلة حسب المستوى
+   ═══════════════════════════════════════════════ */
+function tagTierLocks(zone){
+  if(!state.profile || !zone) return;
+  const userTier = getSubscription(state.profile).tier;
+
+  /* ── 1) أزرار التبويبات الفرعية ── */
+  document.querySelectorAll('.cust-sub-tab').forEach(btn => {
+    const subId = btn.dataset.custSubtab;
+    const tier = getSubtabTier(zone, subId);
+    const locked = userTier < tier;
+
+    btn.classList.toggle('locked', locked);
+    btn.querySelector('.lock-badge')?.remove();
+    if(locked){
+      btn.dataset.lockTier = tier;
+      const lock = document.createElement('span');
+      lock.className = 'lock-badge';
+      lock.textContent = '🔒';
+      btn.appendChild(lock);
+    } else {
+      delete btn.dataset.lockTier;
+    }
+  });
+
+  /* ── 2) أزرار الخيارات (data-cust) ── */
+  document.querySelectorAll('.cust-zone-body [data-cust]').forEach(btn => {
+    const field = btn.dataset.cust;
+    const value = btn.dataset.val;
+    const tier = getFieldTier(field, value);
+    const locked = userTier < tier;
+
+    btn.classList.toggle('locked', locked);
+    if(locked) btn.dataset.lockTier = tier;
+    else delete btn.dataset.lockTier;
+  });
+
+  /* ── 3) الحقول الكاملة (sliders / checkboxes / inputs) ── */
+  document.querySelectorAll('.cust-zone-body .cust-field').forEach(f => {
+    /* احذف تراكباً قديماً */
+    f.querySelector('.cust-field-overlay')?.remove();
+    f.classList.remove('field-locked');
+
+    /* اكتشف المستوى */
+    let tier = 0;
+    const firstCust = f.querySelector('[data-cust]');
+    const slider    = f.querySelector('input[type="range"][id]');
+    const checkbox  = f.querySelector('input[type="checkbox"][id]');
+    const textInput = f.querySelector('input[type="text"][id], textarea[id], input:not([type])[id]');
+
+    if(firstCust){
+      tier = getFieldTier(firstCust.dataset.cust, firstCust.dataset.val);
+    } else if(slider && SLIDER_MAP[slider.id]){
+      tier = getFieldTier(SLIDER_MAP[slider.id].field);
+    } else if(checkbox && CHECKBOX_TO_FIELD[checkbox.id]){
+      tier = getFieldTier(CHECKBOX_TO_FIELD[checkbox.id]);
+    } else if(textInput && INPUT_TO_FIELD[textInput.id]){
+      tier = getFieldTier(INPUT_TO_FIELD[textInput.id]);
+    }
+
+    /* حقول لها أزرار داخلية تتعامل مع نفسها */
+    if(firstCust) return;
+
+    const locked = tier > 0 && userTier < tier;
+    if(locked){
+      f.classList.add('field-locked');
+      f.dataset.lockTier = tier;
+      const overlay = document.createElement('div');
+      overlay.className = 'cust-field-overlay';
+      overlay.dataset.action = 'show-upsell';
+      overlay.dataset.lockTier = tier;
+      overlay.textContent = `🔒 المستوى ${tier}+`;
+      f.appendChild(overlay);
+    }
   });
 }
 
@@ -16922,39 +18658,58 @@ async function applyFrame(frameId){
    ============================================================ */
 async function purchaseSubscription(planId){
   const plan = SUBSCRIPTION_PLANS[planId];
-  if(!plan || planId === 'free') return toast('خطة غير صالحة');
+  if(!plan) return toast('خطة غير صالحة');
+
   const p = state.profile;
-  if((p.coins || 0) < plan.price) return toast(`رصيد غير كافٍ — تحتاج ${nf(plan.price)} عملة`);
+  if((p.coins || 0) < plan.price){
+    return toast(`رصيد غير كافٍ — تحتاج ${nf(plan.price)} عملة`);
+  }
+
   if(!confirm(`شراء اشتراك "${plan.name}" بـ ${nf(plan.price)} عملة؟`)) return;
-  
+
+  const sub = getSubscription(p);
+  const now = new Date();
+  const newEnd = (sub.active && sub.plan === planId && sub.expiresAt)
+    ? new Date(sub.expiresAt.getTime() + plan.durationDays * 86400000)
+    : new Date(now.getTime() + plan.durationDays * 86400000);
+
   try {
-    const now = new Date();
-    const currentSub = p.subscription || {};
-    const currentEnd = currentSub.expiresAt?.toDate?.() || null;
-    let newEnd;
-    if(currentEnd && currentEnd > now && currentSub.plan === planId){
-      newEnd = new Date(currentEnd.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
-    } else {
-      newEnd = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
-    }
-    
-    // ★ بناء كائن subscription كامل
+    const userRef = doc(db, 'users', state.user.uid);
     const subscription = {
       plan: planId,
       expiresAt: Timestamp.fromDate(newEnd),
       purchasedAt: Timestamp.fromDate(now),
     };
-    
-    await updateDoc(doc(db, 'users', state.user.uid), {
-      coins: increment(-plan.price),
-      subscription,   // ← كائن كامل بدلاً من 3 dot-notation
-    });
-    
-    toast(`✨ تم تفعيل ${plan.emoji} ${plan.name} حتى ${newEnd.toLocaleDateString('ar-EG')}`);
-    await logActivity('subscription', `اشترى باقة ${plan.name}`, plan.emoji);
+
+    /* ★ إعادة المحاولة 3 مرات عند تعارض المستند */
+    let attempts = 0;
+    while(attempts < 3){
+      try {
+        await runTransaction(db, async tx => {
+          const snap = await tx.get(userRef);
+          if(!snap.exists()) throw new Error('no user');
+          const curCoins = snap.data().coins || 0;
+          if(curCoins < plan.price) throw new Error('insufficient');
+          tx.update(userRef, {
+            coins: curCoins - plan.price,
+            subscription,
+          });
+        });
+        toast(`✨ تم تفعيل ${plan.emoji} ${plan.name}`);
+        closeModal();
+        return;
+      } catch(e){
+        if(e.code === 'permission-denied') throw e;  // لا تُعد المحاولة لأخطاء الأذونات
+        attempts++;
+        if(attempts >= 3) throw e;
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
   } catch(e){
     console.error('purchaseSubscription:', e);
-    toast('فشل الشراء: ' + (e.message || ''));
+    if(e.message === 'insufficient') toast('رصيد غير كافٍ');
+    else if(e.code === 'permission-denied') toast('رفض الخادم — جرّب تسجيل الخروج والدخول');
+    else toast('فشل الشراء: ' + (e.message || ''));
   }
 }
 
@@ -17444,6 +19199,24 @@ const t = e.target.closest(
   'button'
 );
 
+/* ═══════════════════════════════════════════════
+   🛡️ بحث فريق الدعم
+   ═══════════════════════════════════════════════ */
+if(e.target.id === 'supportSearchInput'){
+  const val = e.target.value;
+  state.supportSearch = val;
+  clearTimeout(window._supportSearchTimer);
+  window._supportSearchTimer = setTimeout(() => {
+    render();
+    const input = document.getElementById('supportSearchInput');
+    if(input){
+      input.focus();
+      try { input.setSelectionRange(val.length, val.length); } catch(err){}
+    }
+  }, 300);
+  return;
+}
+
   /* ════════ 2) معالج الصور — يعمل على e.target مباشرة ════════ */
   const imgEl = e.target.closest('[data-pick-image]');
   if(imgEl){
@@ -17519,6 +19292,25 @@ if(t.dataset.action === 'cancel-reply'){
 
 if(t.dataset.insertCommentEmoji){
   insertCommentEmoji(t.dataset.insertCommentEmoji);
+  return;
+}
+
+/* ═══════════════════════════════════════════════
+   🏆 بحث لوحة الصدارة
+   ═══════════════════════════════════════════════ */
+if(e.target.id === 'lbSearchInput'){
+  const val = e.target.value;
+  state.lbSearch = val;
+  clearTimeout(window._lbSearchTimer);
+  window._lbSearchTimer = setTimeout(() => {
+    render();
+    /* استعادة التركيز والمؤشر */
+    const input = document.getElementById('lbSearchInput');
+    if(input){
+      input.focus();
+      try { input.setSelectionRange(val.length, val.length); } catch(err){}
+    }
+  }, 300);
   return;
 }
 
@@ -17705,6 +19497,12 @@ if(t.dataset.action === 'close-cust-zone'){
 
 /* التبويبات الفرعية (المستوى 2) */
 if(t.dataset.custSubtab){
+  const tier = getSubtabTier(state.custActiveZone, t.dataset.custSubtab);
+  const userTier = getSubscription(state.profile).tier;
+  if(userTier < tier){
+    showUpsellModal(tier);
+    return;
+  }
   state.custSubTab   = t.dataset.custSubtab;
   state.custFieldTab = null;      // ★ إعادة تعيين المستوى الثالث
   document.querySelectorAll('.cust-sub-tab').forEach(b => {
@@ -17852,6 +19650,22 @@ if(t.dataset.action === 'go-back'){ goBack(); return; }
     return;
   }
 
+/* ═══════════════════════════════════════════════════════
+   🧡 صفحة المقربين
+   ═══════════════════════════════════════════════════════ */
+if(t.dataset.cfFilter){
+  state.cfFilter = t.dataset.cfFilter;
+  render();
+  return;
+}
+
+if(t.dataset.action === 'cf-refresh'){
+  state.closeFriendsData = null;
+  toast('🔄 جاري التحديث…');
+  render();
+  return;
+}
+
   /* ============================================================
      6) شراء اشتراك
      ============================================================ */
@@ -17935,7 +19749,7 @@ if(t.dataset.action === 'go-back'){ goBack(); return; }
     return;
   }
 
-  /* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    ★★★ معالجات جديدة — صفحة العلاقة والإجراءات ★★★
    ═══════════════════════════════════════════════════════ */
 
@@ -17944,7 +19758,37 @@ if(t.dataset.action === 'view-relation'){
   closeModal();
   state.viewingRelationUid = t.dataset.uid;
   state.relationData = null;
+  state.relationTab = 'relation';   // ★ جديد — إعادة تعيين التبويب
   go('relation');
+  return;
+}
+
+/* ═══════════════════════════════════════════════
+   🛡️ فريق الدعم
+   ═══════════════════════════════════════════════ */
+if(t.dataset.supportFilter){
+  state.supportFilter = t.dataset.supportFilter;
+  render();
+  return;
+}
+
+if(t.dataset.action === 'support-search-clear'){
+  state.supportSearch = '';
+  render();
+  return;
+}
+
+if(t.dataset.action === 'support-quick-report'){
+  openQuickSupportModal();
+  return;
+}
+
+/* ═══════════════════════════════════════════════
+   📊 تبديل تبويبات صفحة العلاقة (3 تبويبات)
+   ═══════════════════════════════════════════════ */
+if(t.dataset.relTab){
+  state.relationTab = t.dataset.relTab;
+  render();
   return;
 }
 
@@ -17996,7 +19840,15 @@ if(t.dataset.shareProfile){
      ============================================================ */
 if(t.dataset.cust){
   const field = t.dataset.cust;
-  const val = t.dataset.val;
+  const val   = t.dataset.val;
+
+  /* 🆕 فحص المستوى أولاً */
+  const requiredTier = getFieldTier(field, val);
+  const userTier = getSubscription(state.profile).tier;
+  if(userTier < requiredTier){
+    showUpsellModal(requiredTier);
+    return;
+  }
 
   // فحوصات الأذونات (كما هي)
   if(field === 'avatarShape' && !canCustomizeShape(state.profile)){ toast('🔒 شكل الصورة يتطلب اشتراك'); return; }
@@ -18026,6 +19878,12 @@ if(t.dataset.cust){
 
 /* ★★ اختيار إحصائيات الملف المختصر ★★ */
 if(t.dataset.miniStat){
+  const requiredTier = getFieldTier('miniStats');   // = 4
+  const userTier = getSubscription(state.profile).tier;
+  if(userTier < requiredTier){
+    showUpsellModal(requiredTier);
+    return;
+  }
   const stat = t.dataset.miniStat;
   let current = [...(state.profile.miniStats || MINI_STATS_DEFAULT)];
 
@@ -18115,14 +19973,32 @@ if(t.dataset.action === 'cover-click'){
   openImageActionsModal('cover', uid);
   return;
 }
-  if(t.dataset.changeImage){ await changeProfileImage(t.dataset.changeImage); return; }
-  if(t.dataset.deleteImage){ await deleteProfileImage(t.dataset.deleteImage); return; }
-
-  /* ★★ جديد: إعادة اقتصاص الغلاف ★★ */
-  if(t.dataset.recropCover){
-    await recropCover();
+if(t.dataset.changeImage){
+  if(getSubscription(state.profile).tier < 1){
+    showUpsellModal(1);
     return;
   }
+  await changeProfileImage(t.dataset.changeImage);
+  return;
+}
+
+if(t.dataset.deleteImage){
+  if(getSubscription(state.profile).tier < 1){
+    showUpsellModal(1);
+    return;
+  }
+  await deleteProfileImage(t.dataset.deleteImage);
+  return;
+}
+
+if(t.dataset.recropCover){
+  if(getSubscription(state.profile).tier < 1){
+    showUpsellModal(1);
+    return;
+  }
+  await recropCover();
+  return;
+}
 
   /* ============================================================
      16) حظر مستخدم
@@ -18150,6 +20026,18 @@ if(t.dataset.action === 'cover-click'){
   if(t.dataset.action === 'modal-close'){ closeModal(); return; }
   if(t.dataset.action === 'toast'){ toast(t.dataset.msg || ''); return; }
 if(t.dataset.action === 'compose'){ composeModal(); return; }
+
+/* 🆕 طلب ترقية — عند النقر على أي عنصر مقفل */
+if(t.dataset.action === 'show-upsell'){
+  showUpsellModal(parseInt(t.dataset.lockTier) || 1);
+  return;
+}
+
+/* 🆕 معلومات الخطة */
+if(t.dataset.planInfo){
+  openPlanInfoModal(t.dataset.planInfo);
+  return;
+}
 
 /* ═══════════════════════════════════════════════
    #️⃣ فتح الهاشتاق
@@ -18582,7 +20470,24 @@ if(t.dataset.viewProfile){
      33) البحث / الصدارة / الإعدادات
      ============================================================ */
   if(t.dataset.scat){ state.searchCat = t.dataset.scat; render(); return; }
-  if(t.dataset.lb){ state.lbTab = t.dataset.lb; render(); return; }
+/* ═══════════════════════════════════════════════
+   🏆 لوحة الصدارة
+   ═══════════════════════════════════════════════ */
+if(t.dataset.lb){
+  state.lbTab = t.dataset.lb;
+  render();
+  return;
+}
+if(t.dataset.lbFilter){
+  state.lbFilter = t.dataset.lbFilter;
+  render();
+  return;
+}
+if(t.dataset.action === 'lb-search-clear'){
+  state.lbSearch = '';
+  render();
+  return;
+}
   if(t.dataset.toggle){ state.settings[t.dataset.toggle] = !state.settings[t.dataset.toggle]; render(); return; }
 
   /* ============================================================
@@ -18791,21 +20696,24 @@ if(notifCard && !e.target.closest('button, [data-notif-action], [data-follow], [
   /* ============================================================
      46) التخصيص (ثيم / إطار)
      ============================================================ */
-  if(t.dataset.setTheme){
-    if(!canCustomizeTheme(state.profile)){
-      toast('🔒 الثيم يتطلب اشتراك'); return;
-    }
-    await applyTheme(t.dataset.setTheme);
+if(t.dataset.setTheme){
+  const requiredTier = getSubtabTier('body', 'theme');   // = 2
+  if(getSubscription(state.profile).tier < requiredTier){
+    showUpsellModal(requiredTier);
     return;
   }
-  if(t.dataset.setFrame){
-    const frameId = t.dataset.setFrame;
-    if(!canUseFrame(state.profile, frameId)){
-      toast('🔒 هذا الإطار مقفل'); return;
-    }
-    await applyFrame(frameId);
+  await applyTheme(t.dataset.setTheme);
+  return;
+}
+if(t.dataset.setFrame){
+  const frameId = t.dataset.setFrame;
+  if(!canUseFrame(state.profile, frameId)){
+    showUpsellModal(1);
     return;
   }
+  await applyFrame(frameId);
+  return;
+}
 
   /* ============================================================
      47) الإدارة
