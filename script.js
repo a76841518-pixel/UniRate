@@ -1507,6 +1507,22 @@ showSuggestions: false,
   searchTab: 'all',
   searchRecent: [],
   activeGame:null, chatWith:null, viewingUid:null,
+/* ★★★ نظام المحادثة المتطور ★★★ */
+chatId: null,
+chatMessages: [],
+chatMeta: null,
+chatReplyTo: null,
+chatEditingId: null,
+chatEmojiOpen: false,
+chatSearchOpen: false,
+chatSearchQuery: '',
+chatFilter: 'all',
+chatScrollBtn: false,
+chatNewMsgBadge: false,
+chatMessagesUnsub: null,
+chatMetaUnsub: null,
+chatTypingTimeout: null,
+chatListSearch: '',
   viewingTeamId:null,
   liked:{}, saved:{}, profileLiked:{}, followed:new Set(),
   posts:[], users:{}, chats:[], messages:{}, notifs:[], rooms:[], teams:[],
@@ -1809,6 +1825,24 @@ if(page === 'missions' && state.page !== 'missions'){
     state.custSubTab = null;
   }
 
+  /* ★ تنظيف صفحة المحادثة الجديدة */
+if(state.page === 'chat' && page !== 'chat'){
+  if(state.chatMessagesUnsub){ try{state.chatMessagesUnsub();}catch(e){} state.chatMessagesUnsub = null; }
+  if(state.chatMetaUnsub){ try{state.chatMetaUnsub();}catch(e){} state.chatMetaUnsub = null; }
+  if(state.chatTypingTimeout){ clearTimeout(state.chatTypingTimeout); state.chatTypingTimeout = null; }
+  state.chatId = null;
+  state.chatWith = null;
+  state.chatMessages = [];
+  state.chatMeta = null;
+  state.chatReplyTo = null;
+  state.chatEditingId = null;
+  state.chatEmojiOpen = false;
+  state.chatSearchOpen = false;
+  state.chatSearchQuery = '';
+  state.chatScrollBtn = false;
+  state.chatNewMsgBadge = false;
+}
+
 /* ★ تنظيف مستمعي الفرق عند مغادرة الصفحة */
 if(state.page === 'teams' && page !== 'teams'){
   if(state.teamWarsUnsub){ try{state.teamWarsUnsub();}catch(e){} state.teamWarsUnsub = null; }
@@ -1937,11 +1971,50 @@ const NAV = [
 
 /* ★★ الصفحات الرئيسية التي تحتفظ بالأشرطة ★★ */
 const MAIN_PAGES = ['home', 'messages', 'games', 'teams'];
+/* ============================================================
+   🔴 شارة الرسائل غير المقروءة على زر القائمة السفلية
+   ============================================================ */
+function updateMessagesBadge(){
+  const me = state.user?.uid;
+  if(!me) return;
+
+  const btn = document.querySelector('.nav-btn[data-nav="messages"]');
+  if(!btn) return;
+
+  /* احسب مجموع الرسائل غير المقروءة عبر كل المحادثات */
+  const totalUnread = (state.chats || []).reduce(
+    (sum, c) => sum + (c.unreadCounts?.[me] || 0), 0
+  );
+
+  /* احذف الشارة القديمة */
+  btn.querySelector('.nav-badge')?.remove();
+  btn.classList.remove('has-badge');
+
+  /* أضف الشارة الجديدة إذا وُجد غير مقروء */
+  if(totalUnread > 0){
+    const badge = document.createElement('span');
+    badge.className = 'nav-badge';
+    badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+    btn.appendChild(badge);
+    btn.classList.add('has-badge');
+  }
+}
 function renderNav(){
-  document.getElementById('bottombar').innerHTML = NAV.map(n=>`
-    <button class="nav-btn ${state.page===n.id?'active':''}" data-nav="${n.id}">
-      ${ic(n.icon)}<span>${n.label}</span>
-    </button>`).join('');
+  const me = state.user?.uid;
+  const totalUnread = me
+    ? (state.chats || []).reduce((sum, c) => sum + (c.unreadCounts?.[me] || 0), 0)
+    : 0;
+
+  document.getElementById('bottombar').innerHTML = NAV.map(n => {
+    const showBadge = n.id === 'messages' && totalUnread > 0;
+    return `
+      <button class="nav-btn ${state.page === n.id ? 'active' : ''} ${showBadge ? 'has-badge' : ''}"
+              data-nav="${n.id}">
+        ${ic(n.icon)}
+        <span>${n.label}</span>
+        ${showBadge ? `<span class="nav-badge">${totalUnread > 99 ? '99+' : totalUnread}</span>` : ''}
+      </button>`;
+  }).join('');
 }
 
 /* ============================================================
@@ -2660,6 +2733,7 @@ case 'profile':
     case 'closefriends': cfg.title = 'المقربون'; break;
     case 'search':     cfg.title = 'البحث'; break;
     case 'notifs':     cfg.title = '🔔 الإشعارات'; break;
+    case 'chat':       cfg.title = ''; break;  // hidden
     case 'logout':     cfg.title = 'تسجيل الخروج'; break;
     case 'gamestats':  cfg.title = '📊 الإحصائيات'; break;
   }
@@ -3012,7 +3086,7 @@ await setDoc(doc(db, 'users', user.uid), {
 function detachListeners(){
   state.unsubs.forEach(u=>{ try{u();}catch(e){} });
   state.unsubs = [];
-['chatUnsub','matchUnsub','matchChatUnsub','teamChatUnsub','activityUnsub','tournamentUnsub','mmUnsub','teamWarsUnsub','teamTournamentsUnsub']
+['chatUnsub','matchUnsub','matchChatUnsub','teamChatUnsub','activityUnsub','tournamentUnsub','mmUnsub','teamWarsUnsub','teamTournamentsUnsub','chatMessagesUnsub','chatMetaUnsub']
     .forEach(k=>{ if(state[k]){ try{state[k]();}catch(e){} state[k]=null; } });
   if(state.matchTimer){ clearInterval(state.matchTimer); state.matchTimer = null; }
   if(state.mmInterval && typeof state.mmInterval === 'number'){
@@ -3166,14 +3240,19 @@ state.unsubs.push(onSnapshot(
     }
   ));
 
-  state.unsubs.push(onSnapshot(
-    query(collection(db,'chats'), where('participants','array-contains',state.user.uid)),
-    snap=>{
-      state.chats = snap.docs.map(d=>({id:d.id, ...d.data()}))
-        .sort((a,b)=>(b.lastTime?.seconds||0)-(a.lastTime?.seconds||0));
-      if(state.page==='messages' && !state.chatWith) render();
-    }
-  ));
+state.unsubs.push(onSnapshot(
+  query(collection(db,'chats'), where('participants','array-contains',state.user.uid)),
+  snap=>{
+    state.chats = snap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b)=>(b.lastTime?.seconds||0)-(a.lastTime?.seconds||0));
+
+    /* ✅ حدّث صفحة الرسائل إن كنا فيها */
+    if(state.page === 'messages') render();
+
+    /* ✅ حدّث شارة زر الرسائل فوراً (في كل الصفحات الأخرى) */
+    updateMessagesBadge();
+  }
+));
 
 state.unsubs.push(onSnapshot(
   query(collection(db,'notifications',state.user.uid,'items'), orderBy('createdAt','desc'), limit(50)),
@@ -4177,23 +4256,540 @@ async function openOrCreateChat(otherUid){
   if(!snap.exists()){
     await setDoc(chatRef, {
       participants: [state.user.uid, otherUid],
-      lastMessage: 'بداية المحادثة', lastSender: state.user.uid,
-      lastTime: serverTimestamp(), createdAt: serverTimestamp()
+      lastMessage: '',
+      lastSender: '',
+      lastTime: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      unreadCounts: {
+        [state.user.uid]: 0,
+        [otherUid]: 0,
+      },
+      typing: {},
+      lastSeen: {},
     });
   }
   return chatId;
 }
 
-async function openChat(uid){
-  if(state.chatUnsub){ try{state.chatUnsub();}catch(e){} state.chatUnsub = null; }
-  const chatId = await openOrCreateChat(uid);
-  state.chatWith = uid;
-  go('messages', { chatWith: uid });
-  const q = query(collection(db,'chats',chatId,'messages'), orderBy('createdAt','asc'), limit(200));
-  state.chatUnsub = onSnapshot(q, snap=>{
-    state.messages[chatId] = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    renderMessages(chatId);
+/* ============================================================
+   💬 نظام المحادثة المتطور — Subscriptions & Helpers
+   ============================================================ */
+
+/* ═══ الاشتراك في رسائل المحادثة + meta ═══ */
+function subscribeToChatMessages(chatId){
+  if(state.chatMessagesUnsub){ try{state.chatMessagesUnsub();}catch(e){} }
+  if(state.chatMetaUnsub){ try{state.chatMetaUnsub();}catch(e){} }
+
+  const q = query(
+    collection(db, 'chats', chatId, 'messages'),
+    orderBy('createdAt', 'asc'),
+    limit(300)
+  );
+
+  state.chatMessagesUnsub = onSnapshot(q, snap => {
+    const oldLen = state.chatMessages.length;
+    const wasNearBottom = isChatNearBottom();
+
+    state.chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if(state.page === 'chat'){
+      renderChatMessages();
+
+      if(oldLen === 0 || wasNearBottom){
+        setTimeout(() => scrollChatToBottom(oldLen > 0), 50);
+        markChatAsRead(chatId);
+      } else if(state.chatMessages.length > oldLen){
+        state.chatNewMsgBadge = true;
+        updateChatNewBadge();
+      }
+    }
+  }, err => console.warn('chat messages:', err));
+
+  state.chatMetaUnsub = onSnapshot(doc(db, 'chats', chatId), snap => {
+    if(!snap.exists()) return;
+    state.chatMeta = snap.data();
+    if(state.page === 'chat'){
+      updateChatTypingIndicator();
+    }
+  }, err => console.warn('chat meta:', err));
+}
+
+/* ═══ إرسال رسالة ═══ */
+async function sendChatMessage(chatId, text, replyTo = null){
+  const trimmed = (text || '').trim();
+  if(!trimmed) return;
+
+  const otherUid = state.chatWith;
+
+  const payload = {
+    senderId: state.user.uid,
+    text: trimmed,
+    createdAt: serverTimestamp(),
+    readBy: [state.user.uid],
+    edited: false,
+    deleted: false,
+    reactions: {},
+  };
+
+  if(replyTo){
+    payload.replyTo = {
+      msgId: replyTo.id,
+      text: (replyTo.text || '').slice(0, 100),
+      senderName: replyTo._senderName || '',
+    };
+  }
+
+  try {
+    await addDoc(collection(db, 'chats', chatId, 'messages'), payload);
+
+    await updateDoc(doc(db, 'chats', chatId), {
+      lastMessage: trimmed.slice(0, 80),
+      lastSender: state.user.uid,
+      lastTime: serverTimestamp(),
+      [`unreadCounts.${otherUid}`]: increment(1),
+      [`typing.${state.user.uid}`]: false,
+    });
+
+    /* تنظيف */
+    state.chatReplyTo = null;
+    renderChatReplyContext();
+
+  } catch(e){
+    console.error('sendChatMessage:', e);
+    toast('فشل الإرسال');
+  }
+}
+
+/* ═══ تحديث رسالة (تعديل) ═══ */
+async function updateChatMessage(chatId, msgId, newText){
+  const trimmed = (newText || '').trim();
+  if(!trimmed) return toast('الرسالة فارغة');
+
+  try {
+    await updateDoc(doc(db, 'chats', chatId, 'messages', msgId), {
+      text: trimmed,
+      edited: true,
+      editedAt: serverTimestamp(),
+    });
+    toast('تم التعديل ✓');
+  } catch(e){
+    console.error(e);
+    toast('فشل التعديل');
+  }
+}
+
+/* ═══ حذف رسالة (soft delete) ═══ */
+async function deleteChatMessage(chatId, msgId){
+  if(!confirm('حذف هذه الرسالة؟')) return;
+  try {
+    await updateDoc(doc(db, 'chats', chatId, 'messages', msgId), {
+      deleted: true,
+      text: '',
+      reactions: {},
+      deletedAt: serverTimestamp(),
+    });
+    toast('تم الحذف');
+  } catch(e){
+    console.error(e);
+    toast('فشل الحذف');
+  }
+}
+
+/* ═══ إضافة/إزالة تفاعل ═══ */
+async function toggleChatReaction(chatId, msgId, emoji){
+  const msg = state.chatMessages.find(m => m.id === msgId);
+  if(!msg) return;
+
+  const reactions = msg.reactions || {};
+  const users = reactions[emoji] || [];
+  const hasReacted = users.includes(state.user.uid);
+
+  try {
+    if(hasReacted){
+      await updateDoc(doc(db, 'chats', chatId, 'messages', msgId), {
+        [`reactions.${emoji}`]: arrayRemove(state.user.uid),
+      });
+    } else {
+      await updateDoc(doc(db, 'chats', chatId, 'messages', msgId), {
+        [`reactions.${emoji}`]: arrayUnion(state.user.uid),
+      });
+    }
+  } catch(e){ console.error(e); }
+}
+
+/* ═══ وضع علامة مقروء ═══ */
+async function markChatAsRead(chatId){
+  if(!chatId || !state.chatMessages.length) return;
+  const unread = state.chatMessages.filter(m =>
+    m.senderId !== state.user.uid &&
+    !(m.readBy || []).includes(state.user.uid)
+  );
+  if(!unread.length) return;
+
+  try {
+    await Promise.all(unread.map(m =>
+      updateDoc(doc(db, 'chats', chatId, 'messages', m.id), {
+        readBy: arrayUnion(state.user.uid),
+      }).catch(()=>{})
+    ));
+    await updateDoc(doc(db, 'chats', chatId), {
+      [`unreadCounts.${state.user.uid}`]: 0,
+    }).catch(()=>{});
+  } catch(e){ console.warn('markChatAsRead:', e); }
+}
+
+/* ═══ مؤشر الكتابة ═══ */
+function setChatTyping(chatId, isTyping){
+  if(!chatId) return;
+  updateDoc(doc(db, 'chats', chatId), {
+    [`typing.${state.user.uid}`]: isTyping,
+  }).catch(()=>{});
+}
+
+function handleChatTypingActivity(){
+  const chatId = state.chatId;
+  if(!chatId) return;
+  setChatTyping(chatId, true);
+  clearTimeout(state.chatTypingTimeout);
+  state.chatTypingTimeout = setTimeout(() => {
+    setChatTyping(chatId, false);
+    state.chatTypingTimeout = null;
+  }, 2500);
+}
+
+/* ═══ مساعدات التمرير ═══ */
+function isChatNearBottom(){
+  const el = document.getElementById('chatMessagesScroll');
+  if(!el) return true;
+  return (el.scrollHeight - el.scrollTop - el.clientHeight) < 120;
+}
+
+function scrollChatToBottom(smooth = true){
+  const el = document.getElementById('chatMessagesScroll');
+  if(!el) return;
+  el.scrollTo({
+    top: el.scrollHeight,
+    behavior: smooth ? 'smooth' : 'instant'
   });
+  state.chatScrollBtn = false;
+  state.chatNewMsgBadge = false;
+  updateChatScrollBtn();
+  updateChatNewBadge();
+}
+
+/* ═══ تحديثات DOM بسيطة ═══ */
+function updateChatScrollBtn(){
+  const btn = document.getElementById('chatScrollBtn');
+  if(!btn) return;
+  btn.classList.toggle('show', state.chatScrollBtn);
+}
+
+function updateChatNewBadge(){
+  const badge = document.getElementById('chatNewBadge');
+  if(!badge) return;
+  badge.style.display = state.chatNewMsgBadge ? 'block' : 'none';
+}
+
+function updateChatTypingIndicator(){
+  const el = document.getElementById('chatTypingIndicator');
+  if(!el) return;
+  const meta = state.chatMeta || {};
+  const otherTyping = meta.typing?.[state.chatWith] === true;
+  el.style.display = otherTyping ? 'flex' : 'none';
+  // scroll to bottom if was visible
+  if(otherTyping && isChatNearBottom()){
+    setTimeout(() => scrollChatToBottom(), 100);
+  }
+}
+
+/* ═══ تجميع الرسائل ═══ */
+function groupChatMessages(messages){
+  const groups = [];
+  let currentGroup = null;
+  let currentDate = null;
+
+  const parseDate = (ts) => ts?.toDate?.() || (ts ? new Date(ts) : new Date());
+
+  for(let i = 0; i < messages.length; i++){
+    const msg = messages[i];
+    const msgDate = parseDate(msg.createdAt);
+    const dateKey = msgDate.toDateString();
+
+    if(dateKey !== currentDate){
+      currentDate = dateKey;
+      groups.push({ type: 'date', date: msgDate, key: dateKey });
+      currentGroup = null;
+    }
+
+    const prev = i > 0 ? messages[i - 1] : null;
+    const prevDate = prev ? parseDate(prev.createdAt) : null;
+    const timeDiff = prevDate ? (msgDate - prevDate) / 1000 : Infinity;
+
+    const shouldChain =
+      currentGroup &&
+      currentGroup.type === 'messages' &&
+      currentGroup.senderId === msg.senderId &&
+      timeDiff < 300 &&
+      prev?.senderId === msg.senderId;
+
+    if(shouldChain){
+      currentGroup.messages.push({ ...msg, _chain: true, _last: true });
+      if(currentGroup.messages.length > 1){
+        currentGroup.messages[currentGroup.messages.length - 2]._last = false;
+      }
+    } else {
+      currentGroup = {
+        type: 'messages',
+        senderId: msg.senderId,
+        messages: [{ ...msg, _chain: false, _last: true }],
+      };
+      groups.push(currentGroup);
+    }
+  }
+
+  return groups;
+}
+
+/* ═══ رسم رسائل المحادثة ═══ */
+function renderChatMessages(){
+  const listEl = document.getElementById('chatMessagesList');
+  if(!listEl) return;
+
+  if(!state.chatMessages.length){
+    listEl.innerHTML = `
+      <div class="chat-empty-conversation">
+        <div style="font-size:56px;margin-bottom:14px">💬</div>
+        <div style="font-size:15px;font-weight:900;color:var(--txt);margin-bottom:6px">ابدأ المحادثة</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">
+          أرسل أول رسالة لبدء المحادثة<br>
+          مع <b style="color:var(--brand-2)">${esc(state.users[state.chatWith]?.name || '')}</b>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const filtered = state.chatSearchQuery
+    ? state.chatMessages.filter(m =>
+        (m.text || '').toLowerCase().includes(state.chatSearchQuery.toLowerCase())
+      )
+    : state.chatMessages;
+
+  if(!filtered.length){
+    listEl.innerHTML = `
+      <div class="chat-empty-conversation">
+        <div style="font-size:48px;margin-bottom:12px">🔍</div>
+        <div style="font-size:14px;font-weight:900;color:var(--txt)">لا نتائج</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:4px">
+          لا توجد رسائل تحتوي «${esc(state.chatSearchQuery)}»
+        </div>
+      </div>`;
+    return;
+  }
+
+  const groups = groupChatMessages(filtered);
+  const myUid = state.user.uid;
+  const other = state.users[state.chatWith] || { name: 'لاعب' };
+
+  listEl.innerHTML = groups.map(g => {
+    if(g.type === 'date') return renderChatDateSep(g.date, g.key);
+
+    const isMine = g.senderId === myUid;
+    const msgsHtml = g.messages.map((m, idx) =>
+      renderChatMessage(m, isMine, idx === 0, idx === g.messages.length - 1, g.messages.length > 1)
+    ).join('');
+
+    return `
+      <div class="chat-msg-group ${isMine ? 'mine' : ''}">
+        <div class="chat-msg-bubble-wrap">
+          ${msgsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  /* highlight search matches */
+  if(state.chatSearchQuery){
+    requestAnimationFrame(() => {
+      const firstMatch = listEl.querySelector('.chat-msg-bubble');
+      if(firstMatch) firstMatch.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+  }
+}
+
+/* ═══ فاصل تاريخ ═══ */
+function renderChatDateSep(date, key){
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  let label;
+  if(key === today) label = 'اليوم';
+  else if(key === yesterday) label = 'أمس';
+  else label = date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return `<div class="chat-date-sep"><span>${label}</span></div>`;
+}
+
+/* ═══ رسالة واحدة ═══ */
+function renderChatMessage(m, isMine, isFirst, isLast, isGroup){
+  if(m.deleted){
+    return `
+      <div class="chat-msg-bubble deleted ${m._chain ? 'chain' : ''} ${isLast ? 'last' : ''}">
+        <i style="opacity:.6;font-size:12px">🚫 تم حذف هذه الرسالة</i>
+      </div>`;
+  }
+
+  const time = timeAgo(m.createdAt);
+  const readBy = m.readBy || [];
+  const isRead = readBy.length >= 2;
+  const timeStr = m.createdAt?.toDate?.()
+    ? m.createdAt.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  const reactions = m.reactions || {};
+  const reactionsHtml = Object.entries(reactions)
+    .filter(([_, users]) => users?.length > 0)
+    .map(([emoji, users]) => `
+      <button class="chat-reaction ${users.includes(state.user.uid) ? 'reacted' : ''}"
+              data-chat-react="${emoji}" data-chat-msg="${m.id}" data-chat-id="${state.chatId}">
+        ${emoji} <span>${users.length}</span>
+      </button>
+    `).join('');
+
+  const replyHtml = m.replyTo ? `
+    <div class="chat-msg-reply">
+      <div class="chat-msg-reply-name">${esc(m.replyTo.senderName || 'رسالة')}</div>
+      <div class="chat-msg-reply-text">${esc(m.replyTo.text || '')}</div>
+    </div>
+  ` : '';
+
+  const editedBadge = m.edited ? ' <span style="opacity:.6;font-size:9px">(معدّل)</span>' : '';
+
+  const readIcon = isMine
+    ? `<svg class="chat-read-icon" viewBox="0 0 24 24" fill="none" stroke="${isRead ? '#5fe3ff' : 'rgba(255,255,255,.5)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+         ${isRead
+           ? '<path d="M1 12l5 5L17 6"/><path d="M9 12l5 5L23 6"/>'
+           : '<path d="M20 6L9 17l-5-5"/>'}
+       </svg>`
+    : '';
+
+  return `
+    <div class="chat-msg-bubble ${isFirst ? 'first' : 'chain'} ${isLast ? 'last' : ''} ${isMine ? 'mine' : 'theirs'}"
+         data-chat-msg-id="${m.id}" data-chat-id="${state.chatId}">
+      ${replyHtml}
+      <div class="chat-msg-text">${esc(m.text || '')}${editedBadge}</div>
+      ${reactionsHtml ? `<div class="chat-msg-reactions">${reactionsHtml}</div>` : ''}
+      <div class="chat-msg-meta">
+        <span class="chat-msg-time">${timeStr || time}</span>
+        ${readIcon}
+      </div>
+    </div>
+  `;
+}
+
+/* ═══ سياق الرد ═══ */
+function renderChatReplyContext(){
+  const wrap = document.getElementById('chatReplyContextWrap');
+  if(!wrap) return;
+
+  if(state.chatEditingId){
+    const msg = state.chatMessages.find(m => m.id === state.chatEditingId);
+    if(!msg){ state.chatEditingId = null; wrap.innerHTML = ''; return; }
+    wrap.innerHTML = `
+      <div class="chat-reply-context editing">
+        <div class="chat-reply-body">
+          <div class="chat-reply-name">✏️ تعديل الرسالة</div>
+          <div class="chat-reply-text">${esc(msg.text || '')}</div>
+        </div>
+        <button class="chat-reply-close" data-action="chat-cancel-edit" type="button">
+          ${ic('close','xs')}
+        </button>
+      </div>`;
+    return;
+  }
+
+  if(state.chatReplyTo){
+    const r = state.chatReplyTo;
+    const senderName = r.senderId === state.user.uid ? 'أنت' : (state.users[r.senderId]?.name || 'لاعب');
+    wrap.innerHTML = `
+      <div class="chat-reply-context">
+        <div class="chat-reply-body">
+          <div class="chat-reply-name">ترد على @${esc(state.users[r.senderId]?.username || senderName)}</div>
+          <div class="chat-reply-text">${esc((r.text || '').slice(0, 100))}</div>
+        </div>
+        <button class="chat-reply-close" data-action="chat-cancel-reply" type="button">
+          ${ic('close','xs')}
+        </button>
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = '';
+}
+
+/* ═══ مودال إجراءات الرسالة ═══ */
+function openChatMsgActionsModal(msgId){
+  const msg = state.chatMessages.find(m => m.id === msgId);
+  if(!msg || msg.deleted) return;
+
+  const isMine = msg.senderId === state.user.uid;
+  const chatId = state.chatId;
+
+  openModal(`
+    <div class="chat-msg-actions">
+      <button class="chat-msg-action" data-action="chat-reply-msg" data-msg-id="${msgId}">
+        ${ic('comment','sm')} رد
+      </button>
+      <button class="chat-msg-action" data-action="chat-copy-msg" data-msg-id="${msgId}">
+        ${ic('grid','sm')} نسخ
+      </button>
+      <button class="chat-msg-action" data-action="chat-react-msg" data-msg-id="${msgId}">
+        😀 تفاعل
+      </button>
+      ${isMine ? `
+        <button class="chat-msg-action" data-action="chat-edit-msg" data-msg-id="${msgId}">
+          ${ic('edit','sm')} تعديل
+        </button>
+        <button class="chat-msg-action danger" data-action="chat-delete-msg" data-msg-id="${msgId}">
+          ${ic('trash','sm')} حذف
+        </button>
+      ` : ''}
+    </div>
+  `);
+}
+
+/* ═══ منتقي الإيموجي ═══ */
+function toggleChatEmojiPicker(){
+  state.chatEmojiOpen = !state.chatEmojiOpen;
+  const wrap = document.getElementById('chatEmojiPickerWrap');
+  if(wrap) wrap.style.display = state.chatEmojiOpen ? 'block' : 'none';
+}
+
+/* ═══ إعادة رسم صفحة الرسائل عند فتحها ═══ */
+function renderChatPage(){
+  if(state.page !== 'chat') return;
+  render();
+}
+
+/* ★★★ فتح محادثة → صفحة `chat` المستقلة ★★★ */
+async function openChat(uid){
+  if(!uid || uid === state.user.uid) return toast('لا يمكنك مراسلة نفسك');
+  const other = state.users[uid];
+  if(!other) return toast('المستخدم غير موجود');
+
+  const chatId = await openOrCreateChat(uid);
+  state.chatId = chatId;
+  state.chatWith = uid;
+  state.chatReplyTo = null;
+  state.chatEditingId = null;
+  state.chatEmojiOpen = false;
+  state.chatSearchOpen = false;
+  state.chatSearchQuery = '';
+  state.chatScrollBtn = false;
+  state.chatNewMsgBadge = false;
+  state.chatMessages = [];
+  state.chatMeta = null;
+
+  go('chat');
+  subscribeToChatMessages(chatId);
 }
 
 /* ============ Games ============ */
@@ -7606,40 +8202,293 @@ async function adminHidePost(postId){
 }
 
 function pageMessages(){
-  if(state.chatWith){
-    const other = state.users[state.chatWith];
-    return `
-      <div class="row" style="margin-bottom:16px">
-        <button class="icon-btn" data-nav="messages" data-reset="chat">${ic('back','sm')}</button>
-        <div data-view-profile="${state.chatWith}" style="cursor:pointer">${avatar(other, 42)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:900">${esc(other?.name||'')}</div>
-          <div class="muted" style="font-size:10.5px">@${esc(other?.username||'')}</div>
+  const me = state.user.uid;
+  const search = (state.chatListSearch || '').toLowerCase().trim();
+  const filter = state.chatFilter || 'all';
+
+  /* إعداد القائمة */
+  let chats = [...state.chats];
+
+  /* فلترة */
+  if(filter === 'unread'){
+    chats = chats.filter(c => (c.unreadCounts?.[me] || 0) > 0);
+  }
+
+  /* بحث */
+  if(search){
+    chats = chats.filter(c => {
+      const otherId = c.participants.find(p => p !== me);
+      const other = state.users[otherId];
+      if(!other) return false;
+      return (other.name || '').toLowerCase().includes(search) ||
+             (other.username || '').toLowerCase().includes(search);
+    });
+  }
+
+  /* ترتيب */
+  chats.sort((a, b) => (b.lastTime?.seconds || 0) - (a.lastTime?.seconds || 0));
+
+  const totalUnread = state.chats.reduce((sum, c) => sum + (c.unreadCounts?.[me] || 0), 0);
+
+  return `
+    <!-- Hero -->
+    <div class="home-top">
+      <h1 class="page-title">الرسائل</h1>
+      <div style="display:flex;gap:6px">
+        ${totalUnread > 0 ? `
+          <span class="pill pink" style="padding:6px 12px">
+            ${ic('bell','xs')} ${totalUnread} جديد
+          </span>
+        ` : ''}
+        <button class="icon-btn" data-action="new-chat" title="محادثة جديدة">
+          ${ic('plus','sm')}
+        </button>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="chats-search">
+      ${ic('search','xs')}
+      <input type="text" id="chatListSearchInput"
+             placeholder="ابحث في المحادثات…"
+             value="${esc(state.chatListSearch || '')}"
+             autocomplete="off">
+      ${state.chatListSearch ? `
+        <button class="icon-btn" data-action="clear-chat-search"
+                style="width:24px;height:24px;background:transparent;border:0">
+          ${ic('close','xs')}
+        </button>
+      ` : ''}
+    </div>
+
+    <!-- Filters -->
+    <div class="chats-filters">
+      <button class="nf-chip ${filter === 'all' ? 'active' : ''}" data-chat-filter="all">
+        ${ic('message','xs')} <span>الكل</span>
+        <span class="nf-chip-count">${state.chats.length}</span>
+      </button>
+      <button class="nf-chip ${filter === 'unread' ? 'active' : ''}" data-chat-filter="unread">
+        ${ic('bell','xs')} <span>غير مقروء</span>
+        ${totalUnread > 0 ? `<span class="nf-chip-count">${totalUnread}</span>` : ''}
+      </button>
+    </div>
+
+    <!-- List -->
+    ${chats.length ? `
+      <div class="chats-list">
+        ${chats.map(c => renderChatListItem(c, me)).join('')}
+      </div>
+    ` : `
+      <div class="chats-empty">
+        <div class="chats-empty-icon">${search ? '🔍' : '💬'}</div>
+        <div class="chats-empty-title">
+          ${search ? 'لا نتائج' : 'لا توجد محادثات'}
+        </div>
+        <div class="chats-empty-sub">
+          ${search
+            ? `لا محادثات تطابق «${esc(state.chatListSearch)}»`
+            : 'ابدأ محادثة جديدة مع أصدقائك'}
+        </div>
+        ${!search ? `
+          <button class="btn btn-primary" style="margin-top:18px"
+                  data-action="new-chat">
+            ${ic('plus','sm')} محادثة جديدة
+          </button>
+        ` : ''}
+      </div>
+    `}
+  `;
+}
+
+/* ═══ عنصر في قائمة المحادثات ═══ */
+function renderChatListItem(chat, me){
+  const otherId = chat.participants.find(p => p !== me);
+  const other = state.users[otherId];
+  if(!other) return '';
+
+  const unread = chat.unreadCounts?.[me] || 0;
+  const online = ['available','playing'].includes(other.status || 'available');
+  const isTyping = chat.typing?.[otherId] === true;
+  const lastSender = chat.lastSender;
+  const isMyLast = lastSender === me;
+
+  const preview = chat.lastMessage
+    ? (isMyLast ? '✓ ' : '') + chat.lastMessage
+    : 'ابدأ المحادثة…';
+
+  return `
+    <button type="button" class="chat-list-item ${unread > 0 ? 'unread' : ''}"
+            data-open-chat="${otherId}">
+      <div class="chat-list-avatar">
+        ${avatar(other, 50)}
+        ${online ? '<div class="chat-online-dot"></div>' : ''}
+      </div>
+      <div class="chat-list-body">
+        <div class="chat-list-top">
+          <div class="chat-list-name">${esc(other.name)}</div>
+          <div class="chat-list-time">${chat.lastTime ? timeAgo(chat.lastTime) : ''}</div>
+        </div>
+        <div class="chat-list-preview">
+          <span class="chat-list-preview-text">
+            ${isTyping
+              ? '<span class="chat-list-typing">✍️ يكتب…</span>'
+              : esc(preview)}
+          </span>
+          ${unread > 0 ? `<span class="chat-list-unread-badge">${unread > 99 ? '99+' : unread}</span>` : ''}
         </div>
       </div>
-      <div class="card" style="min-height:360px;display:flex;flex-direction:column" id="chatBox">
-        <div id="messagesList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:8px;max-height:55vh"></div>
-        <div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--line);margin-top:10px">
-          <input class="input" id="msgInput" placeholder="اكتب رسالة…" style="flex:1" autocomplete="off">
-          <button class="btn btn-primary" id="sendMsgBtn" style="padding:10px 16px">${ic('send','sm')}</button>
-        </div>
-      </div>`;
+    </button>
+  `;
+}
+
+/* ============================================================
+   💬 صفحة المحادثة الجديدة — متطورة
+   ============================================================ */
+function pageChat(){
+  const otherUid = state.chatWith;
+  if(!otherUid) {
+    setTimeout(() => go('messages'), 0);
+    return emptyState('جارٍ العودة…','message');
   }
-  return `<h1 class="page-title">الرسائل</h1>
-    <div class="card pad0" style="padding:6px">
-    ${state.chats.length ? state.chats.map(c=>{
-      const otherId = c.participants.find(p=>p!==state.user.uid);
-      const other = state.users[otherId];
-      if(!other) return '';
-      return `<button class="chat-item" data-chat="${otherId}">
-        <div style="position:relative">${avatar(other, 50)}</div>
-        <div class="chat-mid">
-          <div class="chat-n"><span>${esc(other.name)}</span><span class="chat-time">${timeAgo(c.lastTime)}</span></div>
-          <div class="chat-last">${esc(c.lastMessage||'بداية المحادثة')}</div>
+
+  const other = state.users[otherUid];
+  if(!other) return emptyState('المستخدم غير موجود','user');
+
+  const meta = state.chatMeta || {};
+  const online = ['available','playing'].includes(other.status || 'available');
+  const otherTyping = meta.typing?.[otherUid] === true;
+
+  /* الحالة */
+  let statusText, statusColor;
+  if(otherTyping){
+    statusText = '✍️ يكتب…';
+    statusColor = 'var(--brand-2)';
+  } else if(online){
+    statusText = `متصل الآن · ${esc(other.name)}`;
+    statusColor = 'var(--ok)';
+  } else {
+    const lastSeen = meta.lastSeen?.[otherUid]?.toDate?.();
+    statusText = lastSeen ? `آخر ظهور ${timeAgo(lastSeen)}` : `@${esc(other.username)}`;
+    statusColor = 'var(--muted)';
+  }
+
+  /* Emoji picker */
+  const pickerEmojis = ['😀','😃','😂','🤣','😊','😍','🥰','😘','😎','🤔','😅','😭','😡','🥳','🤗','😴',
+    '👍','👎','👏','🙌','🤝','💪','👊','✌️','🔥','✨','💯','🎉','❤️','💖','💙','💚','💜','🖤','🤍','💔',
+    '🌹','🌸','🌺','🎁','🏆','⭐','💎','👑','🍕','🍔','☕','🍺','🌈','🌙','☀️','☕'];
+
+  return `
+    <div class="chat-page">
+      <!-- ═══ Header ═══ -->
+      <div class="chat-page-header">
+        <button type="button" class="icon-btn chat-back-btn"
+                data-nav="messages" style="width:38px;height:38px">
+          ${ic('back','sm')}
+        </button>
+
+        <div class="chat-page-avatar" data-view-profile="${otherUid}" style="cursor:pointer">
+          ${avatar(other, 40)}
         </div>
-      </button>`;
-    }).join('') : emptyState('لا توجد محادثات','message')}
-    </div>`;
+
+        <div class="chat-page-info" data-view-profile="${otherUid}" style="cursor:pointer;flex:1;min-width:0">
+          <div class="chat-page-name">
+            ${esc(other.name)}
+            ${getAdminBadge(other)}
+          </div>
+          <div class="chat-page-status" style="color:${statusColor}">
+            ${otherTyping ? '<span class="chat-typing-dots-mini"><span></span><span></span><span></span></span>' : ''}
+            ${statusText}
+          </div>
+        </div>
+
+        <button type="button" class="icon-btn" data-action="chat-search-toggle"
+                style="width:38px;height:38px" title="بحث">
+          ${ic('search','sm')}
+        </button>
+        <button type="button" class="icon-btn" data-action="chat-menu"
+                style="width:38px;height:38px" title="خيارات">
+          ${ic('dots','sm')}
+        </button>
+      </div>
+
+      <!-- ═══ Search bar ═══ -->
+      ${state.chatSearchOpen ? `
+        <div class="chat-search-bar">
+          ${ic('search','sm')}
+          <input type="text" id="chatSearchInput"
+                 placeholder="ابحث في المحادثة…"
+                 value="${esc(state.chatSearchQuery || '')}"
+                 autocomplete="off">
+          <button type="button" class="icon-btn" data-action="chat-search-close"
+                  style="width:28px;height:28px;background:transparent;border:0">
+            ${ic('close','sm')}
+          </button>
+        </div>
+      ` : ''}
+
+      <!-- ═══ Messages area ═══ -->
+      <div class="chat-page-messages-wrap">
+        <div class="chat-page-messages" id="chatMessagesScroll">
+          <div id="chatMessagesList">
+            ${state.chatMessages.length
+              ? '<div class="comments-loading"><div class="spinner"></div></div>'
+              : ''}
+          </div>
+
+          <!-- Typing indicator -->
+          <div id="chatTypingIndicator" class="chat-typing-indicator" style="display:${otherTyping ? 'flex' : 'none'}">
+            <span class="chat-typing-dot"></span>
+            <span class="chat-typing-dot"></span>
+            <span class="chat-typing-dot"></span>
+          </div>
+        </div>
+
+        <!-- New messages badge -->
+        <div id="chatNewBadge" class="chat-new-badge"
+             data-action="chat-scroll-new"
+             style="display:${state.chatNewMsgBadge ? 'block' : 'none'}">
+          ⬇️ رسائل جديدة
+        </div>
+
+        <!-- Scroll to bottom -->
+        <button type="button" id="chatScrollBtn"
+                class="chat-scroll-bottom ${state.chatScrollBtn ? 'show' : ''}"
+                data-action="chat-scroll-bottom-btn">
+          ${ic('back','sm')}
+        </button>
+      </div>
+
+      <!-- ═══ Input area ═══ -->
+      <div class="chat-page-input" id="chatInputArea">
+        <div id="chatReplyContextWrap"></div>
+
+        <div class="chat-input-row">
+          <button type="button" class="chat-input-btn"
+                  data-action="chat-emoji-toggle" title="إيموجي">
+            😊
+          </button>
+
+          <textarea id="chatInput"
+                    class="chat-input-textarea"
+                    placeholder="اكتب رسالة…"
+                    rows="1"
+                    maxlength="2000"
+                    autocomplete="off"></textarea>
+
+          <button type="button" class="chat-input-btn send"
+                  id="chatSendBtn" disabled>
+            ${ic('send','sm')}
+          </button>
+        </div>
+
+        <!-- Emoji picker -->
+        <div id="chatEmojiPickerWrap" class="chat-emoji-picker"
+             style="display:${state.chatEmojiOpen ? 'block' : 'none'}">
+          ${pickerEmojis.map(e => `<button type="button" data-chat-insert-emoji="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderMessages(chatId){
@@ -7651,6 +8500,159 @@ function renderMessages(chatId){
     return `<div style="align-self:${me?'flex-end':'flex-start'};background:${me?'var(--grad)':'var(--card-2)'};color:${me?'#fff':'var(--txt)'};padding:9px 13px;border-radius:${me?'16px 16px 4px 16px':'16px 16px 16px 4px'};max-width:78%;font-size:13px">${esc(m.text)}</div>`;
   }).join('') || `<div class="muted" style="text-align:center">بداية المحادثة</div>`;
   box.scrollTop = box.scrollHeight;
+}
+
+/* ═══ محادثة جديدة — اختر مستخدماً ═══ */
+function openNewChatPicker(){
+  const me = state.user.uid;
+  const users = Object.values(state.users)
+    .filter(u => u && u.uid !== me && !state.profile?.blockedUsers?.includes(u.uid))
+    .sort((a, b) => {
+      const aMutual = state.followed.has(a.uid);
+      const bMutual = state.followed.has(b.uid);
+      if(aMutual !== bMutual) return aMutual ? -1 : 1;
+      return (b.level || 1) - (a.level || 1);
+    })
+    .slice(0, 40);
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">💬 محادثة جديدة</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+    <div class="chats-search" style="margin-bottom:14px">
+      ${ic('search','xs')}
+      <input type="text" id="newChatSearchInput" placeholder="ابحث عن مستخدم…" autocomplete="off">
+    </div>
+    <div id="newChatList" style="max-height:55vh;overflow-y:auto">
+      ${users.map(u => `
+        <button type="button" class="chat-list-item" data-open-chat="${u.uid}" data-close-modal="1">
+          <div class="chat-list-avatar">
+            ${avatar(u, 44)}
+            ${['available','playing'].includes(u.status || 'available') ? '<div class="chat-online-dot"></div>' : ''}
+          </div>
+          <div class="chat-list-body">
+            <div class="chat-list-top">
+              <div class="chat-list-name">${esc(u.name)} ${getAdminBadge(u)}</div>
+            </div>
+            <div class="chat-list-preview">
+              <span class="chat-list-preview-text">@${esc(u.username)}</span>
+            </div>
+          </div>
+        </button>
+      `).join('')}
+    </div>
+  `);
+
+  /* بحث فوري */
+  setTimeout(() => {
+    const input = document.getElementById('newChatSearchInput');
+    if(!input) return;
+    input.focus();
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase().trim();
+      const list = document.getElementById('newChatList');
+      if(!list) return;
+      const filtered = users.filter(u =>
+        (u.name || '').toLowerCase().includes(q) ||
+        (u.username || '').toLowerCase().includes(q)
+      );
+      list.innerHTML = filtered.map(u => `
+        <button type="button" class="chat-list-item" data-open-chat="${u.uid}" data-close-modal="1">
+          <div class="chat-list-avatar">
+            ${avatar(u, 44)}
+          </div>
+          <div class="chat-list-body">
+            <div class="chat-list-top">
+              <div class="chat-list-name">${esc(u.name)} ${getAdminBadge(u)}</div>
+            </div>
+            <div class="chat-list-preview">
+              <span class="chat-list-preview-text">@${esc(u.username)}</span>
+            </div>
+          </div>
+        </button>
+      `).join('') || `<div class="empty" style="padding:30px">لا نتائج</div>`;
+    });
+  }, 50);
+}
+
+/* ═══ قائمة إجراءات المحادثة ═══ */
+function openChatActionsModal(){
+  const other = state.users[state.chatWith];
+  if(!other) return;
+
+  const meta = state.chatMeta || {};
+  const iMuted = (meta.muted || []).includes(state.user.uid);
+
+  openModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      ${avatar(other, 60)}
+      <div style="font-size:14px;font-weight:900;margin-top:8px">${esc(other.name)}</div>
+      <div class="muted" style="font-size:11px">@${esc(other.username)}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button class="set-row" data-view-profile="${other.uid}" data-close-modal="1">
+        ${ic('user','sm')} <span class="sr-txt"><span class="sr-n">عرض الملف الشخصي</span></span>
+      </button>
+      <button class="set-row" data-action="chat-mute-toggle" data-close-modal="1">
+        ${ic('bell','sm')}
+        <span class="sr-txt"><span class="sr-n">${iMuted ? 'إلغاء كتم المحادثة' : 'كتم المحادثة'}</span></span>
+      </button>
+      <button class="set-row" data-action="chat-clear" data-close-modal="1" style="color:#f5c451">
+        ${ic('trash','sm')}
+        <span class="sr-txt"><span class="sr-n" style="color:#f5c451">مسح المحادثة</span></span>
+      </button>
+      <button class="set-row" data-block-user="${other.uid}" data-close-modal="1" style="color:#ff7b9d">
+        ${ic('lock','sm')}
+        <span class="sr-txt"><span class="sr-n" style="color:#ff7b9d">حظر</span></span>
+      </button>
+      <button class="set-row" data-report-target="${other.uid}" data-report-type="user" data-close-modal="1">
+        ${ic('shield','sm')} <span class="sr-txt"><span class="sr-n">إبلاغ</span></span>
+      </button>
+    </div>
+  `);
+}
+
+/* ═══ منتقي تفاعل سريع ═══ */
+function openChatReactionPicker(msgId){
+  const quick = ['❤️','😂','😮','😢','👍','🔥'];
+  openModal(`
+    <div style="display:flex;justify-content:center;gap:8px;padding:14px">
+      ${quick.map(e => `
+        <button class="chat-input-btn" style="width:48px;height:48px;font-size:22px"
+                data-chat-react="${e}" data-chat-msg="${msgId}" data-chat-id="${state.chatId}"
+                data-close-modal="1">
+          ${e}
+        </button>
+      `).join('')}
+    </div>
+  `);
+}
+
+/* ═══ إدراج إيموجي في المحادثة ═══ */
+function insertChatEmoji(emoji){
+  const input = document.getElementById('chatInput');
+  if(!input) return;
+  const start = input.selectionStart || 0;
+  const end = input.selectionEnd || 0;
+  const val = input.value;
+  input.value = val.slice(0, start) + emoji + val.slice(end);
+  input.selectionStart = input.selectionEnd = start + emoji.length;
+  input.focus();
+  updateChatSendBtn();
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  handleChatTypingActivity();
+}
+
+/* ═══ تفعيل زر الإرسال ═══ */
+function updateChatSendBtn(){
+  const btn = document.getElementById('chatSendBtn');
+  const input = document.getElementById('chatInput');
+  if(!btn || !input) return;
+  btn.disabled = !input.value.trim();
 }
 
 function pageGames(){
@@ -13021,6 +14023,10 @@ async function sendPostToUser(targetUid, postId, postUrl){
         lastSender: state.user.uid,
         lastTime: serverTimestamp(),
         createdAt: serverTimestamp(),
+        unreadCounts: {                       // ✅ أضف
+          [state.user.uid]: 0,
+          [targetUid]: 0,
+        },
       });
     }
 
@@ -13029,16 +14035,18 @@ async function sendPostToUser(targetUid, postId, postUrl){
       senderId: state.user.uid,
       text: message,
       createdAt: serverTimestamp(),
+      readBy: [state.user.uid],              // ✅ أضف
+      edited: false,
+      deleted: false,
+      reactions: {},
     });
 
     await updateDoc(chatRef, {
       lastMessage: '📤 شارك معك منشوراً',
       lastSender: state.user.uid,
       lastTime: serverTimestamp(),
+      [`unreadCounts.${targetUid}`]: increment(1),   // ✅ أضف
     });
-
-    await notify(targetUid, 'message',
-      `<b>${esc(state.profile.name)}</b> شارك معك منشوراً`);
 
     closeModal();
     toast('✓ تم إرسال المنشور');
@@ -15797,8 +16805,9 @@ const PAGES = {
   hashtag: pageHashtag,
   posts: pagePosts,
   post: pagePost,
-  relation: pageRelation,   /* ★ جديد */
-  missions: pageMissions,   // ★ جديد
+    relation: pageRelation,
+  missions: pageMissions,
+  chat: pageChat,   /* ★ صفحة المحادثة الجديدة */
 };
 
 function render(){
@@ -15817,9 +16826,9 @@ function render(){
   const pageHeader = document.getElementById('pageHeader');
   const titleEl    = document.getElementById('pageHeaderTitle');
   const actionsEl  = document.getElementById('pageHeaderActions');
-  if(pageHeader){
-    if(!isMain){
-      const cfg = getPageHeaderConfig();
+if(pageHeader){
+  if(!isMain && state.page !== 'chat'){
+    const cfg = getPageHeaderConfig();
       if(titleEl){
         if(cfg.titleHTML){
           titleEl.innerHTML = cfg.titleHTML;
@@ -15844,6 +16853,32 @@ function render(){
 
   const fn = PAGES[state.page] || pageHome;
   const result = fn();
+
+/* ═══ تهيئة صفحة المحادثة ═══ */
+if(state.page === 'chat'){
+  const scrollEl = document.getElementById('chatMessagesScroll');
+  if(scrollEl){
+    scrollEl.addEventListener('scroll', () => {
+      const near = (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight) < 120;
+      state.chatScrollBtn = !near;
+      updateChatScrollBtn();
+      if(near && state.chatNewMsgBadge){
+        state.chatNewMsgBadge = false;
+        updateChatNewBadge();
+        markChatAsRead(state.chatId);
+      }
+    });
+
+    /* رندر أولي + تمرير */
+    renderChatMessages();
+    setTimeout(() => scrollChatToBottom(false), 100);
+    renderChatReplyContext();
+    updateChatSendBtn();
+
+    const input = document.getElementById('chatInput');
+    if(input) setTimeout(() => input.focus(), 200);
+  }
+}
 
 const afterRender = () => {
   if(state.page === 'notifs'){
@@ -22109,8 +23144,152 @@ if(t.dataset.viewProfile){
   /* ============================================================
      31) المحادثات
      ============================================================ */
+  /* ═══════════════════════════════════════════════
+     💬 معالجات نظام المحادثة الجديد
+     ═══════════════════════════════════════════════ */
   if(t.dataset.chat){ await openChat(t.dataset.chat); return; }
   if(t.dataset.openChat){ await openChat(t.dataset.openChat); return; }
+
+  if(t.dataset.action === 'new-chat'){
+    openNewChatPicker();
+    return;
+  }
+
+  if(t.dataset.chatFilter){
+    state.chatFilter = t.dataset.chatFilter;
+    render();
+    return;
+  }
+
+  if(t.dataset.action === 'clear-chat-search'){
+    state.chatListSearch = '';
+    render();
+    return;
+  }
+
+  if(t.dataset.action === 'chat-search-toggle'){
+    state.chatSearchOpen = !state.chatSearchOpen;
+    if(!state.chatSearchOpen) state.chatSearchQuery = '';
+    render();
+    if(state.chatSearchOpen){
+      setTimeout(() => document.getElementById('chatSearchInput')?.focus(), 50);
+    }
+    return;
+  }
+
+  if(t.dataset.action === 'chat-search-close'){
+    state.chatSearchOpen = false;
+    state.chatSearchQuery = '';
+    render();
+    return;
+  }
+
+  if(t.dataset.action === 'chat-menu'){
+    openChatActionsModal();
+    return;
+  }
+
+  if(t.dataset.action === 'chat-scroll-bottom-btn' || t.dataset.action === 'chat-scroll-new'){
+    scrollChatToBottom();
+    return;
+  }
+
+  if(t.dataset.action === 'chat-emoji-toggle'){
+    toggleChatEmojiPicker();
+    return;
+  }
+
+  if(t.dataset.chatInsertEmoji){
+    insertChatEmoji(t.dataset.chatInsertEmoji);
+    return;
+  }
+
+  /* إجراءات على الرسائل */
+  if(t.dataset.chatMsgId && !t.dataset.chatReact){
+    if(e.target.closest('.chat-msg-bubble')){
+      openChatMsgActionsModal(t.dataset.chatMsgId);
+      return;
+    }
+  }
+
+  if(t.dataset.action === 'chat-reply-msg'){
+    const msg = state.chatMessages.find(m => m.id === t.dataset.msgId);
+    if(msg){
+      state.chatReplyTo = msg;
+      state.chatEditingId = null;
+      closeModal();
+      renderChatReplyContext();
+      document.getElementById('chatInput')?.focus();
+    }
+    return;
+  }
+
+  if(t.dataset.action === 'chat-cancel-reply'){
+    state.chatReplyTo = null;
+    renderChatReplyContext();
+    return;
+  }
+
+  if(t.dataset.action === 'chat-cancel-edit'){
+    state.chatEditingId = null;
+    renderChatReplyContext();
+    const input = document.getElementById('chatInput');
+    if(input) input.value = '';
+    updateChatSendBtn();
+    return;
+  }
+
+  if(t.dataset.action === 'chat-edit-msg'){
+    const msg = state.chatMessages.find(m => m.id === t.dataset.msgId);
+    if(msg && msg.senderId === state.user.uid){
+      state.chatEditingId = msg.id;
+      state.chatReplyTo = null;
+      closeModal();
+      renderChatReplyContext();
+      const input = document.getElementById('chatInput');
+      if(input){
+        input.value = msg.text || '';
+        input.focus();
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      }
+      updateChatSendBtn();
+    }
+    return;
+  }
+
+  if(t.dataset.action === 'chat-delete-msg'){
+    closeModal();
+    if(state.chatId && t.dataset.msgId){
+      await deleteChatMessage(state.chatId, t.dataset.msgId);
+    }
+    return;
+  }
+
+  if(t.dataset.action === 'chat-copy-msg'){
+    const msg = state.chatMessages.find(m => m.id === t.dataset.msgId);
+    if(msg?.text){
+      try {
+        await navigator.clipboard.writeText(msg.text);
+        toast('✓ تم نسخ الرسالة');
+      } catch(err){ toast('فشل النسخ'); }
+    }
+    closeModal();
+    return;
+  }
+
+  if(t.dataset.action === 'chat-react-msg'){
+    closeModal();
+    openChatReactionPicker(t.dataset.msgId);
+    return;
+  }
+
+  if(t.dataset.chatReact){
+    if(state.chatId){
+      await toggleChatReaction(state.chatId, t.dataset.chatMsg, t.dataset.chatReact);
+    }
+    return;
+  }
 
   /* ============================================================
      32) الألعاب والغرف
@@ -22164,6 +23343,31 @@ if(t.dataset.action === 'lb-search-clear'){
     return;
   }
 
+  if(t.id === 'chatSendBtn'){
+  const input = document.getElementById('chatInput');
+  const text = input?.value.trim();
+  if(!text || !state.chatId) return;
+
+  const chatId = state.chatId;
+  const editing = state.chatEditingId;
+  const editingMsgId = editing;
+
+  if(input) input.value = '';
+  updateChatSendBtn();
+  if(input){ input.style.height = 'auto'; }
+
+  state.chatReplyTo = null;
+  state.chatEditingId = null;
+  renderChatReplyContext();
+
+  if(editingMsgId){
+    await updateChatMessage(chatId, editingMsgId, text);
+  } else {
+    await sendChatMessage(chatId, text);
+  }
+  return;
+}
+
   /* ============================================================
      36) إرسال تعليق
      ============================================================ */
@@ -22192,6 +23396,34 @@ if(t.id === 'sendCommentBtn'){
     closeModal();
     return;
   }
+
+/* ═══ حقل إدخال المحادثة ═══ */
+if(e.target.id === 'chatInput'){
+  const input = e.target;
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  updateChatSendBtn();
+  handleChatTypingActivity();
+  return;
+}
+
+/* ═══ بحث المحادثة ═══ */
+if(e.target.id === 'chatSearchInput'){
+  state.chatSearchQuery = e.target.value;
+  clearTimeout(window._chatSearchTimer);
+  window._chatSearchTimer = setTimeout(() => {
+    renderChatMessages();
+  }, 200);
+  return;
+}
+
+/* ═══ بحث قائمة المحادثات ═══ */
+if(e.target.id === 'chatListSearchInput'){
+  state.chatListSearch = e.target.value;
+  clearTimeout(window._chatListTimer);
+  window._chatListTimer = setTimeout(() => render(), 250);
+  return;
+}
 
   /* ============================================================
      38) المتجر / الفرق
@@ -22505,7 +23737,41 @@ if(notifCardEl && !e.target.closest('button, [data-notif-action], [data-notif-me
 /* Input events */
 document.addEventListener('input', async (e)=>{
 
-  /* ===== البحث (يبقى كما هو) ===== */
+  /* ═══════════════════════════════════════════════════
+     💬 [جديد] حقل إدخال المحادثة — يُفعّل زر الإرسال فوراً
+     ═══════════════════════════════════════════════════ */
+  if(e.target.id === 'chatInput'){
+    const input = e.target;
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    updateChatSendBtn();          // ✅ يفعّل الزر عند الكتابة
+    handleChatTypingActivity();   // ✅ يُظهر "يكتب…" للطرف الآخر
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     🔍 [جديد] بحث داخل المحادثة — يُفلتر الرسائل
+     ═══════════════════════════════════════════════════ */
+  if(e.target.id === 'chatSearchInput'){
+    state.chatSearchQuery = e.target.value;
+    clearTimeout(window._chatSearchTimer);
+    window._chatSearchTimer = setTimeout(() => {
+      renderChatMessages();         // ✅ يُعيد فلترة الرسائل
+    }, 200);
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     📋 [جديد] بحث في قائمة المحادثات
+     ═══════════════════════════════════════════════════ */
+  if(e.target.id === 'chatListSearchInput'){
+    state.chatListSearch = e.target.value;
+    clearTimeout(window._chatListTimer);
+    window._chatListTimer = setTimeout(() => render(), 250);
+    return;
+  }
+
+  /* ===== البحث العام (موجود مسبقاً) ===== */
   if(e.target.id === 'searchInput'){
     state.searchQ = e.target.value;
     clearTimeout(window._searchTimer);
@@ -22657,6 +23923,11 @@ document.addEventListener('keydown', (e)=>{
   if(e.target.id === 'commentInput' && e.key === 'Enter' && !e.shiftKey){
     e.preventDefault();
     document.getElementById('sendCommentBtn')?.click();
+  }
+  /* ★ جديد: إرسال رسالة المحادثة */
+  if(e.target.id === 'chatInput' && e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    document.getElementById('chatSendBtn')?.click();
   }
 });
 
