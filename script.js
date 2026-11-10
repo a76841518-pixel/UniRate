@@ -23668,72 +23668,77 @@ function renderUnoGame(){
   const currentColor = s.currentColor;
   const topCard = s.discard[s.discard.length - 1];
 
-  /* اللاعبون الآخرون */
   const others = s.playerOrder.filter(uid => uid !== me);
+  const currentPlayer = s.playerOrder[s.currentTurn];
+  const currentPlayerName = (state.users[currentPlayer]?.name || 'لاعب').split(' ')[0];
 
-  /* الوقت المتبقي */
   const elapsed = (Date.now() - s.turnStartedAt) / 1000;
   const remaining = Math.max(0, s.turnTime - elapsed);
 
-  /* ترتيب الأوراق في يدي */
+  /* ترتيب اليد */
   const sortedHand = [...myHand].sort((a, b) => {
     const colorOrder = { red:0, yellow:1, green:2, blue:3, wild:4 };
     if(colorOrder[a.color] !== colorOrder[b.color]) return colorOrder[a.color] - colorOrder[b.color];
     return a.value.localeCompare(b.value);
   });
 
+  /* حساب التراكب — كلما زادت البطاقات زاد التراكب لتبقى في الشاشة */
+  const cardCount = sortedHand.length;
+  const overlap = Math.min(38, Math.max(4, (cardCount - 3) * 5));
+
   container.innerHTML = `
     <div class="uno-game">
 
-      <!-- ═══ شريط علوي ═══ -->
+      <!-- ═══ TOP BAR ═══ -->
       <div class="uno-topbar">
-        <button class="uno-exit-btn" data-action="uno-exit" title="خروج">
+        <button class="uno-exit-btn" data-action="uno-exit" aria-label="خروج">
           ${ic('close','sm')}
         </button>
         <div class="uno-mode-chip">
-          ${modeCfg.icon} ${modeCfg.name}
+          <span>${modeCfg.icon}</span>
+          <span>${modeCfg.name}</span>
         </div>
         <div class="uno-timer ${remaining < 5 ? 'danger' : remaining < 10 ? 'warn' : ''}">
-          ⏱️ ${Math.ceil(remaining)}s
+          <span>⏱️</span>
+          <span class="uno-timer-val">${Math.ceil(remaining)}</span>
         </div>
       </div>
 
-      <!-- ═══ اللاعبون الآخرون ═══ -->
-      <div class="uno-opponents">
-        ${others.map(uid => {
-          const u = state.users[uid] || { name:'لاعب' };
-          const isCurrent = s.playerOrder[s.currentTurn] === uid;
-          const cardCount = (s.hands[uid] || []).length;
-          const uno = cardCount === 1;
-          return `
-            <div class="uno-opponent ${isCurrent ? 'active' : ''}">
-              <div class="uno-opp-avatar">
-                ${avatar(u, 44)}
-                ${uno ? '<div class="uno-opp-uno">UNO!</div>' : ''}
-              </div>
-              <div class="uno-opp-info">
+      <!-- ═══ OPPONENTS ═══ -->
+      ${others.length > 0 ? `
+        <div class="uno-opponents">
+          ${others.map(uid => {
+            const u = state.users[uid] || { name:'لاعب' };
+            const isCurrent = currentPlayer === uid;
+            const count = (s.hands[uid] || []).length;
+            const uno = count === 1;
+            return `
+              <div class="uno-opponent ${isCurrent ? 'active' : ''} ${uno ? 'uno-alert' : ''}">
+                ${isCurrent ? '<div class="uno-turn-indicator">▶</div>' : ''}
+                ${uno ? '<div class="uno-badge-uno">UNO!</div>' : ''}
+                <div class="uno-opp-avatar">${avatar(u, 40)}</div>
                 <div class="uno-opp-name">${esc((u.name||'').split(' ')[0])}</div>
-                <div class="uno-opp-cards">
-                  ${'🂠'.repeat(Math.min(cardCount, 7))}
-                  ${cardCount > 7 ? `+${cardCount - 7}` : ''}
+                <div class="uno-opp-cards-stack">
+                  ${Array(Math.min(count, 4)).fill(0).map(() =>
+                    '<span class="uno-mini-card-back"></span>'
+                  ).join('')}
+                  <span class="uno-mini-card-count">${count}</span>
                 </div>
               </div>
-              ${isCurrent ? '<div class="uno-opp-turn">▶</div>' : ''}
-            </div>
-          `;
-        }).join('')}
-      </div>
+            `;
+          }).join('')}
+        </div>
+      ` : ''}
 
-      <!-- ═══ منطقة اللعب ═══ -->
+      <!-- ═══ PLAY ZONE ═══ -->
       <div class="uno-play-zone">
-        <!-- الكومة -->
         <div class="uno-piles">
           <button class="uno-deck-pile" data-action="uno-draw"
                   ${!isMyTurn || s.finished ? 'disabled' : ''}
-                  title="اسحب ورقة">
+                  aria-label="اسحب ورقة">
             <div class="uno-deck-back">
-              <div class="uno-deck-logo">UNO</div>
-              <div class="uno-deck-count">${s.deck.length}</div>
+              <span class="uno-deck-logo-text">UNO</span>
+              <span class="uno-deck-count">${s.deck.length}</span>
             </div>
           </button>
 
@@ -23742,61 +23747,57 @@ function renderUnoGame(){
           </div>
         </div>
 
-        <!-- اللون الحالي + الاتجاه -->
-        <div class="uno-info-row">
-          <div class="uno-color-indicator" style="--c:${UNO.COLOR_HEX[currentColor]}">
+        <div class="uno-play-info">
+          <div class="uno-color-chip" style="--c:${UNO.COLOR_HEX[currentColor]}">
             <span class="uno-color-dot"></span>
-            <span>${UNO.COLOR_NAMES[currentColor]}</span>
           </div>
           <div class="uno-direction ${s.direction > 0 ? 'cw' : 'ccw'}">
             ${s.direction > 0 ? '↻' : '↺'}
           </div>
           ${s.activePenalty > 0 ? `
-            <div class="uno-penalty-badge">
-              +${s.activePenalty} ⚠️
-            </div>
+            <div class="uno-penalty-chip">+${s.activePenalty}</div>
           ` : ''}
         </div>
-
-        <!-- إعلان UNO -->
-        ${myHand.length === 1 && !s.unoCalled[me] ? `
-          <button class="uno-call-btn" data-action="uno-call">
-            🔔 UNO!
-          </button>
-        ` : ''}
       </div>
 
-      <!-- ═══ يدي ═══ -->
-      <div class="uno-hand-wrap">
-        <div class="uno-hand-header">
-          <span>يدك</span>
-          <span class="uno-hand-count">${myHand.length} ورقة</span>
+      <!-- ═══ TURN INDICATOR ═══ -->
+      ${s.finished ? '' : isMyTurn ? `
+        <div class="uno-turn-banner my-turn">
+          <span class="uno-turn-pulse"></span>
+          <span>🎯 دورك الآن</span>
         </div>
-        <div class="uno-hand">
-          ${sortedHand.map(card => {
+      ` : `
+        <div class="uno-turn-banner">
+          <span class="uno-turn-dots"><span></span><span></span><span></span></span>
+          <span>بانتظار ${esc(currentPlayerName)}</span>
+        </div>
+      `}
+
+      <!-- ═══ MY HAND ═══ -->
+      <div class="uno-hand-wrap ${isMyTurn ? 'my-turn' : ''}">
+        ${myHand.length === 1 && !s.unoCalled[me] && !s.finished ? `
+          <button class="uno-call-btn" data-action="uno-call">🔔 UNO!</button>
+        ` : ''}
+        <div class="uno-hand" style="--overlap:${overlap}px">
+          ${sortedHand.map((card, i) => {
             const playable = isMyTurn && unoCanPlay(card, topCard, currentColor, s.activePenalty, modeCfg);
             return `
               <button class="uno-card-btn ${playable ? 'playable' : 'not-playable'}"
                       data-uno-card="${card.id}"
+                      style="--i:${i}; --z:${i}"
                       ${playable && !s.finished ? '' : 'disabled'}>
                 ${renderUnoCard(card, { playable })}
               </button>
             `;
           }).join('')}
         </div>
-        ${!isMyTurn && !s.finished ? `
-          <div class="uno-waiting">
-            ⏳ بانتظار <b>${esc((state.users[s.playerOrder[s.currentTurn]]?.name || 'لاعب').split(' ')[0])}</b>
-          </div>
-        ` : ''}
       </div>
 
-      <!-- ═══ اختيار اللون (للبري) ═══ -->
+      <!-- ═══ COLOR PICKER ═══ -->
       ${state._unoColorPickerOpen ? renderUnoColorPicker() : ''}
     </div>
   `;
 
-  /* حوار اختيار اللون */
   if(state._unoColorPickerOpen){
     setTimeout(() => {
       document.querySelectorAll('[data-uno-color]').forEach(btn => {

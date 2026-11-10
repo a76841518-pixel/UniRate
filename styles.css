@@ -17042,3 +17042,558 @@ html[dir="rtl"] .spa-actions .pact.ml{
   padding: 12px 16px;
   font-size: 12.5px;
 }
+
+/* ============================================================
+   🃏 UNO — إعادة تصميم كاملة للجوال
+   ============================================================ */
+
+/* حاوية الجذر داخل overlay اللعبة */
+.game-overlay:has(.uno-game){
+  background: #060810 !important;
+  overflow: hidden !important;
+}
+.game-container:has(.uno-game){
+  padding: 0 !important;
+  max-width: 100% !important;
+  min-height: 100dvh !important;
+  display: block !important;
+}
+
+.uno-game {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at top center,
+    #1e7a4a 0%, #0f4a2a 35%, #062a15 70%, #03150a 100%);
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.uno-game::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.015) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,.02) 0 2px, transparent 2px 4px);
+  pointer-events: none;
+  z-index: 0;
+}
+.uno-game > * { position: relative; z-index: 1; }
+
+/* ═══════ TOPBAR ═══════ */
+.uno-topbar{
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(0,0,0,.55), transparent);
+  flex-shrink: 0;
+}
+.uno-exit-btn{
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.4);
+  border: 1.5px solid rgba(255,255,255,.15);
+  color: #fff;
+  display: grid; place-items: center;
+  cursor: pointer; padding: 0;
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+.uno-exit-btn:active{ transform: scale(.9); }
+
+.uno-mode-chip{
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 7px 12px;
+  background: rgba(0,0,0,.4);
+  border: 1.5px solid rgba(255,255,255,.15);
+  border-radius: 10px;
+  font-size: 11.5px; font-weight: 800; color: #fff;
+  backdrop-filter: blur(10px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.uno-timer{
+  display: flex; align-items: center; gap: 4px;
+  padding: 7px 11px; min-width: 66px; justify-content: center;
+  background: rgba(0,210,255,.18);
+  border: 1.5px solid rgba(0,210,255,.5);
+  border-radius: 10px;
+  color: #5fe3ff;
+  font-size: 13px; font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0; backdrop-filter: blur(10px);
+}
+.uno-timer.warn{
+  background: rgba(245,179,1,.2);
+  border-color: rgba(245,179,1,.55);
+  color: #f5c451;
+}
+.uno-timer.danger{
+  background: rgba(255,61,113,.25);
+  border-color: rgba(255,61,113,.6);
+  color: #ff7b9d;
+  animation: unoTimerPulse .7s infinite;
+}
+@keyframes unoTimerPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+/* ═══════ OPPONENTS ═══════ */
+.uno-opponents{
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.uno-opponent{
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px;
+  padding: 6px 10px 5px;
+  background: rgba(0,0,0,.5);
+  border: 1.5px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  min-width: 72px; max-width: 90px;
+  transition: all .25s;
+  backdrop-filter: blur(8px);
+}
+.uno-opponent.active{
+  border-color: #00d2ff;
+  background: rgba(0,210,255,.15);
+  box-shadow: 0 0 20px rgba(0,210,255,.4);
+}
+.uno-opponent.uno-alert{ animation: unoAlertPulse 1s infinite; }
+@keyframes unoAlertPulse{
+  0%,100%{ box-shadow: 0 0 0 0 rgba(255,61,113,.5); }
+  50%    { box-shadow: 0 0 0 8px rgba(255,61,113,0); }
+}
+
+.uno-turn-indicator{
+  position: absolute; top: -8px; left: 50%;
+  transform: translateX(-50%);
+  color: #00d2ff;
+  font-size: 12px;
+  filter: drop-shadow(0 0 6px #00d2ff);
+  animation: unoTurnBounce 1s infinite;
+}
+@keyframes unoTurnBounce{
+  0%,100%{ transform: translateX(-50%) translateY(0); }
+  50%    { transform: translateX(-50%) translateY(3px); }
+}
+.uno-badge-uno{
+  position: absolute; top: -8px; inset-inline-end: -6px;
+  padding: 2px 7px;
+  background: linear-gradient(135deg,#ff3d71,#f5b301);
+  color: #fff;
+  font-size: 9px; font-weight: 900;
+  border-radius: 6px;
+  border: 2px solid #0a1a0f;
+  animation: unoUnoPulse 1s infinite;
+  z-index: 3;
+}
+@keyframes unoUnoPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+.uno-opp-avatar{
+  margin-top: 2px;
+  position: relative;
+}
+.uno-opp-avatar .av{
+  border: 2px solid rgba(255,255,255,.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  --s: 40px !important;
+  width: 40px !important; height: 40px !important;
+}
+.uno-opp-name{
+  font-size: 10px; font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 1px;
+}
+.uno-opp-cards-stack{
+  display: flex; align-items: center;
+  margin-top: 1px;
+  height: 18px;
+  position: relative;
+}
+.uno-mini-card-back{
+  display: inline-block;
+  width: 11px; height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(135deg,#2a2050,#1a1035);
+  border: 1px solid rgba(255,255,255,.25);
+  margin-inline-start: -6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.5);
+}
+.uno-mini-card-back:first-child{ margin-inline-start: 0; }
+.uno-mini-card-count{
+  margin-inline-start: 4px;
+  padding: 1px 6px;
+  background: rgba(0,210,255,.2);
+  border: 1px solid rgba(0,210,255,.5);
+  border-radius: 6px;
+  color: #5fe3ff;
+  font-size: 10px; font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+/* ═══════ PLAY ZONE ═══════ */
+.uno-play-zone{
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 8px 12px;
+  min-height: 0;
+}
+.uno-piles{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+.uno-play-info{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ─── Deck ─── */
+.uno-deck-pile{
+  width: 74px; height: 106px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform .15s;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.uno-deck-pile:not(:disabled):hover{ transform: translateY(-4px); }
+.uno-deck-pile:not(:disabled):active{ transform: translateY(-2px) scale(.97); }
+.uno-deck-pile:disabled{ opacity: .55; cursor: not-allowed; }
+.uno-deck-back{
+  width: 100%; height: 100%;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 4px, transparent 4px 8px),
+    linear-gradient(135deg,#2a1e5c,#1a1540,#2a1e5c);
+  border: 2px solid rgba(255,255,255,.25);
+  box-shadow:
+    0 6px 16px rgba(0,0,0,.6),
+    inset 0 0 20px rgba(108,92,231,.3);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  position: relative;
+}
+.uno-deck-logo-text{
+  font-size: 19px; font-weight: 900; color: #fff;
+  letter-spacing: 1.5px; font-style: italic;
+  text-shadow: 0 0 12px rgba(0,210,255,.7), 0 2px 4px rgba(0,0,0,.8);
+  transform: rotate(-12deg);
+}
+.uno-deck-count{
+  position: absolute; bottom: 6px; inset-inline-end: 6px;
+  font-size: 10px; font-weight: 900; color: #fff;
+  padding: 2px 7px;
+  background: rgba(0,0,0,.6);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Discard ─── */
+.uno-discard-pile{
+  width: 74px; height: 106px;
+  position: relative;
+  flex-shrink: 0;
+}
+.uno-discard-pile .uno-card.discard{
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  aspect-ratio: auto;
+  animation: unoDiscardIn .35s cubic-bezier(.34,1.4,.64,1);
+  box-shadow:
+    0 6px 20px rgba(0,0,0,.6),
+    inset 0 0 0 2.5px rgba(255,255,255,.25);
+}
+@keyframes unoDiscardIn{
+  from{ transform: scale(.6) rotate(-20deg); opacity: 0; }
+  to  { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ─── Color + Direction ─── */
+.uno-color-chip{
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  background: rgba(0,0,0,.6);
+  border: 2px solid var(--c);
+  border-radius: 50%;
+  box-shadow: 0 0 14px var(--c), inset 0 0 8px var(--c);
+}
+.uno-color-dot{
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 10px var(--c);
+  animation: unoColorPulse 1.5s infinite;
+}
+@keyframes unoColorPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+.uno-direction{
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 18px; font-weight: 900;
+  background: rgba(0,210,255,.2);
+  border: 2px solid #00d2ff;
+  color: #5fe3ff;
+  box-shadow: 0 0 12px rgba(0,210,255,.5);
+}
+.uno-direction.ccw{
+  background: rgba(245,179,1,.2);
+  border-color: #f5b301;
+  color: #f5c451;
+  box-shadow: 0 0 12px rgba(245,179,1,.5);
+}
+.uno-penalty-chip{
+  padding: 4px 10px;
+  background: rgba(255,61,113,.25);
+  border: 2px solid #ff3d71;
+  border-radius: 9px;
+  color: #fff;
+  font-size: 11px; font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  animation: unoPenaltyPulse .8s infinite;
+}
+@keyframes unoPenaltyPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+
+/* ═══════ TURN BANNER ═══════ */
+.uno-turn-banner{
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  margin: 0 auto 6px;
+  background: rgba(0,0,0,.55);
+  border: 1.5px solid rgba(255,255,255,.15);
+  border-radius: 20px;
+  font-size: 11.5px; font-weight: 800;
+  color: rgba(255,255,255,.75);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+  width: fit-content; max-width: calc(100% - 24px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.uno-turn-banner.my-turn{
+  background: linear-gradient(135deg, rgba(0,210,255,.3), rgba(108,92,231,.2));
+  border-color: #00d2ff;
+  color: #fff;
+  animation: unoMyTurnGlow 1.5s infinite;
+}
+@keyframes unoMyTurnGlow{
+  0%,100%{ box-shadow: 0 0 18px rgba(0,210,255,.4); }
+  50%    { box-shadow: 0 0 28px rgba(0,210,255,.8); }
+}
+.uno-turn-pulse{
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #00d2ff;
+  box-shadow: 0 0 10px #00d2ff;
+  animation: unoTurnPulse 1s infinite;
+}
+@keyframes unoTurnPulse{ 0%,100%{opacity:1} 50%{opacity:.4} }
+.uno-turn-dots{ display: inline-flex; gap: 3px; }
+.uno-turn-dots span{
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: unoDotsAnim 1.2s infinite;
+}
+.uno-turn-dots span:nth-child(2){ animation-delay: .2s; }
+.uno-turn-dots span:nth-child(3){ animation-delay: .4s; }
+@keyframes unoDotsAnim{
+  0%,60%,100%{ opacity: .4; transform: translateY(0); }
+  30%        { opacity: 1; transform: translateY(-3px); }
+}
+
+/* ═══════ MY HAND ═══════ */
+.uno-hand-wrap{
+  flex-shrink: 0;
+  padding: 4px 0 calc(8px + env(safe-area-inset-bottom, 0));
+  background: linear-gradient(0deg, rgba(0,0,0,.7), rgba(0,0,0,.3) 40%, transparent);
+  display: flex; flex-direction: column; align-items: center;
+  min-height: 132px;
+}
+.uno-hand-wrap.my-turn{
+  background: linear-gradient(0deg, rgba(0,210,255,.18), transparent);
+}
+.uno-call-btn{
+  padding: 7px 18px;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg,#ff3d71,#f5b301);
+  border: 2px solid #fff;
+  border-radius: 22px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px; font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255,61,113,.7);
+  animation: unoCallPulse 1s infinite;
+  z-index: 10;
+}
+@keyframes unoCallPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+.uno-hand{
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 6px 16px 4px;
+  min-height: 118px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+.uno-hand::-webkit-scrollbar{ display: none; }
+
+.uno-card-btn{
+  flex: 0 0 auto;
+  width: 68px;
+  background: transparent;
+  border: 0; padding: 0;
+  cursor: pointer;
+  transition: transform .2s cubic-bezier(.34,1.4,.64,1);
+  position: relative;
+  margin-inline-start: calc(-1 * var(--overlap, 0px));
+  z-index: var(--z, 0);
+}
+.uno-card-btn:first-child{ margin-inline-start: 0; }
+.uno-card-btn.playable:hover{
+  transform: translateY(-14px) scale(1.08);
+  z-index: 100;
+}
+.uno-card-btn.playable:active{
+  transform: translateY(-8px) scale(1.02);
+}
+.uno-card-btn.not-playable{
+  opacity: .45;
+  filter: grayscale(.6);
+  cursor: not-allowed;
+}
+.uno-card-btn.not-playable:hover{ transform: none; }
+
+/* ═══════ CARD ═══════ */
+.uno-card{
+  width: 100%;
+  aspect-ratio: 3 / 4.3;
+  border-radius: 9px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 5px;
+  font-weight: 900; color: #fff;
+  position: relative; overflow: hidden;
+  box-shadow:
+    0 3px 10px rgba(0,0,0,.55),
+    inset 0 0 0 2px rgba(255,255,255,.18);
+  text-shadow: 0 1px 3px rgba(0,0,0,.5);
+  border: 1.5px solid rgba(255,255,255,.15);
+}
+.uno-card.highlight{
+  box-shadow:
+    0 0 0 2.5px #00d2ff,
+    0 0 20px rgba(0,210,255,.7),
+    0 6px 16px rgba(0,0,0,.5);
+}
+.uno-color-red    { background: linear-gradient(135deg,#e63946 0%,#9b1b30 100%); }
+.uno-color-blue   { background: linear-gradient(135deg,#1e88e5 0%,#0d47a1 100%); }
+.uno-color-green  { background: linear-gradient(135deg,#43a047 0%,#1b5e20 100%); }
+.uno-color-yellow { background: linear-gradient(135deg,#fbc02d 0%,#f57f17 100%); }
+.uno-color-wild{
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,61,113,.85) 0 24%, transparent 25%),
+    radial-gradient(circle at 70% 30%, rgba(245,179,1,.85) 0 24%, transparent 25%),
+    radial-gradient(circle at 30% 70%, rgba(34,197,94,.85) 0 24%, transparent 25%),
+    radial-gradient(circle at 70% 70%, rgba(0,210,255,.85) 0 24%, transparent 25%),
+    linear-gradient(135deg,#1a1a2e,#0f0f1e);
+}
+
+.uno-card-tl, .uno-card-br{
+  font-size: 12px; line-height: 1; font-weight: 900;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  position: relative; z-index: 2;
+}
+.uno-card-tl{ align-self: flex-start; }
+.uno-card-br{ align-self: flex-end; transform: rotate(180deg); }
+
+.uno-card-center{
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0,0,0,.6);
+  z-index: 1;
+}
+.uno-card.discard .uno-card-center{ font-size: 32px; }
+.uno-card.discard .uno-card-tl,
+.uno-card.discard .uno-card-br{ font-size: 13px; }
+
+/* ═══════ RESPONSIVE ═══════ */
+@media (max-width: 380px){
+  .uno-deck-pile, .uno-discard-pile{ width: 64px; height: 92px; }
+  .uno-card-btn{ width: 60px; }
+  .uno-card-center{ font-size: 20px; }
+  .uno-card.discard .uno-card-center{ font-size: 26px; }
+  .uno-opponent{ min-width: 62px; padding: 5px 8px 4px; }
+  .uno-opp-avatar .av{
+    --s: 34px !important;
+    width: 34px !important; height: 34px !important;
+  }
+}
+
+@media (max-height: 700px){
+  .uno-topbar{ padding: 6px 10px; }
+  .uno-opponents{ padding: 4px 8px; }
+  .uno-table, .uno-play-zone{ padding: 6px 8px; }
+  .uno-hand-wrap{ min-height: 120px; }
+  .uno-turn-banner{ display: none; }
+  .uno-opp-name{ font-size: 9px; }
+}
+
+@media (max-height: 600px){
+  .uno-deck-pile, .uno-discard-pile{ width: 58px; height: 84px; }
+  .uno-card-btn{ width: 52px; }
+  .uno-hand{ min-height: 100px; }
+  .uno-opponents{ padding: 3px 6px; }
+  .uno-opp-avatar .av{
+    --s: 30px !important;
+    width: 30px !important; height: 30px !important;
+  }
+}
+
+/* Landscape mode */
+@media (orientation: landscape) and (max-height: 500px){
+  .uno-topbar{ padding: 4px 8px; }
+  .uno-opponents{ padding: 2px 8px; gap: 6px; }
+  .uno-opponent{ padding: 3px 6px; min-width: 60px; }
+  .uno-opp-avatar .av{
+    --s: 28px !important;
+    width: 28px !important; height: 28px !important;
+  }
+  .uno-opp-name{ font-size: 8px; }
+  .uno-play-zone{ padding: 4px; }
+  .uno-deck-pile, .uno-discard-pile{ width: 52px; height: 76px; }
+  .uno-card-btn{ width: 46px; }
+  .uno-hand{ min-height: 84px; padding: 4px 12px; }
+  .uno-hand-wrap{ min-height: 92px; }
+  .uno-call-btn{ padding: 4px 12px; font-size: 10px; margin-bottom: 2px; }
+  .uno-turn-banner{ display: none; }
+}
