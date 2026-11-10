@@ -76,13 +76,79 @@ const ICONS = {
 function ic(name, cls=''){ return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`; }
 
 /* ============ Static Data ============ */
+/* ============================================================
+   🎮 الألعاب — الأقسام والفئات الجديدة
+   ============================================================ */
+const GAME_CATEGORIES = {
+  board:  { label:'ألعاب الطاولة',   emoji:'🎲', color:'#6c5ce7' },
+  cards:  { label:'ألعاب البطاقات',  emoji:'🃏', color:'#ff3d71' },
+  sports: { label:'رياضات مصغرة',    emoji:'⚽', color:'#22c55e' },
+  social: { label:'ألعاب اجتماعية',  emoji:'🎭', color:'#f5b301' },
+  puzzle: { label:'ألعاب الذكاء',    emoji:'🧩', color:'#00d2ff' },
+  arcade: { label:'ألعاب أركيد',     emoji:'🕹️', color:'#a78bfa' },
+  nexus:  { label:'ألعاب نكسوس',     emoji:'🌟', color:'#ec4899' },
+};
+
 const GAMES = [
-  {id:'g1', name:'Arena Clash', cat:'قتال جماعي', icon:'bolt', online:'12.4K', grad:'linear-gradient(135deg,#6c5ce7,#ff3d71)', modes:['1v1','5v5','تعاوني']},
-  {id:'g2', name:'Word Duel', cat:'كلمات', icon:'comment', online:'8.1K', grad:'linear-gradient(135deg,#00d2ff,#22c55e)', modes:['1v1','فرق']},
-  {id:'g3', name:'Quiz Clash', cat:'معلومات عامة', icon:'star', online:'5.7K', grad:'linear-gradient(135deg,#f5b301,#ff3d71)', modes:['1v1','تعاوني'], playable:true},
-  {id:'g4', name:'Chess Royale', cat:'شطرنج', icon:'crown', online:'9.9K', grad:'linear-gradient(135deg,#a78bfa,#6c5ce7)', modes:['1v1','بطولات']},
-  {id:'g5', name:'Trivia Titans', cat:'معلومات', icon:'globe', online:'4.2K', grad:'linear-gradient(135deg,#22c55e,#00d2ff)', modes:['فرق','سريع']},
-  {id:'g6', name:'Padel Ping', cat:'رياضة', icon:'play', online:'3.1K', grad:'linear-gradient(135deg,#ff8a00,#f5b301)', modes:['1v1','2v2']},
+  /* ═══ ألعاب الطاولة ═══ */
+  { id:'ludo',       name:'لودو',           cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🎲', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#6c5ce7,#00d2ff)', playable:false },
+  { id:'snakes',     name:'الحية والسلم',   cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🐍', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#22c55e,#00d2ff)', playable:false },
+  { id:'chess',      name:'شطرنج',          cat:'board',  catLabel:'ألعاب الطاولة', emoji:'♟️', icon:'crown',  online:'—', grad:'linear-gradient(135deg,#a78bfa,#6c5ce7)', playable:false },
+  { id:'checkers',   name:'داما',           cat:'board',  catLabel:'ألعاب الطاولة', emoji:'⚫', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#64748b,#1e293b)', playable:false },
+  { id:'backgammon', name:'باكغامون',       cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🎲', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#f5b301,#78350f)', playable:false },
+  { id:'domino',     name:'دومينو',         cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🁣', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#475569,#0f172a)', playable:false },
+  { id:'quarto',     name:'كونيت',          cat:'board',  catLabel:'ألعاب الطاولة', emoji:'⬛', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#8b5cf6,#1e1b4b)', playable:false },
+  { id:'tictac',     name:'تيك تاك تو',     cat:'board',  catLabel:'ألعاب الطاولة', emoji:'⭕', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#00d2ff,#22c55e)', playable:false },
+  { id:'mancala',    name:'منقلة',          cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🥜', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#d97706,#78350f)', playable:false },
+  { id:'korm',       name:'كورم',           cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🟠', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#ff8a00,#7c2d12)', playable:false },
+  { id:'reversi',    name:'ريفيرسي',        cat:'board',  catLabel:'ألعاب الطاولة', emoji:'⚪', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#1e293b,#94a3b8)', playable:false },
+  { id:'battleship', name:'باتل شيب',       cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🚢', icon:'shield', online:'—', grad:'linear-gradient(135deg,#0ea5e9,#1e3a8a)', playable:false },
+  { id:'monopoly',   name:'مونوبولي',       cat:'board',  catLabel:'ألعاب الطاولة', emoji:'🏠', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#22c55e,#065f46)', playable:false },
+
+  /* ═══ ألعاب البطاقات ═══ */
+  { id:'uno',        name:'أونو',           cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'🃏', icon:'image',  online:'—', grad:'linear-gradient(135deg,#ff3d71,#f5b301)', playable:true,
+    modes:['classic','stacking','jumpin','sevenzero','team','elimination','chaos','speed'] },
+  { id:'oldmaid',    name:'أولد ميد',       cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'👵', icon:'image',  online:'—', grad:'linear-gradient(135deg,#ec4899,#831843)', playable:false },
+  { id:'gofish',     name:'جو فش',          cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'🐟', icon:'image',  online:'—', grad:'linear-gradient(135deg,#0ea5e9,#22d3ee)', playable:false },
+  { id:'memory',     name:'ميموري كاردس',   cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'🧠', icon:'image',  online:'—', grad:'linear-gradient(135deg,#a78bfa,#ec4899)', playable:false },
+  { id:'poker',      name:'بوكر',           cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'♠️', icon:'image',  online:'—', grad:'linear-gradient(135deg,#1e293b,#000000)', playable:false },
+  { id:'rummy',      name:'رومي',           cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'🎴', icon:'image',  online:'—', grad:'linear-gradient(135deg,#f43f5e,#7f1d1d)', playable:false },
+  { id:'spades',     name:'سبيدس',          cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'♠',  icon:'image',  online:'—', grad:'linear-gradient(135deg,#334155,#000000)', playable:false },
+  { id:'war',        name:'وور',            cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'⚔️', icon:'image',  online:'—', grad:'linear-gradient(135deg,#dc2626,#7f1d1d)', playable:false },
+  { id:'mind',       name:'ذا ميند',        cat:'cards',  catLabel:'ألعاب البطاقات', emoji:'🌀', icon:'image',  online:'—', grad:'linear-gradient(135deg,#8b5cf6,#1e1b4b)', playable:false },
+
+  /* ═══ رياضات مصغرة ═══ */
+  { id:'minigolf',   name:'ميني غولف',      cat:'sports', catLabel:'رياضات مصغرة', emoji:'⛳', icon:'play',   online:'—', grad:'linear-gradient(135deg,#22c55e,#065f46)', playable:false },
+  { id:'bowling',    name:'بولينغ',         cat:'sports', catLabel:'رياضات مصغرة', emoji:'🎳', icon:'play',   online:'—', grad:'linear-gradient(135deg,#0ea5e9,#1e3a8a)', playable:false },
+  { id:'minifoot',   name:'ميني فوتبول',    cat:'sports', catLabel:'رياضات مصغرة', emoji:'⚽', icon:'play',   online:'—', grad:'linear-gradient(135deg,#22c55e,#00d2ff)', playable:false },
+  { id:'airhockey',  name:'اير هوكي',       cat:'sports', catLabel:'رياضات مصغرة', emoji:'🏒', icon:'play',   online:'—', grad:'linear-gradient(135deg,#06b6d4,#1e40af)', playable:false },
+  { id:'basket',     name:'باسكيت بول شوت', cat:'sports', catLabel:'رياضات مصغرة', emoji:'🏀', icon:'play',   online:'—', grad:'linear-gradient(135deg,#f97316,#7c2d12)', playable:false },
+  { id:'darts',      name:'دارتس',          cat:'sports', catLabel:'رياضات مصغرة', emoji:'🎯', icon:'play',   online:'—', grad:'linear-gradient(135deg,#dc2626,#1e293b)', playable:false },
+  { id:'billiards',  name:'بلياردو',        cat:'sports', catLabel:'رياضات مصغرة', emoji:'🎱', icon:'play',   online:'—', grad:'linear-gradient(135deg,#0f172a,#475569)', playable:false },
+  { id:'penalty',    name:'ركلات جزاء',     cat:'sports', catLabel:'رياضات مصغرة', emoji:'🥅', icon:'play',   online:'—', grad:'linear-gradient(135deg,#16a34a,#065f46)', playable:false },
+  { id:'archery',    name:'ارتشي',          cat:'sports', catLabel:'رياضات مصغرة', emoji:'🏹', icon:'play',   online:'—', grad:'linear-gradient(135deg,#a16207,#451a03)', playable:false },
+  { id:'longjump',   name:'لونج جمب',       cat:'sports', catLabel:'رياضات مصغرة', emoji:'🏃', icon:'play',   online:'—', grad:'linear-gradient(135deg,#06b6d4,#a78bfa)', playable:false },
+
+  /* ═══ ألعاب اجتماعية ═══ */
+  { id:'pictonary',  name:'بكتوناري',       cat:'social', catLabel:'ألعاب اجتماعية', emoji:'🎨', icon:'image', online:'—', grad:'linear-gradient(135deg,#a78bfa,#ec4899)', playable:false },
+  { id:'charades',   name:'تشاردس',         cat:'social', catLabel:'ألعاب اجتماعية', emoji:'🎭', icon:'users', online:'—', grad:'linear-gradient(135deg,#f59e0b,#7c2d12)', playable:false },
+  { id:'mafia',      name:'مافيا',          cat:'social', catLabel:'ألعاب اجتماعية', emoji:'🕵️', icon:'users', online:'—', grad:'linear-gradient(135deg,#1e293b,#000000)', playable:false },
+  { id:'lie',        name:'اكتشاف الكذبة',  cat:'social', catLabel:'ألعاب اجتماعية', emoji:'🤥', icon:'users', online:'—', grad:'linear-gradient(135deg,#ec4899,#831843)', playable:false },
+  { id:'judge',      name:'الحكم',          cat:'social', catLabel:'ألعاب اجتماعية', emoji:'⚖️', icon:'users', online:'—', grad:'linear-gradient(135deg,#6366f1,#1e1b4b)', playable:false },
+  { id:'imposter',   name:'امبوستر',        cat:'social', catLabel:'ألعاب اجتماعية', emoji:'👽', icon:'users', online:'—', grad:'linear-gradient(135deg,#22c55e,#065f46)', playable:false },
+
+  /* ═══ ألعاب الذكاء ═══ */
+  { id:'sudoku',     name:'سودوكو',         cat:'puzzle', catLabel:'ألعاب الذكاء', emoji:'🔢', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#6366f1,#1e1b4b)', playable:false },
+  { id:'tangram',    name:'تانغرام',        cat:'puzzle', catLabel:'ألعاب الذكاء', emoji:'🔺', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#f97316,#7c2d12)', playable:false },
+  { id:'2048',       name:'2048 بتل',       cat:'puzzle', catLabel:'ألعاب الذكاء', emoji:'🔷', icon:'grid',   online:'—', grad:'linear-gradient(135deg,#f5b301,#ff8a00)', playable:false },
+
+  /* ═══ ألعاب أركيد ═══ */
+  { id:'snake',      name:'سناك بتل',       cat:'arcade', catLabel:'ألعاب أركيد', emoji:'🐍', icon:'play',   online:'—', grad:'linear-gradient(135deg,#22c55e,#065f46)', playable:false },
+  { id:'pong',       name:'بونغ',           cat:'arcade', catLabel:'ألعاب أركيد', emoji:'🏓', icon:'play',   online:'—', grad:'linear-gradient(135deg,#ffffff,#94a3b8)', playable:false },
+  { id:'stack',      name:'ستاك تاور',      cat:'arcade', catLabel:'ألعاب أركيد', emoji:'🏗️', icon:'play',   online:'—', grad:'linear-gradient(135deg,#f472b6,#7e22ce)', playable:false },
+  { id:'falling',    name:'فالنج بلوكس',    cat:'arcade', catLabel:'ألعاب أركيد', emoji:'🧱', icon:'play',   online:'—', grad:'linear-gradient(135deg,#0ea5e9,#1e3a8a)', playable:false },
+
+  /* ═══ ألعاب نكسوس (فارغة مؤقتاً) ═══ */
 ];
 const STORE = [
   {id:'s1', name:'سكن «نيزك»', emoji:'🌠', price:1200, grad:'linear-gradient(135deg,#6c5ce7,#00d2ff)'},
@@ -1642,6 +1708,19 @@ chatType: 'direct',        // 'direct' | 'group'
 chatGroupInfo: null,       // بيانات المجموعة { name, avatar, participants, admins, ... }
 chatMembersModalOpen: false,
 chatInfoTab: 'members',    // 'members' | 'info'
+/* أضف هذه داخل كائن state الموجود */
+unoSelectedMode: null,
+unoSettingsEditing: false,
+unoSettingsLoaded: false,
+unoHasCustomSettings: false,
+_unoSettingsBackup: null,
+unoSettings: {
+  maxPlayers: 2,
+  initialHand: 7,
+  turnTime: 30,
+  isPublic: true,
+  password: '',
+},
 };
 
 /* استعادة المنشورات المخفية من localStorage */
@@ -1822,6 +1901,13 @@ function go(page, opt={}, skipHistory=false){
 /* أضف داخل دالة go() عند بداية الانتقال */
 if(page !== 'profile' && page !== 'userprofile'){
   stopProfileMusic();
+}
+
+/* ★ إعادة تعيين اختيار طور أونو عند مغادرة صفحة الألعاب */
+if(page !== 'games'){
+  state.unoSelectedMode = null;
+  state.unoSettingsEditing = false;
+  state._unoSettingsBackup = null;
 }
 
 /* ★ إعادة تحميل بيانات المهام عند دخول الصفحة */
@@ -3213,15 +3299,21 @@ state.unsubs.push(onSnapshot(
       .map(d => ({id: d.id, ...d.data()}))
       .filter(p => !p.reblogOf);
 
-    const oldIds = state.posts.map(p => p.id).join('|');
-    const newIds = newPosts.map(p => p.id).join('|');
+    const oldIds   = state.posts.map(p => p.id).join('|');
+    const newIds   = newPosts.map(p => p.id).join('|');
+    /* ★ جديد: راقب أيضاً تغيّر views */
+    const oldViews = state.posts.map(p => p.views || 0).join('|');
+    const newViews = newPosts.map(p => p.views || 0).join('|');
 
     state.posts = newPosts;
 
-    /* ✅ render فقط إذا تغيّر ترتيب/عدد المنشورات (ليس مجرد إعجاب) */
-    if(oldIds !== newIds && ['home','profile','userprofile'].includes(state.page)){
+    const structureChanged = oldIds !== newIds;
+    const viewsChanged     = oldViews !== newViews;
+
+    if((structureChanged || viewsChanged) &&
+       ['home','profile','userprofile','post'].includes(state.page)){
       const scrollY = window.scrollY;
-      scheduleRender();   // ★ كان render()
+      scheduleRender();
       requestAnimationFrame(() => window.scrollTo(0, scrollY));
     }
   },
@@ -6478,10 +6570,19 @@ function openChatChallengePicker(targetUid){
   const other = state.users[targetUid];
   if(!other) return toast('المستخدم غير موجود');
 
+  /* ═══ بناء قائمة الألعاب مع fallback آمن ═══ */
   const games = GAMES.map(g => ({
     ...g,
     available: g.playable === true,
+    /* ✅ حماية ضد undefined */
+    modesText: Array.isArray(g.modes) && g.modes.length
+      ? g.modes.join(' · ')
+      : '',
+    catText: g.catLabel || g.cat || '',
   }));
+
+  /* ═══ هل هناك أي لعبة قابلة للعب؟ ═══ */
+  const playableCount = games.filter(g => g.available).length;
 
   openModal(`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -6502,61 +6603,73 @@ function openChatChallengePicker(targetUid){
       <span class="pill">الخصم</span>
     </div>
 
-    <!-- اختيار اللعبة -->
-    <div class="challenge-picker-label">🎮 اختر لعبة</div>
-    <div class="challenge-game-list" id="challengeGameList">
-      ${games.map(g => `
-        <button type="button"
-                class="challenge-game-card ${g.available ? '' : 'disabled'}"
-                data-challenge-game="${g.id}"
-                ${g.available ? '' : 'disabled'}>
-          <div class="cgc-icon" style="background:${g.grad}">
-            ${ic(g.icon,'sm')}
-          </div>
-          <div class="cgc-body">
-            <div class="cgc-name">${esc(g.name)}</div>
-            <div class="cgc-meta">${esc(g.cat)} · ${g.modes.join(' · ')}</div>
-          </div>
-          ${g.available
-            ? `<span class="cgc-badge ready">${ic('check','xs')} جاهزة</span>`
-            : `<span class="cgc-badge soon">قريباً</span>`}
+    ${playableCount === 0 ? `
+      <div class="empty-sm" style="padding:28px 16px;text-align:center">
+        ${ic('clock','sm')}
+        <div style="margin-top:10px;font-weight:800">لا توجد ألعاب متاحة للتحدي حالياً</div>
+        <div class="muted" style="font-size:11px;margin-top:6px">ترقّبوا ألعاباً جديدة قريباً</div>
+      </div>
+    ` : `
+      <!-- اختيار اللعبة -->
+      <div class="challenge-picker-label">🎮 اختر لعبة</div>
+      <div class="challenge-game-list" id="challengeGameList">
+        ${games.map(g => `
+          <button type="button"
+                  class="challenge-game-card ${g.available ? '' : 'disabled'}"
+                  data-challenge-game="${g.id}"
+                  ${g.available ? '' : 'disabled'}>
+            <div class="cgc-icon" style="background:${g.grad}">
+              ${g.emoji || ic(g.icon || 'bolt','sm')}
+            </div>
+            <div class="cgc-body">
+              <div class="cgc-name">${esc(g.name)}</div>
+              <div class="cgc-meta">
+                ${esc(g.catText)}${g.modesText ? ' · ' + esc(g.modesText) : ''}
+              </div>
+            </div>
+            ${g.available
+              ? `<span class="cgc-badge ready">${ic('check','xs')} جاهزة</span>`
+              : `<span class="cgc-badge soon">قريباً</span>`}
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- إعدادات (مستقبلاً) -->
+      <div class="challenge-settings-disabled" id="challengeSettings">
+        <div class="csd-header">
+          ${ic('settings','xs')} إعدادات المباراة
+          <span class="csd-soon">قريباً</span>
+        </div>
+        <div class="csd-hint">
+          ستتمكن قريباً من تحديد الشروط، الوقت، والمكافآت الخاصة
+        </div>
+      </div>
+
+      <!-- رسالة اختيارية -->
+      <div class="field" style="margin-top:14px">
+        <label>رسالة تحدي (اختياري)</label>
+        <input class="input" id="challengeMessage" type="text"
+               maxlength="100"
+               placeholder="مثال: تحدي سريع!">
+      </div>
+
+      <!-- أزرار -->
+      <div class="row" style="margin-top:16px">
+        <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+        <button class="btn btn-primary" style="flex:1" id="sendChallengeBtn" disabled>
+          ${ic('bolt','sm')} إرسال التحدي
         </button>
-      `).join('')}
-    </div>
-
-    <!-- إعدادات (مستقبلاً) -->
-    <div class="challenge-settings-disabled" id="challengeSettings">
-      <div class="csd-header">
-        ${ic('settings','xs')} إعدادات المباراة
-        <span class="csd-soon">قريباً</span>
       </div>
-      <div class="csd-hint">
-        ستتمكن قريباً من تحديد عدد الأسئلة، الوقت، نوع الأسئلة، ومكافآت خاصة
-      </div>
-    </div>
-
-    <!-- رسالة اختيارية -->
-    <div class="field" style="margin-top:14px">
-      <label>رسالة تحدي (اختياري)</label>
-      <input class="input" id="challengeMessage" type="text"
-             maxlength="100"
-             placeholder="مثال: تحدي سريع!">
-    </div>
-
-    <!-- أزرار -->
-    <div class="row" style="margin-top:16px">
-      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
-      <button class="btn btn-primary" style="flex:1" id="sendChallengeBtn" disabled>
-        ${ic('bolt','sm')} إرسال التحدي
-      </button>
-    </div>
+    `}
   `);
 
-  let selectedGameId = null;
+  /* ═══ ربط الأحداث (فقط إذا كانت هناك ألعاب) ═══ */
   const gameList = document.getElementById('challengeGameList');
   const sendBtn  = document.getElementById('sendChallengeBtn');
+  if(!gameList || !sendBtn) return;
 
-  /* اختيار اللعبة */
+  let selectedGameId = null;
+
   gameList.querySelectorAll('[data-challenge-game]').forEach(btn => {
     btn.addEventListener('click', () => {
       if(btn.disabled) return;
@@ -6567,15 +6680,11 @@ function openChatChallengePicker(targetUid){
     });
   });
 
-  /* إرسال */
   sendBtn.addEventListener('click', async () => {
     if(!selectedGameId) return toast('اختر لعبة أولاً');
-
     const message = document.getElementById('challengeMessage')?.value.trim() || '';
-
     sendBtn.disabled = true;
     sendBtn.classList.add('loading');
-
     try {
       await sendChallenge(targetUid, selectedGameId, message);
       closeModal();
@@ -6594,7 +6703,7 @@ function openChatChallengePicker(targetUid){
 /* ============================================================
    ⚔️ إرسال التحدي — يرسل بطاقة داخل المحادثة
    ============================================================ */
-async function sendChallenge(targetUid, gameId = 'g3', message = ''){
+async function sendChallenge(targetUid, gameId = 'uno', message = ''){
   if(!targetUid) return toast('الخصم غير محدد');
   if(targetUid === state.user.uid) return toast('لا يمكنك تحدي نفسك');
 
@@ -8147,7 +8256,7 @@ function postCard(p, trendMode=false, trendingScore=null, showFull=false){
           ${p.edited?'· <span>معدّل</span>':''}
           ${visLabel?`· <span class="visibility-badge">${ic(visIcon,'xs')} ${visLabel}</span>`:''}
           ${p.place?`·<span style="display:inline-flex;align-items:center;gap:3px">${ic('location','xs')}${esc(p.place)}</span>`:''}
-          ${(p.views || 0) > 0 ? `· <span class="post-views">${ic('eye','xs')} ${nf(p.views)}</span>` : ''}
+          ${(p.views || 0) > 0 ? `<span class="post-views-badge">${ic('eye','xs')} ${nf(p.views)}</span>` : ''}
         </div>
       </div>
       ${trendMode ? (() => {
@@ -10207,6 +10316,61 @@ function openNewChatPicker(){
   }, 50);
 }
 
+async function toggleChatMute(){
+  if(!state.chatId) return;
+  const meta = state.chatMeta || {};
+  const muted = (meta.muted || []).includes(state.user.uid);
+
+  try {
+    if(muted){
+      await updateDoc(doc(db, 'chats', state.chatId), {
+        muted: arrayRemove(state.user.uid),
+      });
+      toast('✓ تم إلغاء كتم المحادثة');
+    } else {
+      await updateDoc(doc(db, 'chats', state.chatId), {
+        muted: arrayUnion(state.user.uid),
+      });
+      toast('🔕 تم كتم المحادثة');
+    }
+    closeModal();
+  } catch(e){
+    console.error('toggleChatMute:', e);
+    toast('فشل — حاول مجدداً');
+  }
+}
+
+async function clearChat(){
+  if(!state.chatId) return;
+  if(!confirm('مسح كل رسائل هذه المحادثة؟')) return;
+
+  try {
+    const snap = await getDocs(collection(db, 'chats', state.chatId, 'messages'));
+    if(!snap.empty){
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    await updateDoc(doc(db, 'chats', state.chatId), {
+      lastMessage: '',
+      lastSender: '',
+      lastTime: serverTimestamp(),
+      [`unreadCounts.${state.user.uid}`]: 0,
+    }).catch(() => {});
+
+    state.chatMessages = [];
+    state._chatRenderHash = null;
+    renderChatMessages(true);
+
+    closeModal();
+    toast('✓ تم مسح المحادثة');
+  } catch(e){
+    console.error('clearChat:', e);
+    toast('فشل');
+  }
+}
+
 /* ═══ قائمة إجراءات المحادثة ═══ */
 function openChatActionsModal(){
   const other = state.users[state.chatWith];
@@ -10285,90 +10449,138 @@ function updateChatSendBtn(){
 }
 
 function pageGames(){
+  /* ═══ عرض تفاصيل لعبة محددة ═══ */
   if(state.activeGame){
-    const g = GAMES.find(x=>x.id===state.activeGame);
-    const rooms = state.rooms.filter(r=>r.gameId === g.id && r.status === 'waiting');
-    const isQuiz = g.id === 'g3';
+    const g = GAMES.find(x => x.id === state.activeGame);
+    if(!g) return emptyState('اللعبة غير موجودة','gamepad');
+
+/* لعبة أونو → لوبي أو إعدادات */
+if(g.id === 'uno'){
+  if(state.unoSelectedMode){
+    return renderUnoSettingsScreen();
+  }
+  return renderUnoLobby();
+}
+
+    /* ألعاب أخرى */
+    const isPlayable = g.playable;
     return `
       <div class="row" style="margin-bottom:14px">
         <button class="icon-btn" data-nav="games" data-reset="game">${ic('back','sm')}</button>
-        <div style="flex:1"><div style="font-size:17px;font-weight:900">${g.name}</div>
-        <div class="muted" style="font-size:11px">${g.cat} · ${g.online} لاعب</div></div>
-        ${isQuiz ? `<span class="pill ok">${ic('play','xs')} قابل للعب</span>` : `<span class="pill">قريباً</span>`}
-      </div>
-      <div class="card" style="background:${g.grad};border:0;margin-bottom:16px;padding:24px;text-align:center">
-        <div style="font-size:34px;margin-bottom:6px">${ic(g.icon)}</div>
-        <div style="font-size:19px;font-weight:900">${g.name}</div>
-        <div style="font-size:11.5px;opacity:.85;margin-top:4px">${g.modes.join(' · ')}</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:900">${esc(g.name)}</div>
+          <div class="muted" style="font-size:11px">${esc(g.catLabel)}</div>
+        </div>
+        ${isPlayable
+          ? `<span class="pill ok">${ic('play','xs')} جاهزة</span>`
+          : `<span class="pill">قريباً</span>`}
       </div>
 
-      ${isQuiz ? `
-        <div class="section-title">${ic('bolt','sm')} لعب مباشر</div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="muted" style="line-height:1.8;margin-bottom:12px;font-size:12.5px">
-            ابحث عن خصم فوري — ${QUIZ_CONFIG.totalQuestions} أسئلة، ${QUIZ_CONFIG.secondsPerQuestion} ثانية لكل سؤال.
-          </div>
-          <button class="btn btn-primary" style="width:100%" id="matchmakingBtn" data-game="${g.id}">
-            ${ic('play','sm')} لعب مباشر
-          </button>
-        </div>
-      ` : `
-        <div class="card" style="margin-bottom:16px;text-align:center;padding:30px">
-          ${ic('clock')}
-          <div style="font-size:14px;font-weight:800;margin-top:10px">قريباً</div>
-          <div class="muted" style="font-size:11.5px;margin-top:6px">هذه اللعبة قيد التطوير</div>
-        </div>
-      `}
+      <div class="card" style="background:${g.grad};border:0;margin-bottom:16px;padding:28px;text-align:center;position:relative;overflow:hidden">
+        <div style="font-size:48px;margin-bottom:8px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.4))">${g.emoji}</div>
+        <div style="font-size:20px;font-weight:900">${esc(g.name)}</div>
+        <div style="font-size:11.5px;opacity:.85;margin-top:4px">${esc(g.catLabel)}</div>
+      </div>
 
-      <div class="section-title">${ic('users','sm')} الغرف المفتوحة</div>
-      <div class="card" style="margin-bottom:12px">
-        <div class="row" style="margin-bottom:12px">
-          <div style="flex:1"><div style="font-size:13px;font-weight:800">غرف عامة</div>
-          <div class="muted" style="font-size:10.5px">انضم لأي غرفة</div></div>
-          <button class="btn btn-ghost btn-sm" id="createRoomBtn" data-game="${g.id}">${ic('plus','xs')} إنشاء</button>
-        </div>
-        ${rooms.length ? rooms.map(r=>{
-          const host = state.users[r.hostId];
-          const isMe = r.hostId === state.user.uid;
-          const isFull = (r.players||[]).length >= (r.maxPlayers||2);
-          return `<div class="room-item">
-            ${avatar(host, 40)}
-            <div class="room-info">
-              <div class="room-n">${esc(r.name)} ${isMe?'<span class="pill ok" style="font-size:9px">غرفتك</span>':''} ${r.password?'<span class="pill pink" style="font-size:9px">🔐</span>':''}</div>
-              <div class="room-m">
-                <span>${(r.players||[]).length}/${r.maxPlayers||2}</span>
-                <span>${esc(r.mode||'')}</span>
-              </div>
-            </div>
-            ${isMe
-              ? (isQuiz
-                  ? `<button class="btn btn-primary btn-sm" data-start-quiz="${r.id}">${ic('play','xs')} ابدأ</button>
-                     <button class="btn btn-ghost btn-sm" data-invite-room="${r.id}">دعوة</button>`
-                  : `<button class="btn btn-ghost btn-sm" data-leave-room="${r.id}">إلغاء</button>`)
-              : (isFull
-                  ? `<span class="pill">ممتلئة</span>`
-                  : `<button class="btn btn-primary btn-sm" data-join-room="${r.id}">انضمام</button>`)}
-          </div>`;
-        }).join('') : `<div class="empty-sm">لا توجد غرف — أنشئ واحدة</div>`}
-      </div>`;
+      ${isPlayable
+        ? `<button class="btn btn-primary" style="width:100%;margin-bottom:12px"
+                   data-action="uno-open-lobby">
+             ${ic('play','sm')} العب الآن
+           </button>`
+        : `<div class="card" style="text-align:center;padding:32px">
+             ${ic('clock')}
+             <div style="font-size:14px;font-weight:800;margin-top:10px">قريباً</div>
+             <div class="muted" style="font-size:11.5px;margin-top:6px">هذه اللعبة قيد التطوير</div>
+           </div>`}
+    `;
   }
-  return `<h1 class="page-title">الألعاب</h1>
-    <div class="games-grid">
-    ${GAMES.map(g=>`
-      <button class="game-card" data-game-open="${g.id}">
-        <div class="gc-cover" style="background:${g.grad}">
-          <span class="gc-live"><span class="dot"></span>${g.online}</span>
-          ${ic(g.icon)}
+
+  /* ═══ قائمة الألعاب حسب الأقسام ═══ */
+  loadGameCategoryTab();
+
+  const activeTab = state.gamesCategoryTab || 'all';
+  const tabs = [
+    { id:'all', label:'الكل', emoji:'✨' },
+    ...Object.entries(GAME_CATEGORIES).map(([k, v]) => ({
+      id:k, label:v.label, emoji:v.emoji, color:v.color
+    }))
+  ];
+
+  const filtered = activeTab === 'all'
+    ? GAMES
+    : GAMES.filter(g => g.cat === activeTab);
+
+  /* عدد الألعاب في كل فئة */
+  const counts = { all: GAMES.length };
+  Object.keys(GAME_CATEGORIES).forEach(k => {
+    counts[k] = GAMES.filter(g => g.cat === k).length;
+  });
+
+  const playableCount = GAMES.filter(g => g.playable).length;
+
+  return `
+    <!-- ═══ Hero ═══ -->
+    <div class="games-hero">
+      <div class="games-hero-icon">🎮</div>
+      <div class="games-hero-text">
+        <h1 class="games-hero-h">الألعاب</h1>
+        <div class="games-hero-sub">
+          ${nf(GAMES.length)} لعبة · <b style="color:var(--ok)">${playableCount} جاهزة</b> · <span>${GAMES.length - playableCount} قريباً</span>
         </div>
-        <div class="gc-body">
-          <div class="gc-name">${g.name}</div>
-          <div class="gc-meta">
-            <span>${g.cat}</span>
-            ${g.id === 'g3' ? `<span class="pill ok" style="font-size:9px">${ic('play','xs')} جاهزة</span>` : ''}
-          </div>
-        </div>
-      </button>`).join('')}
-    </div>`;
+      </div>
+    </div>
+
+    <!-- ═══ Tabs ═══ -->
+    <div class="games-cat-outer">
+      <div class="games-cat-tabs" id="gamesCatTabs">
+        ${tabs.map(t => `
+          <button type="button" class="games-cat-tab ${activeTab === t.id ? 'active' : ''}"
+                  data-games-cat="${t.id}"
+                  style="--cat-color:${t.color || 'var(--brand-2)'}">
+            <span class="gct-emoji">${t.emoji}</span>
+            <span class="gct-label">${t.label}</span>
+            ${counts[t.id] > 0 ? `<span class="gct-count">${counts[t.id]}</span>` : ''}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- ═══ Grid ═══ -->
+    ${filtered.length ? `
+      <div class="games-grid-new">
+        ${filtered.map(g => `
+          <button type="button" class="game-card-new ${g.playable ? 'playable' : 'soon'}"
+                  data-game-open="${g.id}">
+            <div class="gcn-cover" style="background:${g.grad}">
+              <span class="gcn-emoji">${g.emoji}</span>
+              ${g.playable
+                ? `<span class="gcn-badge playable">${ic('play','xs')} جاهزة</span>`
+                : `<span class="gcn-badge soon">قريباً</span>`}
+            </div>
+            <div class="gcn-body">
+              <div class="gcn-name">${esc(g.name)}</div>
+              <div class="gcn-cat">${esc(g.catLabel)}</div>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    ` : `
+      <div class="empty" style="padding:50px 20px">
+        ${ic('gamepad')}
+        <div>لا توجد ألعاب في هذا القسم بعد</div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted)">سيتم إضافة ألعاب جديدة قريباً</div>
+      </div>
+    `}
+  `;
+}
+
+/* حفظ التبويب المحدد */
+function loadGameCategoryTab(){
+  if(state.gamesCategoryTab === undefined){
+    try {
+      state.gamesCategoryTab = localStorage.getItem('nexus_games_cat') || 'all';
+    } catch(e){ state.gamesCategoryTab = 'all'; }
+  }
 }
 
 /* ============ Teams Page ============ */
@@ -13813,17 +14025,36 @@ function buildAvatarFrameHTML(p, size, frameClass){
 /* ============================================================
    🎵 تشغيل موسيقى الملف الشخصي
    ============================================================ */
-/* ============================================================
-   🎵 تشغيل موسيقى الملف الشخصي — مع التحقق من الرابط
-   ============================================================ */
+/* محاولة التشغيل + fallback على أول تفاعل */
+function _attemptPlayProfileAudio(audio){
+  if(!audio) return;
+  const p = audio.play();
+  if(p && p.catch){
+    p.catch(() => {
+      /* المتصفح حظر — أعد المحاولة عند أول تفاعل */
+      const retry = () => {
+        if(audio.paused && audio.dataset.currentUrl){
+          audio.play().catch(() => {});
+        }
+        document.removeEventListener('click', retry);
+        document.removeEventListener('touchstart', retry);
+        document.removeEventListener('keydown', retry);
+      };
+      document.addEventListener('click',      retry, { once: true, passive: true });
+      document.addEventListener('touchstart', retry, { once: true, passive: true });
+      document.addEventListener('keydown',    retry, { once: true, passive: true });
+    });
+  }
+}
+
 function playProfileMusic(profile){
   const audio = document.getElementById('profileMusicAudio');
   if(!audio) return;
 
-  const url = (profile?.musicUrl || '').trim();
+  const url  = (profile?.musicUrl || '').trim();
   const cust = getProfileCustomization(profile);
 
-  /* ★ لا رابط — أوقف */
+  /* لا رابط → أوقف */
   if(!url){
     audio.pause();
     audio.removeAttribute('src');
@@ -13831,45 +14062,41 @@ function playProfileMusic(profile){
     return;
   }
 
-  /* ★ فحص الرابط — يجب أن يكون رابط صوتي مباشر */
+  /* فحص الرابط */
   const isValidAudioUrl =
     /^https?:\/\//i.test(url) &&
     (
       /\.(mp3|wav|ogg|m4a|aac|flac|opus|webm)(\?|#|$)/i.test(url) ||
-      /(sndcdn\.com|soundhelix|pixabay\.com|archive\.org|cdn\.)/i.test(url)
+      /(sndcdn\.com|soundhelix|pixabay\.com|archive\.org|cdn\.|drive\.google\.com)/i.test(url)
     );
 
   if(!isValidAudioUrl){
-    console.debug('🎵 رابط موسيقى غير مدعوم — تم تجاهله');
+    console.debug('🎵 رابط موسيقى غير مدعوم:', url);
     audio.pause();
     audio.removeAttribute('src');
     audio.dataset.currentUrl = '';
     return;
   }
 
-  /* ★ نفس الرابط — لا تعيد التحميل */
+  /* نفس الرابط — اضبط الصوت فقط */
   if(audio.dataset.currentUrl === url){
     audio.volume = (cust.musicVolume ?? 70) / 100;
-    audio.loop = true;
-    if(cust.musicAutoplay && audio.paused){
-      audio.play().catch(() => {});
+    audio.loop   = true;
+    if(audio.paused && cust.musicAutoplay){
+      _attemptPlayProfileAudio(audio);
     }
     return;
   }
 
-  /* ★ تحميل رابط جديد */
+  /* رابط جديد — حمّل وشغّل */
   audio.dataset.currentUrl = url;
-  audio.src = url;
-  audio.volume = (cust.musicVolume ?? 70) / 100;
-  audio.loop = true;
+  audio.src      = url;
+  audio.volume   = (cust.musicVolume ?? 70) / 100;
+  audio.loop     = true;
   audio.load();
 
   if(cust.musicAutoplay){
-    const playPromise = audio.play();
-    if(playPromise && typeof playPromise.catch === 'function'){
-      /* صامت — تفشل تلقائياً في المتصفحات التي تحظر autoplay */
-      playPromise.catch(() => {});
-    }
+    _attemptPlayProfileAudio(audio);
   }
 }
 
@@ -14565,6 +14792,17 @@ function pagePost(){
   const p = state.posts.find(x => x.id === postId);
   if(!p) return emptyState('المنشور غير موجود','grid');
 
+  /* ★ تسجيل مشاهدة — تأخير 1.2 ثانية (قراءة فعلية) */
+  if(!state.seenPosts.has(postId)){
+    setTimeout(() => {
+      if(state.viewingPostId === postId && !state.seenPosts.has(postId)){
+        state.seenPosts.add(postId);
+        persistSeenPosts();
+        recordPostView(postId);
+      }
+    }, 1200);
+  }
+
   /* إعداد التعليقات */
   if(state.currentPostId !== postId || !state.commentsUnsub){
     state.currentPostId = postId;
@@ -14623,17 +14861,20 @@ function pagePost(){
       </div>
 
       <!-- ═══ شريط التفاعل (بدون زر تعليقات) ═══ -->
-      <div class="spa-actions">
-        <button class="pact ${liked?'liked':''}" data-like="${p.id}">
-          ${ic('heart','sm')} <span>${nf(p.likes)}</span>
-        </button>
-        <button class="pact ${wasReblogged?'reblogged':''}" data-reblog="${p.id}">
-          ${ic('share','sm')} <span>${nf(p.reblogs||0)}</span>
-        </button>
-        <button class="pact ml ${saved?'saved':''}" data-save="${p.id}">
-          ${ic('bookmark','sm')}
-        </button>
-      </div>
+<div class="spa-actions">
+  <button class="pact ${liked?'liked':''}" data-like="${p.id}">
+    ${ic('heart','sm')} <span>${nf(p.likes)}</span>
+  </button>
+  <button class="pact ${wasReblogged?'reblogged':''}" data-reblog="${p.id}">
+    ${ic('share','sm')} <span>${nf(p.reblogs||0)}</span>
+  </button>
+  <span class="spa-views-chip">
+    ${ic('eye','sm')} ${nf(p.views||0)}
+  </span>
+  <button class="pact ${saved?'saved':''}" data-save="${p.id}">
+    ${ic('bookmark','sm')}
+  </button>
+</div>
 
       <!-- ═══ التعليقات متصلة مباشرة ═══ -->
       <div class="spa-comments">
@@ -23207,6 +23448,1299 @@ document.getElementById('forgotPassBtn')?.addEventListener('click', async () => 
   }
 });
 
+/* ============================================================
+   🃏 أونو — UNO Card Game Engine v1.0
+   ============================================================ */
+
+const UNO = {
+  COLORS: ['red','blue','green','yellow'],
+  COLOR_NAMES: { red:'أحمر', blue:'أزرق', green:'أخضر', yellow:'أصفر', wild:'بري' },
+  COLOR_HEX: {
+    red:    '#ff3d71',
+    blue:   '#00d2ff',
+    green:  '#22c55e',
+    yellow: '#f5b301',
+    wild:   '#0f172a'
+  },
+  INITIAL_HAND: 7,
+
+  MODES: {
+    classic:     { name:'كلاسيكي',      icon:'🎯', desc:'قواعد أونو الرسمية الكلاسيكية',       turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:false, team:false, elimination:false },
+    stacking:    { name:'ستاكينغ',      icon:'📚', desc:'يمكن تكديس +2 و+4 على بعضها',          turnTime:30, stacking:true,  jumpin:false, sevenzero:false, chaos:false, team:false, elimination:false },
+    jumpin:      { name:'جامب إن',      icon:'⚡', desc:'العب ورقة مطابقة حتى خارج دورك',       turnTime:30, stacking:false, jumpin:true,  sevenzero:false, chaos:false, team:false, elimination:false },
+    sevenzero:   { name:'7-صفر',        icon:'🔄', desc:'7 = بدّل الأيدي · 0 = دوران الجميع',    turnTime:30, stacking:false, jumpin:false, sevenzero:true,  chaos:false, team:false, elimination:false },
+    team:        { name:'فريقين (2v2)', icon:'👥', desc:'الزميل الذي يفوز يُفوز معه الفريق',      turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:false, team:true,  elimination:false },
+    elimination: { name:'إقصاء',        icon:'💀', desc:'آخر لاعب صامد يفوز — لا رحمة',         turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:false, team:false, elimination:true  },
+    chaos:       { name:'فوضى نكسوس',   icon:'🌪️', desc:'حدث عشوائي كل 5 أدوار — فوضى كاملة',   turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:true,  team:false, elimination:false },
+    speed:       { name:'سرعة',         icon:'⏱️', desc:'15 ثانية فقط لكل دور — من يتردد يخسر', turnTime:15, stacking:true,  jumpin:true,  sevenzero:false, chaos:false, team:false, elimination:false },
+  },
+
+  CHAOS_EVENTS: [
+    { id:'reverse_all',  name:'انعكاس جماعي', desc:'كل الأيدي تُعكس!',       icon:'🔄' },
+    { id:'draw_one',     name:'سحب قسري',     desc:'الجميع يسحب ورقة',        icon:'🃏' },
+    { id:'swap_left',    name:'تبديل يساري',  desc:'بدّل يدك مع اللاعب السابق', icon:'↔️' },
+    { id:'wild_frenzy',  name:'إعصار بري',    desc:'كل لاعب يحصل على بري',    icon:'🌈' },
+    { id:'color_lock',   name:'قفل اللون',    desc:'اللون الحالي يتجمد لدورين', icon:'🔒' },
+    { id:'skip_all',     name:'توقف جماعي',   desc:'الجميع يتوقف ما عدا اللاعب الحالي', icon:'⏸️' },
+  ],
+};
+
+/* ══════════════════════════════════════════════
+   🏗️ بناء مجموعة أوراق أونو
+   ══════════════════════════════════════════════ */
+function unoBuildDeck(){
+  const deck = [];
+  let id = 0;
+
+  /* أوراق ملوّنة */
+  UNO.COLORS.forEach(color => {
+    /* صفر واحد */
+    deck.push({ id:`c${id++}`, color, value:'0', type:'number' });
+    /* 1-9 مرتان */
+    for(let n = 1; n <= 9; n++){
+      deck.push({ id:`c${id++}`, color, value:String(n), type:'number' });
+      deck.push({ id:`c${id++}`, color, value:String(n), type:'number' });
+    }
+    /* أوراق الحركة مرتان */
+    ['skip','reverse','draw2'].forEach(action => {
+      deck.push({ id:`c${id++}`, color, value:action, type:'action' });
+      deck.push({ id:`c${id++}`, color, value:action, type:'action' });
+    });
+  });
+
+  /* بري ×4 */
+  for(let i = 0; i < 4; i++){
+    deck.push({ id:`w${id++}`, color:'wild', value:'wild',     type:'wild' });
+    deck.push({ id:`w${id++}`, color:'wild', value:'wild4',    type:'wild' });
+    deck.push({ id:`w${id++}`, color:'wild', value:'wild_swap',type:'wild' });
+  }
+
+  return deck;
+}
+
+function unoShuffle(deck){
+  const d = [...deck];
+  for(let i = d.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+/* ══════════════════════════════════════════════
+   ✅ هل يمكن لعب الورقة؟
+   ══════════════════════════════════════════════ */
+function unoCanPlay(card, topCard, currentColor, activePenalty, mode){
+  if(!card) return false;
+  if(card.type === 'wild') return true;
+  if(activePenalty > 0 && mode.stacking && (card.value === 'draw2' || card.value === 'wild4')){
+    /* تكديس معاكس */
+    return card.value === (topCard.value === 'wild4' ? 'wild4' : 'draw2');
+  }
+  if(card.color === currentColor) return true;
+  if(card.value === topCard.value) return true;
+  return false;
+}
+
+/* ══════════════════════════════════════════════
+   🎮 إنشاء/بدء مباراة أونو
+   ══════════════════════════════════════════════ */
+async function unoStartMatch(roomId, isHost){
+  const roomRef = doc(db, 'rooms', roomId);
+  const snap = await getDoc(roomRef);
+  if(!snap.exists()) return toast('الغرفة غير موجودة');
+  const room = snap.data();
+  const players = room.players || [];
+
+  if(players.length < 2) return toast('تحتاج لاعبين على الأقل');
+
+if(isHost && !room.unoState){
+  const deck = unoShuffle(unoBuildDeck());
+  const hands = {};
+  const playerOrder = [...players];
+  const settings = room.unoSettings || {};
+  const initialHand = settings.initialHand || UNO.INITIAL_HAND;
+
+  /* وزّع الأوراق حسب الإعدادات */
+  playerOrder.forEach(uid => {
+    hands[uid] = deck.splice(0, initialHand);
+  });
+
+    /* اسحب أول ورقة كبداية (يجب أن تكون رقمية) */
+    let topCard = deck.shift();
+    while(topCard.type === 'wild'){
+      deck.push(topCard);
+      topCard = deck.shift();
+    }
+
+    const modeCfg = UNO.MODES[room.unoMode || 'classic'] || UNO.MODES.classic;
+
+    const unoState = {
+      deck,
+      discard: [topCard],
+      hands,
+      playerOrder,
+      currentTurn: 0,
+      direction: 1,
+      currentColor: topCard.color,
+      activePenalty: 0,
+      penaltyType: null,
+      lastPlayed: topCard,
+      turnStartedAt: Date.now(),
+      turnTime: settings.turnTime || modeCfg.turnTime || 30,
+      mode: room.unoMode || 'classic',
+      winnerId: null,
+      finished: false,
+      unoCalled: {},
+      turnCount: 0,
+      chaosLog: [],
+      nextChaosAt: modeCfg.chaos ? 5 : 0,
+      teams: modeCfg.team ? buildUnoTeams(playerOrder) : null,
+      round: 1,
+    };
+
+    await updateDoc(roomRef, {
+      status: 'playing',
+      unoState,
+      startedAt: serverTimestamp(),
+    });
+  }
+
+  subscribeToUnoMatch(roomId);
+}
+
+function buildUnoTeams(players){
+  /* زوجي: 0+2 ضد 1+3 */
+  const teams = {};
+  players.forEach((uid, i) => {
+    teams[uid] = i % 2 === 0 ? 'A' : 'B';
+  });
+  return teams;
+}
+
+/* ══════════════════════════════════════════════
+   📡 الاشتراك في غرفة أونو
+   ══════════════════════════════════════════════ */
+function subscribeToUnoMatch(roomId){
+  if(state.unoUnsub){ try{ state.unoUnsub(); }catch(e){} state.unoUnsub = null; }
+  if(state.unoTimer){ clearInterval(state.unoTimer); state.unoTimer = null; }
+
+  state.activeUnoMatch = { roomId };
+  document.getElementById('gameOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  state.unoUnsub = onSnapshot(doc(db,'rooms',roomId), snap => {
+    if(!snap.exists()){ unoExitMatch(); return; }
+    const data = snap.data();
+    state.activeUnoMatch = { roomId, ...data };
+
+    if(!data.unoState){
+      const c = document.getElementById('gameContainer');
+      if(c) c.innerHTML = `<div class="uno-loading"><div class="spinner"></div><h3>جارٍ تحضير الأوراق…</h3></div>`;
+      return;
+    }
+
+    renderUnoGame();
+    startUnoTurnTimer(roomId);
+
+    /* فوز */
+    if(data.unoState.winnerId && !state._unoWinnerShown){
+      state._unoWinnerShown = true;
+      setTimeout(() => unoShowResult(roomId), 600);
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   🖼️ رسم واجهة اللعبة
+   ══════════════════════════════════════════════ */
+function renderUnoGame(){
+  const m = state.activeUnoMatch;
+  if(!m || !m.unoState) return;
+  const s = m.unoState;
+  const me = state.user.uid;
+  const container = document.getElementById('gameContainer');
+  if(!container) return;
+
+  const modeCfg = UNO.MODES[s.mode] || UNO.MODES.classic;
+  const myHand = s.hands[me] || [];
+  const isMyTurn = s.playerOrder[s.currentTurn] === me;
+  const currentColor = s.currentColor;
+  const topCard = s.discard[s.discard.length - 1];
+
+  /* اللاعبون الآخرون */
+  const others = s.playerOrder.filter(uid => uid !== me);
+
+  /* الوقت المتبقي */
+  const elapsed = (Date.now() - s.turnStartedAt) / 1000;
+  const remaining = Math.max(0, s.turnTime - elapsed);
+
+  /* ترتيب الأوراق في يدي */
+  const sortedHand = [...myHand].sort((a, b) => {
+    const colorOrder = { red:0, yellow:1, green:2, blue:3, wild:4 };
+    if(colorOrder[a.color] !== colorOrder[b.color]) return colorOrder[a.color] - colorOrder[b.color];
+    return a.value.localeCompare(b.value);
+  });
+
+  container.innerHTML = `
+    <div class="uno-game">
+
+      <!-- ═══ شريط علوي ═══ -->
+      <div class="uno-topbar">
+        <button class="uno-exit-btn" data-action="uno-exit" title="خروج">
+          ${ic('close','sm')}
+        </button>
+        <div class="uno-mode-chip">
+          ${modeCfg.icon} ${modeCfg.name}
+        </div>
+        <div class="uno-timer ${remaining < 5 ? 'danger' : remaining < 10 ? 'warn' : ''}">
+          ⏱️ ${Math.ceil(remaining)}s
+        </div>
+      </div>
+
+      <!-- ═══ اللاعبون الآخرون ═══ -->
+      <div class="uno-opponents">
+        ${others.map(uid => {
+          const u = state.users[uid] || { name:'لاعب' };
+          const isCurrent = s.playerOrder[s.currentTurn] === uid;
+          const cardCount = (s.hands[uid] || []).length;
+          const uno = cardCount === 1;
+          return `
+            <div class="uno-opponent ${isCurrent ? 'active' : ''}">
+              <div class="uno-opp-avatar">
+                ${avatar(u, 44)}
+                ${uno ? '<div class="uno-opp-uno">UNO!</div>' : ''}
+              </div>
+              <div class="uno-opp-info">
+                <div class="uno-opp-name">${esc((u.name||'').split(' ')[0])}</div>
+                <div class="uno-opp-cards">
+                  ${'🂠'.repeat(Math.min(cardCount, 7))}
+                  ${cardCount > 7 ? `+${cardCount - 7}` : ''}
+                </div>
+              </div>
+              ${isCurrent ? '<div class="uno-opp-turn">▶</div>' : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- ═══ منطقة اللعب ═══ -->
+      <div class="uno-play-zone">
+        <!-- الكومة -->
+        <div class="uno-piles">
+          <button class="uno-deck-pile" data-action="uno-draw"
+                  ${!isMyTurn || s.finished ? 'disabled' : ''}
+                  title="اسحب ورقة">
+            <div class="uno-deck-back">
+              <div class="uno-deck-logo">UNO</div>
+              <div class="uno-deck-count">${s.deck.length}</div>
+            </div>
+          </button>
+
+          <div class="uno-discard-pile">
+            ${renderUnoCard(topCard, { discard:true })}
+          </div>
+        </div>
+
+        <!-- اللون الحالي + الاتجاه -->
+        <div class="uno-info-row">
+          <div class="uno-color-indicator" style="--c:${UNO.COLOR_HEX[currentColor]}">
+            <span class="uno-color-dot"></span>
+            <span>${UNO.COLOR_NAMES[currentColor]}</span>
+          </div>
+          <div class="uno-direction ${s.direction > 0 ? 'cw' : 'ccw'}">
+            ${s.direction > 0 ? '↻' : '↺'}
+          </div>
+          ${s.activePenalty > 0 ? `
+            <div class="uno-penalty-badge">
+              +${s.activePenalty} ⚠️
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- إعلان UNO -->
+        ${myHand.length === 1 && !s.unoCalled[me] ? `
+          <button class="uno-call-btn" data-action="uno-call">
+            🔔 UNO!
+          </button>
+        ` : ''}
+      </div>
+
+      <!-- ═══ يدي ═══ -->
+      <div class="uno-hand-wrap">
+        <div class="uno-hand-header">
+          <span>يدك</span>
+          <span class="uno-hand-count">${myHand.length} ورقة</span>
+        </div>
+        <div class="uno-hand">
+          ${sortedHand.map(card => {
+            const playable = isMyTurn && unoCanPlay(card, topCard, currentColor, s.activePenalty, modeCfg);
+            return `
+              <button class="uno-card-btn ${playable ? 'playable' : 'not-playable'}"
+                      data-uno-card="${card.id}"
+                      ${playable && !s.finished ? '' : 'disabled'}>
+                ${renderUnoCard(card, { playable })}
+              </button>
+            `;
+          }).join('')}
+        </div>
+        ${!isMyTurn && !s.finished ? `
+          <div class="uno-waiting">
+            ⏳ بانتظار <b>${esc((state.users[s.playerOrder[s.currentTurn]]?.name || 'لاعب').split(' ')[0])}</b>
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- ═══ اختيار اللون (للبري) ═══ -->
+      ${state._unoColorPickerOpen ? renderUnoColorPicker() : ''}
+    </div>
+  `;
+
+  /* حوار اختيار اللون */
+  if(state._unoColorPickerOpen){
+    setTimeout(() => {
+      document.querySelectorAll('[data-uno-color]').forEach(btn => {
+        btn.onclick = () => unoConfirmColor(btn.dataset.unoColor);
+      });
+    }, 20);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   🎴 رسم ورقة أونو
+   ══════════════════════════════════════════════ */
+function renderUnoCard(card, opts = {}){
+  const { playable = false, discard = false } = opts;
+  const colorClass = `uno-color-${card.color}`;
+  const display = unoCardDisplay(card);
+  return `
+    <div class="uno-card ${colorClass} ${discard ? 'discard' : ''} ${playable ? 'highlight' : ''}">
+      <div class="uno-card-tl">${display}</div>
+      <div class="uno-card-center">${display}</div>
+      <div class="uno-card-br">${display}</div>
+    </div>
+  `;
+}
+
+function unoCardDisplay(card){
+  if(!card) return '';
+  const v = card.value;
+  if(v === 'skip')      return '⊘';
+  if(v === 'reverse')   return '↺';
+  if(v === 'draw2')     return '+2';
+  if(v === 'wild')      return '🌈';
+  if(v === 'wild4')     return '+4';
+  if(v === 'wild_swap') return '🔀';
+  return v;
+}
+
+/* ══════════════════════════════════════════════
+   🎯 لعب ورقة
+   ══════════════════════════════════════════════ */
+async function unoPlayCard(cardId, chosenColor = null){
+  const m = state.activeUnoMatch;
+  if(!m || !m.unoState) return;
+  const s = m.unoState;
+  const me = state.user.uid;
+  const modeCfg = UNO.MODES[s.mode] || UNO.MODES.classic;
+
+  /* ليس دوري؟ */
+  if(s.playerOrder[s.currentTurn] !== me) return toast('ليس دورك');
+
+  const myHand = s.hands[me] || [];
+  const card = myHand.find(c => c.id === cardId);
+  if(!card) return toast('الورقة غير موجودة');
+
+  const topCard = s.discard[s.discard.length - 1];
+  if(!unoCanPlay(card, topCard, s.currentColor, s.activePenalty, modeCfg)){
+    return toast('لا يمكنك لعب هذه الورقة');
+  }
+
+  /* بري يحتاج اختيار لون */
+  if(card.type === 'wild' && !chosenColor){
+    state._unoPendingWild = cardId;
+    state._unoColorPickerOpen = true;
+    renderUnoGame();
+    return;
+  }
+
+  try {
+    const roomRef = doc(db, 'rooms', m.roomId);
+
+    await runTransaction(db, async tx => {
+      const snap = await tx.get(roomRef);
+      if(!snap.exists()) throw new Error('room deleted');
+      const data = snap.data();
+      const st = data.unoState;
+      if(!st || st.finished) throw new Error('game finished');
+      if(st.playerOrder[st.currentTurn] !== me) throw new Error('not your turn');
+
+      const hand = [...(st.hands[me] || [])];
+      const idx = hand.findIndex(c => c.id === cardId);
+      if(idx < 0) throw new Error('card not in hand');
+      const played = hand.splice(idx, 1)[0];
+
+      const newDiscard = [...st.discard, played];
+      const newColor = played.type === 'wild' ? chosenColor : played.color;
+      let newPenalty = st.activePenalty;
+      let newDirection = st.direction;
+      let skipNext = false;
+      let drawExtra = 0;
+      let swapHandsWith = null;
+      let everyoneDraw = 0;
+      let rotateAllHands = false;
+
+      /* تطبيق تأثير الورقة */
+      const v = played.value;
+
+      if(v === 'skip'){
+        skipNext = true;
+      } else if(v === 'reverse'){
+        newDirection = st.direction * -1;
+        if(st.playerOrder.length === 2) skipNext = true;
+      } else if(v === 'draw2'){
+        if(modeCfg.stacking && st.activePenalty > 0){
+          newPenalty = st.activePenalty + 2;
+        } else {
+          newPenalty = 2;
+        }
+      } else if(v === 'wild4'){
+        if(modeCfg.stacking && st.activePenalty > 0 && st.penaltyType === 'wild4'){
+          newPenalty = st.activePenalty + 4;
+        } else {
+          newPenalty = 4;
+        }
+      } else if(modeCfg.sevenzero){
+        if(v === '7'){
+          const partnerIdx = (st.currentTurn + 2) % st.playerOrder.length;
+          swapHandsWith = st.playerOrder[partnerIdx];
+        } else if(v === '0'){
+          rotateAllHands = true;
+        }
+      }
+
+      /* تحديث الأيدي */
+      const newHands = { ...st.hands, [me]: hand };
+
+      if(swapHandsWith){
+        const otherHand = [...(newHands[swapHandsWith] || [])];
+        newHands[swapHandsWith] = hand;
+        newHands[me] = otherHand;
+      }
+
+      if(rotateAllHands){
+        const allHands = st.playerOrder.map(uid => [...(newHands[uid] || [])]);
+        const rotated = allHands.map((_, i) => allHands[(i - 1 + allHands.length) % allHands.length]);
+        st.playerOrder.forEach((uid, i) => { newHands[uid] = rotated[i]; });
+      }
+
+      /* حساب اللاعب التالي */
+      let nextTurn = (st.currentTurn + newDirection + st.playerOrder.length) % st.playerOrder.length;
+      if(skipNext){
+        nextTurn = (nextTurn + newDirection + st.playerOrder.length) % st.playerOrder.length;
+      }
+
+      /* فحص الفوز */
+      const newDeck = [...st.deck];
+      let winnerId = null;
+      let finished = false;
+      const playerAfter = st.playerOrder[st.currentTurn];
+
+      if(newHands[playerAfter].length === 0){
+        winnerId = playerAfter;
+        finished = true;
+
+        /* في وضع الفريق — الفريق كله يفوز */
+        if(modeCfg.team && st.teams){
+          const winningTeam = st.teams[playerAfter];
+          const teammate = st.playerOrder.find(u => st.teams[u] === winningTeam && u !== playerAfter);
+          if(teammate) winnerId = teammate;
+        }
+      }
+
+      /* فحص الإقصاء */
+      if(!finished && modeCfg.elimination){
+        /* إذا بقي لاعب واحد فقط بأوراق */
+        const active = st.playerOrder.filter(u => (newHands[u] || []).length > 0);
+        if(active.length === 1){
+          winnerId = active[0];
+          finished = true;
+        }
+      }
+
+      /* UNO تلقائي إذا لم ينادي */
+      const unoState = { ...st.unoCalled };
+
+      /* سحب عقوبة إذا كان نشطاً ولم يُكدَّس */
+      if(newPenalty > 0 && !finished){
+        const target = st.playerOrder[nextTurn];
+        const targetHand = [...(newHands[target] || [])];
+        const drawCount = newPenalty;
+
+        for(let i = 0; i < drawCount; i++){
+          if(newDeck.length === 0){
+            /* أعد تدوير discard */
+            const reshuffled = st.discard.slice(0, -1);
+            newDeck.push(...unoShuffle(reshuffled));
+          }
+          if(newDeck.length > 0) targetHand.push(newDeck.shift());
+        }
+
+        newHands[target] = targetHand;
+        newPenalty = 0;
+        /* تجاوز اللاعب المسحوب عليه */
+        nextTurn = (nextTurn + newDirection + st.playerOrder.length) % st.playerOrder.length;
+      }
+
+      /* حدث فوضى */
+      let chaosLog = [...(st.chaosLog || [])];
+      let nextChaosAt = st.nextChaosAt || 0;
+      if(modeCfg.chaos && st.turnCount + 1 >= nextChaosAt && !finished){
+        const chaos = UNO.CHAOS_EVENTS[Math.floor(Math.random() * UNO.CHAOS_EVENTS.length)];
+
+        /* تطبيق الحدث */
+        if(chaos.id === 'draw_one'){
+          st.playerOrder.forEach(uid => {
+            if(newDeck.length > 0) newHands[uid] = [...(newHands[uid] || []), newDeck.shift()];
+          });
+        } else if(chaos.id === 'wild_frenzy'){
+          st.playerOrder.forEach(uid => {
+            newHands[uid] = [...(newHands[uid] || []), { id:`chaos_w${Date.now()}_${uid}`, color:'wild', value:'wild', type:'wild' }];
+          });
+        } else if(chaos.id === 'swap_left'){
+          const prev = (st.currentTurn - 1 + st.playerOrder.length) % st.playerOrder.length;
+          const prevUid = st.playerOrder[prev];
+          const temp = [...(newHands[me] || [])];
+          newHands[me] = [...(newHands[prevUid] || [])];
+          newHands[prevUid] = temp;
+        }
+
+        chaosLog.unshift({ ...chaos, at: Date.now() });
+        chaosLog = chaosLog.slice(0, 5);
+        nextChaosAt = st.turnCount + 1 + 5;
+      }
+
+      /* بناء الحالة الجديدة */
+      const newUnoState = {
+        ...st,
+        deck: newDeck,
+        discard: newDiscard,
+        hands: newHands,
+        currentTurn: nextTurn,
+        direction: newDirection,
+        currentColor: newColor,
+        activePenalty: newPenalty,
+        penaltyType: newPenalty > 0 ? played.value : null,
+        lastPlayed: played,
+        turnStartedAt: Date.now(),
+        winnerId,
+        finished,
+        unoCalled: unoState,
+        turnCount: st.turnCount + 1,
+        chaosLog,
+        nextChaosAt,
+      };
+
+      tx.update(roomRef, { unoState: newUnoState });
+    });
+
+    state._unoColorPickerOpen = false;
+    state._unoPendingWild = null;
+  } catch(e){
+    console.error('unoPlayCard:', e);
+    toast('فشل اللعب: ' + (e.message || ''));
+    state._unoColorPickerOpen = false;
+    state._unoPendingWild = null;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   🃏 سحب ورقة
+   ══════════════════════════════════════════════ */
+async function unoDrawCard(){
+  const m = state.activeUnoMatch;
+  if(!m || !m.unoState) return;
+  const s = m.unoState;
+  const me = state.user.uid;
+
+  if(s.playerOrder[s.currentTurn] !== me) return toast('ليس دورك');
+
+  try {
+    const roomRef = doc(db, 'rooms', m.roomId);
+    await runTransaction(db, async tx => {
+      const snap = await tx.get(roomRef);
+      const data = snap.data();
+      const st = data.unoState;
+      if(st.playerOrder[st.currentTurn] !== me) throw new Error('not your turn');
+
+      const newDeck = [...st.deck];
+      const newHands = { ...st.hands };
+      const myHand = [...(newHands[me] || [])];
+
+      /* اسحب ورقة */
+      if(newDeck.length === 0){
+        const reshuffled = st.discard.slice(0, -1);
+        newDeck.push(...unoShuffle(reshuffled));
+      }
+      if(newDeck.length === 0) throw new Error('deck empty');
+
+      const drawn = newDeck.shift();
+      myHand.push(drawn);
+      newHands[me] = myHand;
+
+      /* هل يمكن لعب الورقة المسحوبة؟ */
+      const modeCfg = UNO.MODES[st.mode] || UNO.MODES.classic;
+      const topCard = st.discard[st.discard.length - 1];
+      const canPlayDrawn = unoCanPlay(drawn, topCard, st.currentColor, st.activePenalty, modeCfg);
+
+      /* إذا لم يستطع اللعب — انتقال الدور */
+      let nextTurn = st.currentTurn;
+      let turnStartedAt = st.turnStartedAt;
+      if(!canPlayDrawn){
+        nextTurn = (st.currentTurn + st.direction + st.playerOrder.length) % st.playerOrder.length;
+        turnStartedAt = Date.now();
+      }
+
+      tx.update(roomRef, {
+        'unoState.deck': newDeck,
+        'unoState.hands': newHands,
+        'unoState.currentTurn': nextTurn,
+        'unoState.turnStartedAt': turnStartedAt,
+        'unoState.turnCount': st.turnCount + 1,
+      });
+    });
+
+    /* إذا كان بإمكانه اللعب — تحتاج لمسة إضافية */
+    const updated = state.activeUnoMatch.unoState;
+    const myNewHand = updated.hands[me];
+    const drawnCard = myNewHand[myNewHand.length - 1];
+    const modeCfg = UNO.MODES[updated.mode] || UNO.MODES.classic;
+    if(drawnCard && unoCanPlay(drawnCard, updated.discard[updated.discard.length-1], updated.currentColor, updated.activePenalty, modeCfg)){
+      setTimeout(() => unoPlayCard(drawnCard.id), 100);
+    }
+  } catch(e){
+    console.error('unoDrawCard:', e);
+    toast('فشل السحب');
+  }
+}
+
+/* ══════════════════════════════════════════════
+   🎨 اختيار اللون بعد بري
+   ══════════════════════════════════════════════ */
+function renderUnoColorPicker(){
+  return `
+    <div class="uno-color-picker">
+      <div class="uno-color-picker-title">اختر اللون</div>
+      <div class="uno-color-picker-grid">
+        ${UNO.COLORS.map(c => `
+          <button class="uno-color-opt" data-uno-color="${c}"
+                  style="--c:${UNO.COLOR_HEX[c]}">
+            <span class="uno-color-opt-dot"></span>
+            <span>${UNO.COLOR_NAMES[c]}</span>
+          </button>
+        `).join('')}
+      </div>
+      <button class="uno-color-cancel" data-action="uno-cancel-color">إلغاء</button>
+    </div>
+  `;
+}
+
+function unoConfirmColor(color){
+  const cardId = state._unoPendingWild;
+  if(!cardId) return;
+  unoPlayCard(cardId, color);
+}
+
+/* ══════════════════════════════════════════════
+   🔔 إعلان UNO
+   ══════════════════════════════════════════════ */
+async function unoCallUno(){
+  const m = state.activeUnoMatch;
+  if(!m || !m.unoState) return;
+  const me = state.user.uid;
+  const myHand = m.unoState.hands[me] || [];
+  if(myHand.length !== 1) return toast('لا يمكنك إعلان UNO الآن');
+
+  try {
+    const roomRef = doc(db,'rooms', m.roomId);
+    await updateDoc(roomRef, {
+      [`unoState.unoCalled.${me}`]: true,
+    });
+    toast('🔔 UNO!');
+  } catch(e){
+    console.error(e);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   ⏱️ مؤقت الدور
+   ══════════════════════════════════════════════ */
+function startUnoTurnTimer(roomId){
+  if(state.unoTimer) clearInterval(state.unoTimer);
+  state.unoTimer = setInterval(() => {
+    const m = state.activeUnoMatch;
+    if(!m || !m.unoState){ clearInterval(state.unoTimer); return; }
+    if(m.unoState.finished){ clearInterval(state.unoTimer); return; }
+
+    const s = m.unoState;
+    const elapsed = (Date.now() - s.turnStartedAt) / 1000;
+    const remaining = Math.max(0, s.turnTime - elapsed);
+
+    const timerEl = document.querySelector('.uno-timer');
+    if(timerEl){
+      timerEl.textContent = `⏱️ ${Math.ceil(remaining)}s`;
+      timerEl.classList.toggle('warn', remaining < 10 && remaining >= 5);
+      timerEl.classList.toggle('danger', remaining < 5);
+    }
+
+    /* انتهاء الوقت — سحب قسري */
+    if(remaining <= 0 && s.playerOrder[s.currentTurn] === state.user.uid && !s.finished){
+      unoDrawCard();
+    }
+  }, 500);
+}
+
+/* ══════════════════════════════════════════════
+   🏆 شاشة النتيجة
+   ══════════════════════════════════════════════ */
+async function unoShowResult(roomId){
+  const m = state.activeUnoMatch;
+  if(!m || !m.unoState) return;
+  const winnerId = m.unoState.winnerId;
+  const isWinner = winnerId === state.user.uid;
+  const winnerUser = state.users[winnerId] || { name:'لاعب' };
+
+  /* XP/عملات */
+  try {
+    await updateDoc(doc(db,'users',state.user.uid), {
+      xp:    increment(isWinner ? 150 : 30),
+      coins: increment(isWinner ? 200 : 50),
+      fame:  increment(isWinner ? 30  : 5),
+    });
+    await addDoc(collection(db,'users',state.user.uid,'matchHistory'), {
+      gameId:'uno',
+      gameName:'أونو',
+      roomId,
+      result: isWinner ? 'win' : 'loss',
+      myScore: isWinner ? 1 : 0,
+      opponentScore: isWinner ? 0 : 1,
+      mode: m.unoState.mode,
+      playedAt: serverTimestamp(),
+    });
+  } catch(e){ console.warn('uno reward:', e); }
+
+  const container = document.getElementById('gameContainer');
+  if(!container) return;
+  container.innerHTML = `
+    <div class="uno-result">
+      <div class="uno-result-icon">${isWinner ? '🏆' : '🎴'}</div>
+      <h1 class="uno-result-title" style="color:${isWinner ? 'var(--gold)' : 'var(--muted)'}">
+        ${isWinner ? 'فوز رائع!' : `${esc(winnerUser.name)} فاز`}
+      </h1>
+      <div class="uno-result-sub">
+        ${isWinner ? '+200 عملة · +150 XP' : '+50 عملة · +30 XP'}
+      </div>
+      <div class="uno-result-actions">
+        <button class="btn btn-primary" data-action="uno-play-again">
+          ${ic('play','sm')} مباراة أخرى
+        </button>
+        <button class="btn btn-ghost" data-action="uno-exit">
+          العودة للألعاب
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   🚪 الخروج
+   ══════════════════════════════════════════════ */
+function unoExitMatch(){
+  if(state.unoUnsub){ try{state.unoUnsub();}catch(e){} state.unoUnsub = null; }
+  if(state.unoTimer){ clearInterval(state.unoTimer); state.unoTimer = null; }
+  if(state._unoMatchingUnsub){
+    try { state._unoMatchingUnsub(); } catch(e){}
+    state._unoMatchingUnsub = null;
+  }
+
+  state.activeUnoMatch = null;
+  state._unoWinnerShown = false;
+  state._unoColorPickerOpen = false;
+  state._unoPendingWild = null;
+
+  /* ✅ جديد: نظّف حالة الاختيار */
+  state.unoSelectedMode = null;
+  state.unoSettingsEditing = false;
+  state._unoSettingsBackup = null;
+
+  document.getElementById('gameOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  render();
+}
+
+/* ══════════════════════════════════════════════
+   💾 تحميل الإعدادات من قاعدة البيانات
+   ══════════════════════════════════════════════ */
+function loadUnoSettingsFromDB(){
+  if(state.unoSettingsLoaded) return;
+  if(!state.profile) return;
+
+  const saved = state.profile.unoSettings;
+  if(saved && typeof saved === 'object'){
+    state.unoSettings = {
+      maxPlayers:  Number(saved.maxPlayers)  || 4,
+      initialHand: Number(saved.initialHand) || 7,
+      turnTime:    Number(saved.turnTime)    || 30,
+      isPublic:    saved.isPublic !== false,
+      password:    typeof saved.password === 'string' ? saved.password : '',
+    };
+    state.unoHasCustomSettings = true;
+  }
+  state.unoSettingsLoaded = true;
+}
+
+/* ══════════════════════════════════════════════
+   💾 حفظ الإعدادات في قاعدة البيانات
+   ══════════════════════════════════════════════ */
+async function persistUnoSettings(){
+  if(!state.user?.uid) return;
+  try {
+    await updateDoc(doc(db, 'users', state.user.uid), {
+      unoSettings: {
+        maxPlayers:  state.unoSettings.maxPlayers,
+        initialHand: state.unoSettings.initialHand,
+        turnTime:    state.unoSettings.turnTime,
+        isPublic:    state.unoSettings.isPublic,
+        password:    state.unoSettings.password,
+      },
+    });
+    /* حدّث الملف الشخصي محلياً */
+    if(state.profile){
+      state.profile.unoSettings = { ...state.unoSettings };
+    }
+    state.unoHasCustomSettings = true;
+    toast('✓ تم حفظ الإعدادات');
+    return true;
+  } catch(e){
+    console.warn('persistUnoSettings:', e);
+    toast('تعذر حفظ الإعدادات');
+    return false;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   🎯 لوبي أونو
+   ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   🎯 اللوبي — اختيار الطور فقط
+   ══════════════════════════════════════════════ */
+function renderUnoLobby(){
+    loadUnoSettingsFromDB();   /* ← أضف هذا السطر */
+  return `
+    <div class="row" style="margin-bottom:14px">
+      <button class="icon-btn" data-nav="games" data-reset="game">${ic('back','sm')}</button>
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:900">🃏 أونو</div>
+        <div class="muted" style="font-size:11px">${Object.keys(UNO.MODES).length} أطوار لعب</div>
+      </div>
+    </div>
+
+    <div class="uno-hero">
+      <div class="uno-hero-cards">
+        <div class="uno-mini-card uno-color-red">7</div>
+        <div class="uno-mini-card uno-color-blue">+2</div>
+        <div class="uno-mini-card uno-color-green">↺</div>
+        <div class="uno-mini-card uno-color-wild">🌈</div>
+      </div>
+      <h1 class="uno-hero-title">أونو</h1>
+      <p class="uno-hero-desc">
+        اللعبة الكلاسيكية الشهيرة — تخلّص من أوراقك قبل الجميع<br>
+        مع 8 أطوار مختلفة منها 3 أطوار حصرية من نكسوس
+      </p>
+    </div>
+
+    <div class="section-title">${ic('play','sm')} اختر طور اللعب</div>
+
+    <div class="uno-modes-grid">
+      ${Object.entries(UNO.MODES).map(([key, mode]) => `
+        <button class="uno-mode-card" data-uno-select-mode="${key}">
+          <div class="uno-mode-icon">${mode.icon}</div>
+          <div class="uno-mode-info">
+            <div class="uno-mode-name">${mode.name}</div>
+            <div class="uno-mode-desc">${mode.desc}</div>
+          </div>
+          <div class="uno-mode-arrow">${ic('back','xs')}</div>
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   ⚙️ شاشة الإعدادات — موزِّع (ملخص أو نموذج)
+   ══════════════════════════════════════════════ */
+function renderUnoSettingsScreen(){
+  const modeKey = state.unoSelectedMode;
+  if(!modeKey) return renderUnoLobby();
+
+  const mode = UNO.MODES[modeKey];
+  if(!mode) return renderUnoLobby();
+
+  loadUnoSettingsFromDB();
+
+  if(state.unoSettingsEditing){
+    return renderUnoSettingsForm(mode);
+  }
+  return renderUnoSettingsSummary(mode);
+}
+
+/* ══════════════════════════════════════════════
+   📋 ملخص الإعدادات — عرض فقط + زر تعديل
+   ══════════════════════════════════════════════ */
+function renderUnoSettingsSummary(mode){
+  const s = state.unoSettings;
+
+  return `
+    <div class="row" style="margin-bottom:14px">
+      <button class="icon-btn" data-action="uno-back-to-modes">${ic('back','sm')}</button>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:900">${mode.icon} ${mode.name}</div>
+        <div class="muted" style="font-size:10.5px">جاهز للبدء</div>
+      </div>
+    </div>
+
+    <!-- ═══ بطاقة الطور ═══ -->
+    <div class="uno-settings-mode-card">
+      <div class="usmc-icon">${mode.icon}</div>
+      <div class="usmc-body">
+        <div class="usmc-name">${mode.name}</div>
+        <div class="usmc-desc">${mode.desc}</div>
+      </div>
+    </div>
+
+    <!-- ═══ ملخص الإعدادات الحالية ═══ -->
+    <div class="section-title">
+      ${ic('settings','sm')} الإعدادات الحالية
+      ${state.unoHasCustomSettings
+        ? '<span class="pill ok" style="font-size:9px;margin-inline-start:auto">✓ محفوظة</span>'
+        : '<span class="pill" style="font-size:9px;margin-inline-start:auto">افتراضية</span>'}
+    </div>
+
+    <div class="uno-settings-summary">
+      <div class="uss-row">
+        <div class="uss-icon">👥</div>
+        <div class="uss-info">
+          <div class="uss-lbl">عدد اللاعبين</div>
+          <div class="uss-val">${s.maxPlayers} ${s.maxPlayers === 2 ? 'لاعب' : 'لاعبين'}</div>
+        </div>
+      </div>
+      <div class="uss-row">
+        <div class="uss-icon">🃏</div>
+        <div class="uss-info">
+          <div class="uss-lbl">الأوراق الأولية</div>
+          <div class="uss-val">${s.initialHand} أوراق لكل لاعب</div>
+        </div>
+      </div>
+      <div class="uss-row">
+        <div class="uss-icon">⏱️</div>
+        <div class="uss-info">
+          <div class="uss-lbl">وقت الدور</div>
+          <div class="uss-val">${s.turnTime} ثانية</div>
+        </div>
+      </div>
+      <div class="uss-row">
+        <div class="uss-icon">${s.isPublic ? '🌐' : '🔒'}</div>
+        <div class="uss-info">
+          <div class="uss-lbl">نوع الغرفة</div>
+          <div class="uss-val">
+            ${s.isPublic
+              ? 'عامة — مطابقة تلقائية'
+              : `خاصة${s.password ? ' · 🔑 بكلمة مرور' : ' · بالدعوة'}`}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ أزرار ═══ -->
+    <div class="uno-summary-actions">
+      <button class="btn btn-ghost" style="flex:1" data-action="uno-change-settings">
+        ${ic('settings','sm')} تغيير الإعدادات
+      </button>
+    </div>
+
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" data-action="uno-back-to-modes">
+        ${ic('back','xs')} تغيير الطور
+      </button>
+      <button class="btn btn-primary" style="flex:2" data-action="uno-confirm-settings">
+        ${ic('play','sm')} ابدأ اللعب
+      </button>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   ⚙️ نموذج تعديل الإعدادات
+   ══════════════════════════════════════════════ */
+function renderUnoSettingsForm(mode){
+  const s = state.unoSettings;
+
+  return `
+    <div class="row" style="margin-bottom:14px">
+      <button class="icon-btn" data-action="uno-cancel-settings">${ic('back','sm')}</button>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:900">${mode.icon} ${mode.name}</div>
+        <div class="muted" style="font-size:10.5px">تعديل الإعدادات</div>
+      </div>
+      <span class="pill">${ic('settings','xs')} تحرير</span>
+    </div>
+
+    <div class="uno-settings-mode-card">
+      <div class="usmc-icon">${mode.icon}</div>
+      <div class="usmc-body">
+        <div class="usmc-name">${mode.name}</div>
+        <div class="usmc-desc">${mode.desc}</div>
+      </div>
+    </div>
+
+    <!-- عدد اللاعبين -->
+    <div class="uno-setting-field">
+      <label>
+        <span>👥 عدد اللاعبين</span>
+        <span class="uno-setting-val">${s.maxPlayers}</span>
+      </label>
+      <div class="compact-chips">
+        ${[2, 3, 4, 5, 6].map(n => {
+          const disabled = mode.team && n < 4;
+          return `
+            <button type="button"
+                    class="cchip ${s.maxPlayers === n ? 'active' : ''} ${disabled ? 'is-disabled' : ''}"
+                    data-uno-setting="maxPlayers"
+                    data-val="${n}"
+                    ${disabled ? 'disabled' : ''}>
+              ${n} ${n === 2 ? 'لاعب' : 'لاعبين'}
+            </button>
+          `;
+        }).join('')}
+      </div>
+      ${mode.team ? `<div class="info-hint">👥 طور الفريقين يتطلب 4 لاعبين على الأقل</div>` : ''}
+    </div>
+
+    <!-- عدد الأوراق -->
+    <div class="uno-setting-field">
+      <label>
+        <span>🃏 الأوراق الأولية</span>
+        <span class="uno-setting-val">${s.initialHand}</span>
+      </label>
+      <div class="compact-chips">
+        ${[5, 7, 10].map(n => `
+          <button type="button"
+                  class="cchip ${s.initialHand === n ? 'active' : ''}"
+                  data-uno-setting="initialHand"
+                  data-val="${n}">
+            ${n} أوراق
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- وقت الدور -->
+    <div class="uno-setting-field">
+      <label>
+        <span>⏱️ وقت الدور</span>
+        <span class="uno-setting-val">${s.turnTime} ثانية</span>
+      </label>
+      <div class="compact-chips">
+        ${[15, 30, 45, 60].map(n => `
+          <button type="button"
+                  class="cchip ${s.turnTime === n ? 'active' : ''}"
+                  data-uno-setting="turnTime"
+                  data-val="${n}">
+            ${n} ثانية
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- نوع الغرفة -->
+    <div class="uno-setting-field">
+      <label>
+        <span>🌐 نوع الغرفة</span>
+      </label>
+      <div class="compact-chips">
+        <button type="button"
+                class="cchip ${s.isPublic ? 'active' : ''}"
+                data-uno-setting="isPublic"
+                data-val="true">
+          🌐 عامة
+        </button>
+        <button type="button"
+                class="cchip ${!s.isPublic ? 'active' : ''}"
+                data-uno-setting="isPublic"
+                data-val="false">
+          🔒 خاصة
+        </button>
+      </div>
+    </div>
+
+    ${!s.isPublic ? `
+      <div class="uno-setting-field">
+        <label>
+          <span>🔑 كلمة المرور</span>
+        </label>
+        <input type="text"
+               class="input"
+               id="unoPasswordInput"
+               value="${esc(s.password || '')}"
+               placeholder="اتركها فارغة للدخول الحر"
+               maxlength="20"
+               autocomplete="off">
+      </div>
+    ` : ''}
+
+    <!-- أزرار -->
+    <div class="row" style="gap:8px;margin-top:20px">
+      <button class="btn btn-ghost" style="flex:1" data-action="uno-cancel-settings">
+        ${ic('close','xs')} إلغاء
+      </button>
+      <button class="btn btn-primary" style="flex:2" data-action="uno-save-settings">
+        ${ic('check','sm')} حفظ الإعدادات
+      </button>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   🚀 بدء المباراة (إنشاء غرفة + مطابقة)
+   ══════════════════════════════════════════════ */
+async function unoStartMatchmaking(modeKey){
+  const mode = UNO.MODES[modeKey];
+  if(!mode) return toast('الطور غير صالح');
+
+  const cfg = state.unoSettings || {};
+
+  /* ═══ فحوصات ═══ */
+  if(mode.team && cfg.maxPlayers < 4){
+    return toast('طور الفريقين يتطلب 4 لاعبين على الأقل', 'warning');
+  }
+
+  openModal(`
+    <div class="uno-matchmaking-modal">
+      <div class="uno-matching-spinner"></div>
+      <h3>🔍 جارٍ البحث عن خصوم…</h3>
+      <div class="muted" style="margin-top:6px">
+        الطور: <b>${mode.name}</b>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:6px">
+        👥 ${cfg.maxPlayers} لاعب · 🃏 ${cfg.initialHand} ورقة · ⏱️ ${cfg.turnTime}s
+      </div>
+      <div class="uno-matching-hint" id="unoMatchingHint">نبحث عن غرفة متاحة…</div>
+      <button class="btn btn-ghost" style="margin-top:14px" data-action="uno-cancel-matching">
+        إلغاء
+      </button>
+    </div>
+  `);
+
+  try {
+    /* ابحث عن غرفة متاحة */
+    if(cfg.isPublic){
+      const q = query(
+        collection(db,'rooms'),
+        where('gameId','==','uno'),
+        where('unoMode','==',modeKey),
+        where('status','==','waiting'),
+        where('public','==',true),
+        limit(5)
+      );
+      const snap = await getDocs(q);
+      const available = snap.docs.find(d => {
+        const data = d.data();
+        return data.hostId !== state.user.uid
+            && (data.players || []).length < (data.maxPlayers || 4);
+      });
+
+      if(available){
+        const data = available.data();
+        const roomRef = doc(db, 'rooms', available.id);
+
+        await updateDoc(roomRef, {
+          players: arrayUnion(state.user.uid),
+        });
+
+        const newSnap = await getDoc(roomRef);
+        const newData = newSnap.data();
+        closeModal();
+        await unoStartMatch(available.id, newData.hostId === state.user.uid);
+        return;
+      }
+    }
+
+    /* أنشئ غرفة جديدة */
+    const newRoomRef = await addDoc(collection(db, 'rooms'), {
+      gameId:      'uno',
+      unoMode:     modeKey,
+      unoSettings: {
+        maxPlayers:  cfg.maxPlayers,
+        initialHand: cfg.initialHand,
+        turnTime:    cfg.turnTime,
+        password:    cfg.isPublic ? null : (cfg.password || null),
+      },
+      hostId:      state.user.uid,
+      name:        `أونو · ${mode.name}`,
+      players:     [state.user.uid],
+      maxPlayers:  cfg.maxPlayers,
+      mode:        'multiplayer',
+      public:      !!cfg.isPublic,
+      password:    cfg.isPublic ? null : (cfg.password || null),
+      status:      'waiting',
+      createdAt:   serverTimestamp(),
+    });
+
+    const hint = document.getElementById('unoMatchingHint');
+    if(hint){
+      hint.textContent = cfg.isPublic
+        ? `غرفتك جاهزة — انتظر ${cfg.maxPlayers - 1} لاعبين آخرين…`
+        : '🔒 غرفة خاصة — شارك الرابط مع أصدقائك';
+    }
+
+    /* استمع للغرفة */
+    let started = false;
+    const unsub = onSnapshot(doc(db,'rooms',newRoomRef.id), snap => {
+      if(!snap.exists()) return;
+      const d = snap.data();
+      if(!started && (d.players || []).length >= d.maxPlayers && d.status === 'waiting'){
+        started = true;
+        try { unsub(); } catch(e){}
+        closeModal();
+        unoStartMatch(newRoomRef.id, d.hostId === state.user.uid);
+      }
+    });
+
+    /* timeout 60 ثانية */
+    setTimeout(() => {
+      if(!started){
+        try { unsub(); } catch(e){}
+        closeModal();
+        toast('لم يصل لاعبون كافيون — حاول مجدداً');
+        deleteDoc(doc(db,'rooms',newRoomRef.id)).catch(()=>{});
+      }
+    }, 60000);
+
+    /* احفظ مرجع لإلغاء المطابقة */
+    state._unoMatchingUnsub = () => {
+      if(!started){
+        try { unsub(); } catch(e){}
+        deleteDoc(doc(db,'rooms',newRoomRef.id)).catch(()=>{});
+      }
+    };
+
+  } catch(e){
+    console.error('uno matchmaking:', e);
+    closeModal();
+    toast('فشل البدء: ' + (e.message || ''));
+  }
+}
+
 /* ============ Event Handlers ============ */
 document.addEventListener('click', async (e)=>{
 
@@ -24071,6 +25605,18 @@ if(t.dataset.miniStat){
   return;
 }
 
+/* ═══ كتم المحادثة ═══ */
+if(t.dataset.action === 'chat-mute-toggle'){
+  await toggleChatMute();
+  return;
+}
+
+/* ═══ مسح المحادثة ═══ */
+if(t.dataset.action === 'chat-clear'){
+  await clearChat();
+  return;
+}
+
   /* ============================================================
      13) حفظ موسيقى الملف
      ============================================================ */
@@ -24890,6 +26436,149 @@ if(t.dataset.memberMenu){
   return;
 }
 
+/* ═══ أونو ═══ */
+if(t.dataset.action === 'uno-open-lobby'){
+  state.activeGame = 'uno';
+  render();
+  return;
+}
+
+if(t.dataset.unoStart){
+  await unoStartMatchmaking(t.dataset.unoStart);
+  return;
+}
+
+if(t.dataset.unoCard){
+  await unoPlayCard(t.dataset.unoCard);
+  return;
+}
+
+if(t.dataset.action === 'uno-draw'){
+  await unoDrawCard();
+  return;
+}
+
+if(t.dataset.action === 'uno-call'){
+  await unoCallUno();
+  return;
+}
+
+if(t.dataset.action === 'uno-cancel-color'){
+  state._unoColorPickerOpen = false;
+  state._unoPendingWild = null;
+  renderUnoGame();
+  return;
+}
+
+if(t.dataset.action === 'uno-exit'){
+  unoExitMatch();
+  return;
+}
+
+if(t.dataset.action === 'uno-play-again'){
+  unoExitMatch();
+  go('games', { activeGame: 'uno' });
+  return;
+}
+
+/* ═══ أونو: اختيار الطور ═══ */
+if(t.dataset.unoSelectMode){
+  const modeKey = t.dataset.unoSelectMode;
+  const mode = UNO.MODES[modeKey];
+
+  state.unoSelectedMode = modeKey;
+  state.unoSettingsEditing = false;
+
+  /* إذا لم يخصص المستخدم إعدادات من قبل — استخدم توصية الطور */
+  if(!state.unoHasCustomSettings && mode?.turnTime){
+    state.unoSettings.turnTime = mode.turnTime;
+  }
+
+  render();
+  return;
+}
+
+/* ═══ أونو: الرجوع لتغيير الطور ═══ */
+if(t.dataset.action === 'uno-back-to-modes'){
+  state.unoSelectedMode = null;
+  state.unoSettingsEditing = false;
+  state._unoSettingsBackup = null;
+  render();
+  return;
+}
+
+/* ═══ أونو: الدخول لوضع التعديل ═══ */
+if(t.dataset.action === 'uno-change-settings'){
+  state._unoSettingsBackup = { ...state.unoSettings };
+  state.unoSettingsEditing = true;
+  render();
+  return;
+}
+
+/* ═══ أونو: إلغاء التعديل ═══ */
+if(t.dataset.action === 'uno-cancel-settings'){
+  if(state._unoSettingsBackup){
+    state.unoSettings = { ...state._unoSettingsBackup };
+    state._unoSettingsBackup = null;
+  }
+  state.unoSettingsEditing = false;
+  render();
+  return;
+}
+
+/* ═══ أونو: حفظ الإعدادات ═══ */
+if(t.dataset.action === 'uno-save-settings'){
+  /* اقرأ كلمة المرور */
+  const pwInput = document.getElementById('unoPasswordInput');
+  if(pwInput){
+    state.unoSettings.password = pwInput.value.trim().slice(0, 20);
+  }
+
+  const ok = await persistUnoSettings();
+  if(ok){
+    state._unoSettingsBackup = null;
+    state.unoSettingsEditing = false;
+    render();
+  }
+  return;
+}
+
+/* ═══ أونو: تعديل إعداد ═══ */
+if(t.dataset.unoSetting){
+  const key = t.dataset.unoSetting;
+  const val = t.dataset.val;
+
+  if(key === 'isPublic'){
+    state.unoSettings.isPublic = val === 'true';
+    if(!state.unoSettings.isPublic && !state.unoSettings.password){
+      /* اترك الباسورد فارغة — سيتم إدخالها يدوياً */
+    } else if(state.unoSettings.isPublic){
+      state.unoSettings.password = '';
+    }
+  } else {
+    state.unoSettings[key] = parseInt(val, 10);
+  }
+
+  render();
+  return;
+}
+
+/* ═══ أونو: تأكيد وبدء المباراة ═══ */
+if(t.dataset.action === 'uno-confirm-settings'){
+  await unoStartMatchmaking(state.unoSelectedMode);
+  return;
+}
+
+/* ═══ أونو: إلغاء المطابقة ═══ */
+if(t.dataset.action === 'uno-cancel-matching'){
+  if(state._unoMatchingUnsub){
+    try { state._unoMatchingUnsub(); } catch(e){}
+    state._unoMatchingUnsub = null;
+  }
+  closeModal();
+  return;
+}
+
   /* ============================================================
      27) تبويبات الصفحة الرئيسية والملف
      ============================================================ */
@@ -25183,6 +26872,14 @@ if(t.dataset.openChatItem){
     const otherId = chat.participants.find(p => p !== state.user.uid);
     if(otherId) openChat(otherId);
   }
+  return;
+}
+
+/* ═══ تبويبات فئات الألعاب ═══ */
+if(t.dataset.gamesCat){
+  state.gamesCategoryTab = t.dataset.gamesCat;
+  try { localStorage.setItem('nexus_games_cat', t.dataset.gamesCat); } catch(e){}
+  render();
   return;
 }
 

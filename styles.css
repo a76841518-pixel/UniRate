@@ -16056,3 +16056,989 @@ html[dir="rtl"] .spa-actions .pact.ml{
   .ccc-game { font-size: 12.5px; }
   .ccc-btn { padding: 8px 10px; font-size: 10.5px; }
 }
+
+/* ═══ شارة المشاهدات بجانب قائمة المنشور ═══ */
+.post-views-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--line);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  margin-inline-start: 4px;
+}
+.post-views-badge .ic{
+  width: 11px;
+  height: 11px;
+  color: var(--brand-2);
+}
+
+/* ═══ شارة المشاهدات في صفحة المنشور المفرد ═══ */
+.spa-views-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-inline-start: auto;
+  margin-inline-end: 6px;
+}
+.spa-views-chip .ic{
+  color: var(--brand-2);
+}
+
+/* ============================================================
+   🎮 صفحة الألعاب الجديدة
+   ============================================================ */
+.games-hero {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(108,92,231,.14), rgba(0,210,255,.06));
+  border: 1px solid rgba(108,92,231,.3);
+  border-radius: 20px; margin-bottom: 14px;
+  position: relative; overflow: hidden;
+}
+.games-hero::before {
+  content: ""; position: absolute; top: -60px; right: -60px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(108,92,231,.4), transparent 70%);
+  filter: blur(40px); pointer-events: none;
+}
+.games-hero-icon {
+  font-size: 42px; flex-shrink: 0;
+  filter: drop-shadow(0 6px 18px rgba(108,92,231,.5));
+  animation: gamesHeroFloat 3s ease-in-out infinite;
+  position: relative; z-index: 1;
+}
+@keyframes gamesHeroFloat {
+  0%,100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-6px) rotate(4deg); }
+}
+.games-hero-text { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.games-hero-h {
+  font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -.3px;
+}
+.games-hero-sub {
+  font-size: 11.5px; color: var(--muted); font-weight: 700; margin-top: 3px;
+}
+
+/* Tabs */
+.games-cat-outer {
+  width: 100%; overflow: hidden; margin-bottom: 12px;
+}
+.games-cat-tabs {
+  display: flex; flex-wrap: nowrap; gap: 6px;
+  overflow-x: auto; padding: 4px 2px 8px;
+  -webkit-overflow-scrolling: touch; touch-action: pan-x;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent;
+}
+.games-cat-tabs::-webkit-scrollbar { height: 4px; }
+.games-cat-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.2); border-radius: 9px;
+}
+.games-cat-tab {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 13px; border-radius: 11px;
+  background: var(--card); border: 1.5px solid var(--line);
+  color: var(--muted); font-family: inherit;
+  font-size: 11.5px; font-weight: 800;
+  cursor: pointer; transition: .2s; white-space: nowrap;
+}
+.games-cat-tab:hover {
+  background: var(--card-2);
+  border-color: color-mix(in srgb, var(--cat-color) 40%, transparent);
+  color: var(--txt);
+}
+.games-cat-tab.active {
+  background: linear-gradient(135deg, var(--cat-color), color-mix(in srgb, var(--cat-color) 60%, #000));
+  border-color: transparent; color: #fff;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--cat-color) 40%, transparent);
+}
+.gct-emoji { font-size: 14px; line-height: 1; }
+.gct-label { font-size: 11.5px; }
+.gct-count {
+  padding: 1px 6px; border-radius: 6px;
+  background: rgba(255,255,255,.15);
+  font-size: 9.5px; font-weight: 900; min-width: 18px; text-align: center;
+}
+.games-cat-tab.active .gct-count { background: rgba(255,255,255,.28); }
+
+/* Grid */
+.games-grid-new {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+}
+.game-card-new {
+  border-radius: 16px; overflow: hidden;
+  background: var(--card); border: 1px solid var(--line);
+  transition: .22s; cursor: pointer; padding: 0;
+  text-align: start; font-family: inherit; color: inherit;
+  display: flex; flex-direction: column;
+}
+.game-card-new:hover {
+  transform: translateY(-3px);
+  border-color: rgba(108,92,231,.45);
+  box-shadow: 0 12px 28px rgba(0,0,0,.4);
+}
+.game-card-new.soon { opacity: .82; }
+.game-card-new.soon:hover { opacity: 1; }
+
+.gcn-cover {
+  aspect-ratio: 16/9;
+  display: grid; place-items: center;
+  position: relative; overflow: hidden;
+}
+.gcn-emoji {
+  font-size: 40px;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.4));
+  z-index: 1;
+}
+.gcn-badge {
+  position: absolute; top: 8px; inset-inline-end: 8px;
+  padding: 3px 8px; border-radius: 7px;
+  font-size: 9px; font-weight: 900;
+  display: inline-flex; align-items: center; gap: 3px;
+  backdrop-filter: blur(8px); z-index: 2;
+}
+.gcn-badge.playable {
+  background: rgba(34,197,94,.85); color: #fff;
+  box-shadow: 0 2px 10px rgba(34,197,94,.4);
+}
+.gcn-badge.soon {
+  background: rgba(7,10,17,.75); color: #94a3b8;
+  border: 1px solid rgba(255,255,255,.15);
+}
+.gcn-body {
+  padding: 10px 12px 12px;
+}
+.gcn-name {
+  font-size: 13px; font-weight: 900; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gcn-cat {
+  font-size: 10px; color: var(--muted); font-weight: 700; margin-top: 2px;
+}
+
+@media (max-width: 400px){
+  .games-hero { padding: 14px; }
+  .games-hero-icon { font-size: 32px; }
+  .games-hero-h { font-size: 17px; }
+  .gcn-emoji { font-size: 32px; }
+  .games-grid-new { gap: 8px; }
+}
+
+/* ============================================================
+   🃏 أونو — UNO Game
+   ============================================================ */
+
+/* اللوبي */
+.uno-hero {
+  text-align: center;
+  padding: 28px 20px;
+  background: linear-gradient(135deg, rgba(255,61,113,.15), rgba(245,179,1,.08), rgba(108,92,231,.1));
+  border: 1px solid rgba(255,61,113,.3);
+  border-radius: 22px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.uno-hero::before {
+  content: ""; position: absolute; top: -50px; right: -50px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(255,61,113,.4), transparent 70%);
+  filter: blur(40px); pointer-events: none;
+}
+.uno-hero-cards {
+  display: flex; justify-content: center; gap: 8px;
+  margin-bottom: 16px; position: relative; z-index: 1;
+}
+.uno-mini-card {
+  width: 50px; height: 72px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-weight: 900; font-size: 20px; color: #fff;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  transform: rotate(-8deg);
+  border: 2px solid rgba(255,255,255,.25);
+}
+.uno-mini-card:nth-child(2) { transform: rotate(8deg); }
+.uno-mini-card:nth-child(3) { transform: rotate(-5deg); }
+.uno-mini-card:nth-child(4) { transform: rotate(5deg); }
+.uno-hero-title {
+  font-size: 32px; font-weight: 900; margin: 0;
+  background: linear-gradient(135deg, #fff, #ff7b9d, #f5c451);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  letter-spacing: -1px; position: relative; z-index: 1;
+}
+.uno-hero-desc {
+  font-size: 12.5px; color: var(--muted);
+  line-height: 1.7; margin-top: 10px; font-weight: 700;
+  position: relative; z-index: 1;
+}
+
+.uno-modes-grid {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.uno-mode-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer; transition: .2s;
+  font-family: inherit; text-align: start; color: inherit;
+  width: 100%;
+}
+.uno-mode-card:hover {
+  background: var(--card-2);
+  border-color: rgba(255,61,113,.5);
+  transform: translateY(-1px);
+}
+.uno-mode-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255,61,113,.2), rgba(245,179,1,.1));
+  border: 1px solid rgba(255,61,113,.3);
+  display: grid; place-items: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.uno-mode-info { flex: 1; min-width: 0; }
+.uno-mode-name {
+  font-size: 13px; font-weight: 900; color: var(--txt);
+}
+.uno-mode-desc {
+  font-size: 10.5px; color: var(--muted); font-weight: 600;
+  margin-top: 2px; line-height: 1.5;
+}
+.uno-mode-arrow {
+  color: var(--muted); flex-shrink: 0;
+  transform: scaleX(-1);
+}
+
+/* ═══ اللعبة ═══ */
+.uno-game {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  gap: 10px;
+  background: radial-gradient(circle at 50% 0%, #1a1f2e 0%, #0a0e17 60%, #060810 100%);
+}
+
+.uno-topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.uno-exit-btn {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: rgba(255,61,113,.15);
+  border: 1px solid rgba(255,61,113,.3);
+  color: #ff7b9d;
+  display: grid; place-items: center;
+  cursor: pointer; padding: 0;
+}
+.uno-mode-chip {
+  flex: 1;
+  font-size: 11.5px; font-weight: 800;
+  color: var(--txt); text-align: center;
+  padding: 5px 10px;
+  background: rgba(0,210,255,.08);
+  border: 1px solid rgba(0,210,255,.25);
+  border-radius: 8px;
+}
+.uno-timer {
+  font-size: 13px; font-weight: 900;
+  color: var(--brand-2);
+  padding: 5px 12px;
+  background: rgba(0,210,255,.1);
+  border: 1px solid rgba(0,210,255,.3);
+  border-radius: 9px;
+  font-variant-numeric: tabular-nums;
+  min-width: 62px; text-align: center;
+}
+.uno-timer.warn {
+  color: #f5c451; background: rgba(245,179,1,.1);
+  border-color: rgba(245,179,1,.35);
+}
+.uno-timer.danger {
+  color: #ff7b9d; background: rgba(255,61,113,.15);
+  border-color: rgba(255,61,113,.4);
+  animation: unoTimerPulse 0.8s infinite;
+}
+@keyframes unoTimerPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.08); }
+}
+
+/* اللاعبون الآخرون */
+.uno-opponents {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+}
+.uno-opponent {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: .2s;
+  position: relative;
+}
+.uno-opponent.active {
+  background: rgba(0,210,255,.08);
+  border-color: rgba(0,210,255,.4);
+  box-shadow: 0 0 16px rgba(0,210,255,.2);
+}
+.uno-opp-avatar { position: relative; flex-shrink: 0; }
+.uno-opp-uno {
+  position: absolute;
+  top: -6px; inset-inline-end: -6px;
+  padding: 1px 6px;
+  background: linear-gradient(135deg, #ff3d71, #f5b301);
+  color: #fff;
+  font-size: 8px; font-weight: 900;
+  border-radius: 6px;
+  border: 1.5px solid #0a0e17;
+  animation: unoCallPulse 1s infinite;
+}
+@keyframes unoCallPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.15); }
+}
+.uno-opp-info { flex: 1; min-width: 0; }
+.uno-opp-name {
+  font-size: 11px; font-weight: 900;
+  color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.uno-opp-cards {
+  font-size: 10px; color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: -2px;
+}
+.uno-opp-turn {
+  position: absolute;
+  inset-inline-start: 4px;
+  top: 4px;
+  color: var(--brand-2);
+  font-size: 10px;
+  animation: unoTurnArrow 1s infinite;
+}
+@keyframes unoTurnArrow {
+  0%,100% { opacity: 1; }
+  50%     { opacity: .4; }
+}
+
+/* منطقة اللعب */
+.uno-play-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  position: relative;
+}
+.uno-piles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.uno-deck-pile, .uno-discard-pile {
+  width: 90px; height: 130px;
+  position: relative;
+}
+.uno-deck-pile {
+  cursor: pointer; padding: 0; border: 0;
+  background: transparent;
+  transition: transform .15s;
+}
+.uno-deck-pile:hover:not(:disabled) { transform: translateY(-4px); }
+.uno-deck-pile:disabled { opacity: .5; cursor: not-allowed; }
+.uno-deck-back {
+  width: 100%; height: 100%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1e1b4b, #312e81, #1e1b4b);
+  border: 2px solid rgba(255,255,255,.2);
+  box-shadow: 0 4px 16px rgba(0,0,0,.5), inset 0 0 30px rgba(255,255,255,.05);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  position: relative;
+}
+.uno-deck-logo {
+  font-size: 22px; font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  letter-spacing: 2px;
+  font-style: italic;
+  transform: rotate(-15deg);
+}
+.uno-deck-count {
+  font-size: 11px; font-weight: 800;
+  color: rgba(255,255,255,.7);
+  padding: 2px 10px;
+  background: rgba(0,0,0,.4);
+  border-radius: 8px;
+}
+
+.uno-info-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px;
+}
+.uno-color-indicator {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0,0,0,.4);
+  border: 1px solid var(--c);
+  border-radius: 10px;
+  font-weight: 800; color: var(--c);
+}
+.uno-color-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 8px var(--c);
+}
+.uno-direction {
+  font-size: 22px; font-weight: 900;
+  color: var(--brand-2);
+  padding: 4px 10px;
+  background: rgba(0,210,255,.1);
+  border: 1px solid rgba(0,210,255,.3);
+  border-radius: 10px;
+}
+.uno-direction.ccw { color: #f5b301; background: rgba(245,179,1,.1); border-color: rgba(245,179,1,.3); }
+.uno-penalty-badge {
+  padding: 5px 11px;
+  background: rgba(255,61,113,.2);
+  border: 1px solid rgba(255,61,113,.5);
+  border-radius: 9px;
+  font-weight: 900; color: #ff7b9d;
+  font-size: 12px;
+  animation: unoPenaltyPulse 1.2s infinite;
+}
+@keyframes unoPenaltyPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.05); }
+}
+
+.uno-call-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #ff3d71, #f5b301);
+  border: 0; border-radius: 12px;
+  color: #fff; font-weight: 900; font-size: 14px;
+  font-family: inherit; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255,61,113,.5);
+  animation: unoCallBtnPulse 1s infinite;
+}
+@keyframes unoCallBtnPulse {
+  0%,100% { transform: scale(1); box-shadow: 0 6px 20px rgba(255,61,113,.5); }
+  50%     { transform: scale(1.05); box-shadow: 0 6px 28px rgba(255,61,113,.8); }
+}
+
+/* يدي */
+.uno-hand-wrap {
+  padding: 12px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.uno-hand-header {
+  display: flex; justify-content: space-between;
+  font-size: 11px; font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.uno-hand-count { color: var(--brand-2); }
+.uno-hand {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.2) transparent;
+  min-height: 130px;
+  align-items: flex-end;
+}
+.uno-hand::-webkit-scrollbar { height: 4px; }
+.uno-hand::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.2);
+  border-radius: 9px;
+}
+.uno-card-btn {
+  flex: 0 0 auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: transform .2s;
+  width: 76px;
+}
+.uno-card-btn.playable:hover {
+  transform: translateY(-10px) scale(1.03);
+}
+.uno-card-btn.not-playable {
+  opacity: .45;
+  cursor: not-allowed;
+  filter: grayscale(.5);
+}
+.uno-card-btn.not-playable:hover { transform: none; }
+
+.uno-waiting {
+  text-align: center;
+  padding: 12px;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* ═══ الورقة ═══ */
+.uno-card {
+  width: 100%;
+  aspect-ratio: 3/4.3;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px;
+  font-weight: 900;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.15);
+  text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+.uno-card.discard {
+  width: 90px;
+  aspect-ratio: 3/4.3;
+  animation: unoDiscardIn .3s ease both;
+}
+@keyframes unoDiscardIn {
+  from { transform: scale(.7) rotate(-15deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0); opacity: 1; }
+}
+.uno-card.highlight {
+  box-shadow: 0 0 0 2px #00d2ff, 0 0 20px rgba(0,210,255,.6);
+}
+
+.uno-color-red    { background: linear-gradient(135deg, #ff3d71, #c8102e); }
+.uno-color-blue   { background: linear-gradient(135deg, #00d2ff, #0a3d8f); }
+.uno-color-green  { background: linear-gradient(135deg, #22c55e, #0a5c2a); }
+.uno-color-yellow { background: linear-gradient(135deg, #f5b301, #b45309); }
+.uno-color-wild   { background: conic-gradient(from 90deg at 50% 50%, #ff3d71 0deg 90deg, #f5b301 90deg 180deg, #22c55e 180deg 270deg, #00d2ff 270deg 360deg); }
+
+.uno-card-tl, .uno-card-center, .uno-card-br {
+  font-size: 13px;
+  line-height: 1;
+  position: relative;
+}
+.uno-card-tl { align-self: flex-start; }
+.uno-card-br { align-self: flex-end; transform: rotate(180deg); }
+.uno-card-center {
+  font-size: 26px;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+.uno-card.discard .uno-card-center { font-size: 36px; }
+.uno-card.discard .uno-card-tl,
+.uno-card.discard .uno-card-br { font-size: 14px; }
+
+/* اختيار اللون */
+.uno-color-picker {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn .2s;
+}
+.uno-color-picker-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 20px;
+}
+.uno-color-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  max-width: 340px;
+  width: 100%;
+}
+.uno-color-opt {
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--c);
+  border: 3px solid rgba(255,255,255,.2);
+  cursor: pointer;
+  transition: .2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  font-family: inherit;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+}
+.uno-color-opt:hover {
+  transform: scale(1.05);
+  border-color: #fff;
+  box-shadow: 0 10px 32px rgba(0,0,0,.6);
+}
+.uno-color-opt-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.35);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.2);
+}
+.uno-color-cancel {
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* نتيجة */
+.uno-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  text-align: center;
+}
+.uno-result-icon {
+  font-size: 100px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,.5));
+  animation: unoResultBounce 1s infinite alternate;
+}
+@keyframes unoResultBounce {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-12px); }
+}
+.uno-result-title {
+  font-size: 32px;
+  font-weight: 900;
+  margin: 0 0 10px;
+}
+.uno-result-sub {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+.uno-result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+.uno-result-actions .btn { padding: 14px; font-size: 14px; }
+
+/* Loading */
+.uno-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+/* Matchmaking */
+.uno-matchmaking-modal {
+  text-align: center;
+  padding: 20px;
+}
+.uno-matching-spinner {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.1);
+  border-top-color: var(--brand-2);
+  margin: 0 auto 20px;
+  animation: spin .9s linear infinite;
+}
+.uno-matching-hint {
+  font-size: 11.5px;
+  color: var(--brand-2);
+  font-weight: 700;
+  margin-top: 14px;
+}
+
+/* Responsive */
+@media (max-width: 400px){
+  .uno-hero-title { font-size: 26px; }
+  .uno-mini-card { width: 42px; height: 60px; font-size: 16px; }
+  .uno-mode-icon { width: 38px; height: 38px; font-size: 18px; }
+  .uno-mode-name { font-size: 12px; }
+  .uno-mode-desc { font-size: 10px; }
+  .uno-deck-pile, .uno-discard-pile { width: 75px; height: 108px; }
+  .uno-card-btn { width: 64px; }
+  .uno-hand { min-height: 110px; }
+  .uno-card-tl, .uno-card-br { font-size: 11px; }
+  .uno-card-center { font-size: 22px; }
+}
+
+/* ============================================================
+   ⚙️ أونو — شاشة الإعدادات
+   ============================================================ */
+
+/* بطاقة الطور المختار */
+.uno-settings-mode-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(255,61,113,.14), rgba(245,179,1,.06));
+  border: 1px solid rgba(255,61,113,.32);
+  border-radius: 18px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.uno-settings-mode-card::before {
+  content: "";
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  background: radial-gradient(circle, rgba(255,61,113,.35), transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+.usmc-icon {
+  font-size: 42px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 12px rgba(255,61,113,.5));
+  position: relative;
+  z-index: 1;
+}
+.usmc-body {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+.usmc-name {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--txt);
+  letter-spacing: -.2px;
+}
+.usmc-desc {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* حقول الإعدادات */
+.uno-setting-field {
+  margin-bottom: 18px;
+}
+.uno-setting-field > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--txt);
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.uno-setting-field > label > span:first-child {
+  color: var(--muted);
+}
+.uno-setting-val {
+  color: var(--brand-2);
+  font-weight: 900;
+  font-size: 11.5px;
+  padding: 3px 10px;
+  background: rgba(0,210,255,.1);
+  border-radius: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* تعطيل خيار */
+.compact-chips .cchip.is-disabled {
+  opacity: .35;
+  cursor: not-allowed;
+  filter: grayscale(.6);
+}
+.compact-chips .cchip.is-disabled:hover {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+/* بطاقة الملخص */
+.uno-summary-card {
+  padding: 14px;
+  background: rgba(0,210,255,.06);
+  border: 1px dashed rgba(0,210,255,.3);
+  border-radius: 14px;
+  margin-top: 16px;
+}
+.usc-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--brand-2);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.usc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.usc-item {
+  padding: 9px 4px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  text-align: center;
+  transition: .15s;
+}
+.usc-item:hover {
+  background: rgba(0,0,0,.35);
+  transform: translateY(-1px);
+}
+.usc-icon {
+  font-size: 16px;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+.usc-val {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.usc-lbl {
+  font-size: 9px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  .uno-settings-mode-card { padding: 13px; gap: 11px; }
+  .usmc-icon { font-size: 32px; }
+  .usmc-name { font-size: 14px; }
+  .usmc-desc { font-size: 10.5px; }
+  .usc-grid { gap: 4px; }
+  .usc-item { padding: 7px 2px; }
+  .usc-val { font-size: 11.5px; }
+  .usc-icon { font-size: 14px; }
+}
+
+/* ============================================================
+   📋 أونو — ملخص الإعدادات
+   ============================================================ */
+.uno-settings-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.uss-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: .2s;
+}
+.uss-row:hover {
+  background: var(--card-2);
+  border-color: rgba(0,210,255,.35);
+  transform: translateX(-2px);
+}
+.uss-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(0,210,255,.1);
+  border: 1px solid rgba(0,210,255,.25);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.uss-info {
+  flex: 1;
+  min-width: 0;
+}
+.uss-lbl {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.uss-val {
+  font-size: 13.5px;
+  font-weight: 900;
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+}
+
+.uno-summary-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.uno-summary-actions .btn {
+  padding: 12px 16px;
+  font-size: 12.5px;
+}
