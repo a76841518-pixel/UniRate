@@ -6,12 +6,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut,
-  setPersistence, browserLocalPersistence, updateProfile
+  setPersistence, browserLocalPersistence, updateProfile,
+  sendPasswordResetEmail  // ← أضف هذا السطر
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, collection, collectionGroup, addDoc,
   query, where, orderBy, limit, onSnapshot, serverTimestamp, getDocs,
-  deleteDoc, increment, runTransaction, arrayUnion, arrayRemove
+  deleteDoc, increment, runTransaction, arrayUnion, arrayRemove,
+  endBefore, startAfter, startAt, endAt, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ============ Firebase Config ============ */
@@ -1522,6 +1524,15 @@ chatNewMsgBadge: false,
 chatMessagesUnsub: null,
 chatMetaUnsub: null,
 chatTypingTimeout: null,
+  /* ★★ حالة المحادثة — Pagination + Precence */
+  chatHasMore: true,
+  chatOldestCursor: null,
+  chatLoadingOlder: false,
+  chatInitialLoaded: false,
+  chatLastRenderedAt: null,
+  _chatRenderHash: null,
+  _chatObserver: null,
+  _presenceTimer: null,
 chatListSearch: '',
   viewingTeamId:null,
   liked:{}, saved:{}, profileLiked:{}, followed:new Set(),
@@ -1626,6 +1637,11 @@ supportSearch: '',
 /* ابحث عن state وأضف: */
 missionsTab: 'rewards',    // 'rewards' | 'daily' | 'weekly' | 'monthly'
 missionsData: null,        // { loaded, loading, daily, weekly, monthly, claims, ... }
+/* ★★ مجموعات الدردشة */
+chatType: 'direct',        // 'direct' | 'group'
+chatGroupInfo: null,       // بيانات المجموعة { name, avatar, participants, admins, ... }
+chatMembersModalOpen: false,
+chatInfoTab: 'members',    // 'members' | 'info'
 };
 
 /* استعادة المنشورات المخفية من localStorage */
@@ -1841,6 +1857,15 @@ if(state.page === 'chat' && page !== 'chat'){
   state.chatSearchQuery = '';
   state.chatScrollBtn = false;
   state.chatNewMsgBadge = false;
+    state.chatHasMore = true;
+  state.chatOldestCursor = null;
+  state.chatLoadingOlder = false;
+  state.chatInitialLoaded = false;
+  state._chatRenderHash = null;
+  state.chatType = 'direct';
+  state.chatGroupInfo = null;
+  state.chatMembersModalOpen = false;
+  state.chatInfoTab = 'members';
 }
 
 /* ★ تنظيف مستمعي الفرق عند مغادرة الصفحة */
@@ -2060,7 +2085,7 @@ async function loadMissionsData(){
   if(state.missionsData?.loading) return;
 
   state.missionsData = { loading: true, loaded: false };
-  if(state.page === 'missions') render();
+  if(state.page === 'missions') scheduleRender();
 
   const me = state.user.uid;
   const now = new Date();
@@ -3038,7 +3063,9 @@ await setDoc(doc(db, 'users', user.uid), {
     window.NexusLoader?.setProgress?.(75);
 
     // ★ الإصلاح الأساسي: اعرض الصفحة فوراً
-    render();
+render();
+// ✅ أجّل heartbeat 2 ثانية حتى يستقر أول ريندر
+setTimeout(() => startPresenceHeartbeat(), 2000);
 
     // ★★★ انتظر 1.2 ثانية حتى تصل بيانات onSnapshot قبل إغلاق الشاشة ★★★
     setTimeout(() => window.NexusLoader?.finish?.(), 1200);
@@ -3093,6 +3120,7 @@ function detachListeners(){
     clearInterval(state.mmInterval);
   }
   state.mmInterval = null;
+  stopPresenceHeartbeat();  // ★
 }
 
 function closeModal(){
@@ -3140,33 +3168,41 @@ state.unsubs.push(onSnapshot(
 ));
 
 state.unsubs.push(onSnapshot(
-  doc(db, 'users', state.user.uid),
+  collection(db, 'users'),
   snap => {
-    if (snap.exists()) {
-      state.profile = snap.data();
-      updateTopbarCoins();
-      renderTopbar();
-if (
-  !state._resettingAll &&
-  !state._resettingZone &&
-  !state._savingCustomization &&   // ← ★ جديد
-  ['profile','stats','settings','userprofile'].includes(state.page)
-) render();
-    } else {
-      console.warn('Profile document disappeared');
-    }
-  },
-  err => {
-    console.error('Profile snapshot error:', err);
-    // محاولة getDoc كخطة بديلة
-    getDoc(doc(db, 'users', state.user.uid)).then(s => {
-      if (s.exists()) {
-        state.profile = s.data();
-        renderTopbar();
-        render();
+    const map = {};
+    snap.docs.forEach(d => { map[d.id] = d.data(); });
+
+    const shouldRender = (() => {
+      /* ═══ صفحة ملف الغير — تجاهل عدّادات المشاهدة ═══ */
+      if(state.page === 'userprofile' && state.viewingUid){
+        const oldU = state.users[state.viewingUid];
+        const newU = map[state.viewingUid];
+        if(!oldU || !newU) return true;
+
+        // نحن نزيد هذه الحقول عند دخول الملف → لا تستدعي ريندر
+        const IGNORE = new Set([
+          'lastSeen',
+          'views',           // +1 عند كل زيارة
+          'uniqueViewers',   // +1 عند أول زيارة
+          'reputation',      // +3 من uniqueViewer
+        ]);
+        const keys = new Set([...Object.keys(oldU), ...Object.keys(newU)]);
+        for(const k of keys){
+          if(IGNORE.has(k)) continue;
+          if(JSON.stringify(oldU[k]) !== JSON.stringify(newU[k])) return true;
+        }
+        return false;
       }
-    }).catch(e => console.error('getDoc fallback failed:', e));
-  }
+
+      /* ═══ الصفحات الأخرى التي تحتاج الريندر عند أي تغيير ═══ */
+      return ['home','leaderboard','closefriends','teams','team'].includes(state.page);
+    })();
+
+    state.users = map;
+    if(shouldRender) scheduleRender();
+  },
+  err => console.error('Users snapshot error:', err)
 ));
 
 /* posts — render فقط عند تغيّر الهيكل */
@@ -3185,7 +3221,7 @@ state.unsubs.push(onSnapshot(
     /* ✅ render فقط إذا تغيّر ترتيب/عدد المنشورات (ليس مجرد إعجاب) */
     if(oldIds !== newIds && ['home','profile','userprofile'].includes(state.page)){
       const scrollY = window.scrollY;
-      render();
+      scheduleRender();   // ★ كان render()
       requestAnimationFrame(() => window.scrollTo(0, scrollY));
     }
   },
@@ -3199,18 +3235,30 @@ state.unsubs.push(onSnapshot(
     snap.docs.forEach(d => { map[d.id] = d.data(); });
     state.users = map;
     const affected = ['home','leaderboard','closefriends','userprofile','teams','team'];
-    if (affected.includes(state.page)) render();
+    if (affected.includes(state.page)) scheduleRender();   // ★ كان render()
   },
   err => console.error('Users snapshot error:', err)
 ));
 
-  state.unsubs.push(onSnapshot(
-    query(collection(db,'follows'), where('followerId','==',state.user.uid)),
-    snap=>{
-      state.followed = new Set(snap.docs.map(d=>d.data().followingId));
-      if(['home','userprofile'].includes(state.page)) render();
+state.unsubs.push(onSnapshot(
+  query(collection(db,'follows'), where('followerId','==',state.user.uid)),
+  snap => {
+    state.followed = new Set(snap.docs.map(d => d.data().followingId));
+
+    /* ✅ ريندر فقط عند الحاجة الفعلية */
+    if(state.page === 'userprofile'){
+      scheduleRender();
+      return;
     }
-  ));
+    if(state.page === 'home' && state.homeTab === 'follow'){
+      // تبويب "متابعة" يحتاج الريندر (يعرض منشورات متابَعين)
+      scheduleRender();
+      return;
+    }
+    // explore/trend: لا حاجة — زر المتابعة يُحدَّث فوراً بالنقر
+  },
+  err => console.warn('follows snapshot:', err)
+));
 
 /* postLikes — بدون render */
 state.unsubs.push(onSnapshot(
@@ -3228,7 +3276,7 @@ state.unsubs.push(onSnapshot(
     snap=>{
       state.profileLiked = {};
       snap.docs.forEach(d=>{ state.profileLiked[d.data().to] = true; });
-      if(state.page==='userprofile') render();
+      if(state.page==='userprofile') scheduleRender();   // ★ كان render()
     }
   ));
 
@@ -3247,7 +3295,7 @@ state.unsubs.push(onSnapshot(
       .sort((a,b)=>(b.lastTime?.seconds||0)-(a.lastTime?.seconds||0));
 
     /* ✅ حدّث صفحة الرسائل إن كنا فيها */
-    if(state.page === 'messages') render();
+    if(state.page === 'messages') scheduleRender();   // ★ كان render()
 
     /* ✅ حدّث شارة زر الرسائل فوراً (في كل الصفحات الأخرى) */
     updateMessagesBadge();
@@ -3263,20 +3311,20 @@ state.unsubs.push(onSnapshot(
     if(state.page === 'notifs'){
       /* ★ debounce: جمع التحديثات السريعة في render واحد */
       clearTimeout(window._notifsRenderTimer);
-      window._notifsRenderTimer = setTimeout(() => render(), 200);
+      window._notifsRenderTimer = setTimeout(() => scheduleRender(), 200);
     }
   }
 ));
 
   state.unsubs.push(onSnapshot(collection(db,'rooms'), snap=>{
     state.rooms = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    if(state.page==='games' && state.activeGame) render();
+    if(state.page==='games' && state.activeGame) scheduleRender();   // ★ كان render()
   }));
 
   state.unsubs.push(onSnapshot(collection(db,'teams'), snap=>{
     state.teams = snap.docs.map(d=>({id:d.id, ...d.data()}))
       .sort((a,b)=>(b.points||0)-(a.points||0));
-    if(['teams','team'].includes(state.page)) render();
+    if(['teams','team'].includes(state.page)) scheduleRender();   // ★ كان render()
   }));
   subscribeToActivity();
 }
@@ -4099,10 +4147,13 @@ async function createPost(data){
       mediaAlts: mediaAlts,
       place: state.composeLocation || '',
       likes: 0, comments: 0, reblogs: 0,
+      views: 0,                          // ★ أضف هذا
       rebloggedBy: [],
       visibility: state.composeVisibility || 'public',
       pinned: false,
+       views: 0,   // ★ أضف
       createdAt: serverTimestamp()
+      
     });
 
     /* مسح المسودة + تنظيف الحالة */
@@ -4272,46 +4323,217 @@ async function openOrCreateChat(otherUid){
 }
 
 /* ============================================================
-   💬 نظام المحادثة المتطور — Subscriptions & Helpers
+   💬 المحادثة — تحميل أولي + اشتراك حي + Pagination
    ============================================================ */
 
-/* ═══ الاشتراك في رسائل المحادثة + meta ═══ */
+/* ═══ 1) تحميل أولي — آخر 30 رسالة فقط ═══ */
+async function loadInitialChatMessages(chatId){
+  state.chatMessages = [];
+  state.chatHasMore = true;
+  state.chatOldestCursor = null;
+  state.chatLoadingOlder = false;
+  state.chatInitialLoaded = false;
+  state._chatRenderHash = null;
+
+  try {
+    const q = query(
+      collection(db, 'chats', chatId, 'messages'),
+      orderBy('createdAt', 'desc'),
+      limit(30)
+    );
+    const snap = await getDocs(q);
+    state.chatMessages = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .reverse();
+
+    state.chatOldestCursor = snap.docs.length
+      ? snap.docs[snap.docs.length - 1]
+      : null;
+    state.chatHasMore = snap.docs.length === 30;
+    state.chatInitialLoaded = true;
+
+    if(state.page === 'chat' && state.chatId === chatId){
+      renderChatMessages(true);
+      setTimeout(() => scrollChatToBottom(false), 50);
+      markChatAsRead(chatId);
+    }
+  } catch(e){
+    console.error('loadInitialChatMessages:', e);
+    state.chatInitialLoaded = true;
+    if(state.page === 'chat') renderChatMessages(true);
+  }
+}
+
+/* ============================================================
+   💬 المحادثة — التحميل والاشتراك والدمج
+   ============================================================ */
+let _chatMergeDebounce = null;
+
+/* ═══ دالة الدمج الموحّدة — تُصلح التكرار ═══ */
+function mergeChatMessages(existing, recent){
+  const map = new Map();
+
+  /* 1) أضف كل الرسائل الموجودة (بما فيها القديمة من pagination) */
+  for(const m of existing){
+    map.set(m.id, m);
+  }
+
+  /* 2) الرسائل الجديدة من Firestore تُحدّث أو تُضاف */
+  for(const m of recent){
+    const prev = map.get(m.id);
+
+    if(prev){
+      /* ✅ لا تسمح لـ createdAt: null من الخادم بأن يمسح طابعاً حقيقياً */
+      const merged = { ...prev, ...m };
+      if(!merged.createdAt && prev.createdAt){
+        merged.createdAt = prev.createdAt;
+      }
+      map.set(m.id, merged);
+    } else {
+      map.set(m.id, m);
+    }
+  }
+
+  /* 3) ترتيب آمن — الرسائل قيد الإرسال (createdAt: null) تذهب للآخر */
+  return [...map.values()].sort((a, b) => {
+    const ta = a.createdAt?.toMillis?.() ?? Number.MAX_SAFE_INTEGER;
+    const tb = b.createdAt?.toMillis?.() ?? Number.MAX_SAFE_INTEGER;
+    return ta - tb;
+  });
+}
+
 function subscribeToChatMessages(chatId){
-  if(state.chatMessagesUnsub){ try{state.chatMessagesUnsub();}catch(e){} }
-  if(state.chatMetaUnsub){ try{state.chatMetaUnsub();}catch(e){} }
+  if(state.chatMessagesUnsub){
+    try { state.chatMessagesUnsub(); } catch(e){}
+    state.chatMessagesUnsub = null;
+  }
+  if(state.chatMetaUnsub){
+    try { state.chatMetaUnsub(); } catch(e){}
+    state.chatMetaUnsub = null;
+  }
 
   const q = query(
     collection(db, 'chats', chatId, 'messages'),
-    orderBy('createdAt', 'asc'),
-    limit(300)
+    orderBy('createdAt', 'desc'),
+    limit(50)
   );
 
   state.chatMessagesUnsub = onSnapshot(q, snap => {
-    const oldLen = state.chatMessages.length;
-    const wasNearBottom = isChatNearBottom();
+    if(state.chatId !== chatId) return;
+    if(state.page !== 'chat') return;
 
-    state.chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const applySnap = () => {
+      const recent = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const wasNearBottom = isChatNearBottom();
+      const oldLen = state.chatMessages.length;
+      const isFirstLoad = !state.chatInitialLoaded;
 
-    if(state.page === 'chat'){
-      renderChatMessages();
+      /* ★ دمج ذكي — يمنع التكرار */
+      state.chatMessages = mergeChatMessages(state.chatMessages, recent);
 
-      if(oldLen === 0 || wasNearBottom){
-        setTimeout(() => scrollChatToBottom(oldLen > 0), 50);
+      /* ★ ضبط cursor عند التحميل الأول */
+      if(isFirstLoad && snap.docs.length){
+        state.chatOldestCursor = snap.docs[snap.docs.length - 1];
+        state.chatHasMore = snap.docs.length === 50;
+      }
+
+      state.chatInitialLoaded = true;
+      const addedCount = state.chatMessages.length - oldLen;
+
+      /* ★ إعادة رسم قسري عند التحميل الأول */
+      renderChatMessages(isFirstLoad);
+
+      if(isFirstLoad){
+        setTimeout(() => scrollChatToBottom(false), 30);
         markChatAsRead(chatId);
-      } else if(state.chatMessages.length > oldLen){
+      } else if(addedCount > 0 && wasNearBottom){
+        setTimeout(() => scrollChatToBottom(true), 30);
+        markChatAsRead(chatId);
+      } else if(addedCount > 0 && !wasNearBottom){
         state.chatNewMsgBadge = true;
         updateChatNewBadge();
       }
+    };
+
+    /* ★ debounce أقصر (30ms) + بدون تأخير عند التحميل الأول */
+    clearTimeout(_chatMergeDebounce);
+    if(!state.chatInitialLoaded){
+      applySnap();   // ← فوري
+    } else {
+      _chatMergeDebounce = setTimeout(applySnap, 30);
     }
   }, err => console.warn('chat messages:', err));
 
   state.chatMetaUnsub = onSnapshot(doc(db, 'chats', chatId), snap => {
     if(!snap.exists()) return;
     state.chatMeta = snap.data();
-    if(state.page === 'chat'){
+    if(state.page === 'chat' && state.chatId === chatId){
       updateChatTypingIndicator();
     }
   }, err => console.warn('chat meta:', err));
+}
+
+/* ═══ 3) جلب رسائل أقدم ═══ */
+async function loadOlderChatMessages(chatId){
+  if(!state.chatHasMore || state.chatLoadingOlder) return;
+  if(!state.chatOldestCursor) return;
+
+  state.chatLoadingOlder = true;
+  showChatLoadingOlder(true);
+
+  const scrollEl = document.getElementById('chatMessagesScroll');
+  const oldScrollHeight = scrollEl?.scrollHeight || 0;
+  const oldScrollTop = scrollEl?.scrollTop || 0;
+
+  try {
+    const q = query(
+      collection(db, 'chats', chatId, 'messages'),
+      orderBy('createdAt', 'desc'),
+      endBefore(state.chatOldestCursor),
+      limit(30)
+    );
+    const snap = await getDocs(q);
+    const older = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .reverse();
+
+    if(older.length){
+      /* ★★★ الإصلاح الجذري: استخدم mergeChatMessages بدل concat ★★★
+         السبب: الـ cursor قد يكون قديماً والاشتراك أضاف رسائل
+         بين 51-70، فيسبب الـ concat تكراراً. */
+      state.chatMessages = mergeChatMessages(state.chatMessages, older);
+      state.chatOldestCursor = snap.docs[snap.docs.length - 1];
+    }
+    state.chatHasMore = snap.docs.length === 30;
+
+    if(state.page === 'chat'){
+      renderChatMessages(true);
+      setTimeout(() => {
+        if(scrollEl){
+          const newHeight = scrollEl.scrollHeight;
+          scrollEl.scrollTop = newHeight - oldScrollHeight + oldScrollTop;
+        }
+      }, 20);
+      updateChatNoMoreHint();
+    }
+  } catch(e){
+    console.error('loadOlderChatMessages:', e);
+  } finally {
+    state.chatLoadingOlder = false;
+    showChatLoadingOlder(false);
+  }
+}
+
+function showChatLoadingOlder(show){
+  const el = document.getElementById('chatLoadingOlder');
+  if(el) el.style.display = show ? 'flex' : 'none';
+}
+
+function updateChatNoMoreHint(){
+  const el = document.getElementById('chatNoMore');
+  if(el){
+    el.style.display = state.chatHasMore ? 'none' : 'block';
+  }
 }
 
 /* ═══ إرسال رسالة ═══ */
@@ -4319,7 +4541,11 @@ async function sendChatMessage(chatId, text, replyTo = null){
   const trimmed = (text || '').trim();
   if(!trimmed) return;
 
-  const otherUid = state.chatWith;
+  const isGroup = state.chatType === 'group';
+  const participants = state.chatMeta?.participants || [];
+  const targets = isGroup
+    ? participants.filter(p => p !== state.user.uid)
+    : [state.chatWith];
 
   const payload = {
     senderId: state.user.uid,
@@ -4342,21 +4568,24 @@ async function sendChatMessage(chatId, text, replyTo = null){
   try {
     await addDoc(collection(db, 'chats', chatId, 'messages'), payload);
 
-    await updateDoc(doc(db, 'chats', chatId), {
+    const updates = {
       lastMessage: trimmed.slice(0, 80),
       lastSender: state.user.uid,
       lastTime: serverTimestamp(),
-      [`unreadCounts.${otherUid}`]: increment(1),
       [`typing.${state.user.uid}`]: false,
+    };
+
+    targets.forEach(t => {
+      updates[`unreadCounts.${t}`] = increment(1);
     });
 
-    /* تنظيف */
+    await updateDoc(doc(db, 'chats', chatId), updates);
+
     state.chatReplyTo = null;
     renderChatReplyContext();
-
   } catch(e){
     console.error('sendChatMessage:', e);
-    toast('فشل الإرسال');
+    toast('فشل الإرسال', 'error');
   }
 }
 
@@ -4420,22 +4649,32 @@ async function toggleChatReaction(chatId, msgId, emoji){
 /* ═══ وضع علامة مقروء ═══ */
 async function markChatAsRead(chatId){
   if(!chatId || !state.chatMessages.length) return;
-  const unread = state.chatMessages.filter(m =>
-    m.senderId !== state.user.uid &&
-    !(m.readBy || []).includes(state.user.uid)
-  );
-  if(!unread.length) return;
+
+  /* ★ حارس — يمنع الإطلاق المتكرر */
+  if(state._markingRead) return;
+  state._markingRead = true;
 
   try {
+    const unread = state.chatMessages.filter(m =>
+      m.senderId !== state.user.uid &&
+      !(m.readBy || []).includes(state.user.uid)
+    );
+    if(!unread.length) return;
+
     await Promise.all(unread.map(m =>
       updateDoc(doc(db, 'chats', chatId, 'messages', m.id), {
         readBy: arrayUnion(state.user.uid),
       }).catch(()=>{})
     ));
+
     await updateDoc(doc(db, 'chats', chatId), {
       [`unreadCounts.${state.user.uid}`]: 0,
     }).catch(()=>{});
-  } catch(e){ console.warn('markChatAsRead:', e); }
+  } catch(e){
+    console.warn('markChatAsRead:', e);
+  } finally {
+    setTimeout(() => { state._markingRead = false; }, 600);
+  }
 }
 
 /* ═══ مؤشر الكتابة ═══ */
@@ -4493,13 +4732,588 @@ function updateChatNewBadge(){
 function updateChatTypingIndicator(){
   const el = document.getElementById('chatTypingIndicator');
   if(!el) return;
+
   const meta = state.chatMeta || {};
-  const otherTyping = meta.typing?.[state.chatWith] === true;
-  el.style.display = otherTyping ? 'flex' : 'none';
-  // scroll to bottom if was visible
-  if(otherTyping && isChatNearBottom()){
+  const myUid = state.user.uid;
+  const participants = meta.participants || [];
+  const others = participants.filter(p => p !== myUid);
+
+  let isTyping = false;
+  if(state.chatType === 'group'){
+    isTyping = others.some(p => meta.typing?.[p] === true);
+  } else {
+    isTyping = meta.typing?.[state.chatWith] === true;
+  }
+
+  el.style.display = isTyping ? 'flex' : 'none';
+
+  if(isTyping && isChatNearBottom()){
     setTimeout(() => scrollChatToBottom(), 100);
   }
+}
+
+/* ============================================================
+   👥 إنشاء مجموعة جديدة
+   ============================================================ */
+function openCreateGroupModal(){
+  const me = state.user.uid;
+  const users = Object.values(state.users || {})
+    .filter(u => u.uid !== me && !state.profile?.blockedUsers?.includes(u.uid))
+    .sort((a, b) => {
+      const aF = state.followed.has(a.uid);
+      const bF = state.followed.has(b.uid);
+      if(aF !== bF) return aF ? -1 : 1;
+      return (b.level || 1) - (a.level || 1);
+    })
+    .slice(0, 50);
+
+  const selected = new Set();
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">👥 مجموعة جديدة</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+
+    <!-- معلومات المجموعة -->
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div class="group-avatar-picker" id="groupAvatarPicker">
+        ${['👥','🎮','🏆','⭐','🔥','💎','👑','🎯','⚡','🌈','🌟','🎨'].map(emoji => `
+          <button type="button" class="gap-btn ${emoji === '👥' ? 'active' : ''}"
+                  data-group-avatar="${emoji}">${emoji}</button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="field">
+      <label>اسم المجموعة</label>
+      <input class="input" id="groupNameInput" type="text"
+             maxlength="60" placeholder="مثال: فريق الأبطال">
+    </div>
+
+    <!-- اختيار الأعضاء -->
+    <div class="field">
+      <label>الأعضاء <span class="range-val" id="groupMemberCount">0</span></label>
+      <div class="group-member-search">
+        ${ic('search','xs')}
+        <input type="text" id="groupMemberSearch"
+               placeholder="ابحث…" autocomplete="off">
+      </div>
+      <div class="group-members-list" id="groupMembersList">
+        ${users.map(u => `
+          <button type="button" class="group-member-pick"
+                  data-group-pick="${u.uid}">
+            <div class="gmp-check">${ic('check','xs')}</div>
+            ${avatar(u, 36)}
+            <div class="gmp-info">
+              <div class="gmp-name">${esc(u.name)}</div>
+              <div class="gmp-username">@${esc(u.username)}</div>
+            </div>
+          </button>
+        `).join('') || '<div class="empty" style="padding:20px">لا يوجد مستخدمون</div>'}
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="createGroupBtn" disabled>
+        ${ic('check','sm')} إنشاء
+      </button>
+    </div>
+  `);
+
+  /* اختيار الأفاتار */
+  let groupAvatar = '👥';
+  document.querySelectorAll('[data-group-avatar]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-group-avatar]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      groupAvatar = btn.dataset.groupAvatar;
+    });
+  });
+
+  /* اختيار الأعضاء */
+  const memberCountEl = document.getElementById('groupMemberCount');
+  const createBtn = document.getElementById('createGroupBtn');
+
+  document.querySelectorAll('[data-group-pick]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const uid = btn.dataset.groupPick;
+      if(selected.has(uid)){
+        selected.delete(uid);
+        btn.classList.remove('selected');
+      } else {
+        if(selected.size >= 100){
+          return toast('الحد الأقصى 100 عضو');
+        }
+        selected.add(uid);
+        btn.classList.add('selected');
+      }
+      memberCountEl.textContent = selected.size;
+      createBtn.disabled = selected.size < 1;
+    });
+  });
+
+  /* بحث الأعضاء */
+  const searchInput = document.getElementById('groupMemberSearch');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    document.querySelectorAll('[data-group-pick]').forEach(btn => {
+      const uid = btn.dataset.groupPick;
+      const u = state.users[uid];
+      if(!u) return;
+      const match = !q
+        || (u.name || '').toLowerCase().includes(q)
+        || (u.username || '').toLowerCase().includes(q);
+      btn.style.display = match ? '' : 'none';
+    });
+  });
+
+  /* إنشاء */
+  createBtn.addEventListener('click', async () => {
+    const name = document.getElementById('groupNameInput')?.value.trim();
+    if(!name) return toast('اسم المجموعة مطلوب');
+    if(name.length > 60) return toast('الاسم طويل جداً');
+    if(selected.size < 1) return toast('اختر عضواً واحداً على الأقل');
+
+    createBtn.disabled = true;
+    createBtn.classList.add('loading');
+
+    try {
+      const chatId = await createGroupChat(name, groupAvatar, [...selected]);
+      closeModal();
+      toast('✓ تم إنشاء المجموعة', 'success');
+      setTimeout(() => openGroupChat(chatId), 300);
+    } catch(e){
+      console.error('createGroup:', e);
+      toast('فشل الإنشاء', 'error');
+      createBtn.disabled = false;
+      createBtn.classList.remove('loading');
+    }
+  });
+}
+
+/* ═══ إنشاء مستند المجموعة ═══ */
+async function createGroupChat(name, avatar, memberUids){
+  const me = state.user.uid;
+  const chatId = 'group_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+  const participants = [me, ...memberUids];
+  const unreadCounts = {};
+  participants.forEach(p => { unreadCounts[p] = 0; });
+
+  await setDoc(doc(db, 'chats', chatId), {
+    type: 'group',
+    name: name.trim().slice(0, 60),
+    avatar: avatar || '👥',
+    participants,
+    admins: [me],
+    createdBy: me,
+    createdAt: serverTimestamp(),
+    lastMessage: 'تم إنشاء المجموعة',
+    lastSender: me,
+    lastTime: serverTimestamp(),
+    unreadCounts,
+    typing: {},
+    lastSeen: {},
+  });
+
+  /* إشعار للأعضاء */
+  await Promise.all(memberUids.map(uid =>
+    notify(
+      uid,
+      'group_added',
+      `<b>${esc(state.profile.name)}</b> أضافك إلى مجموعة <b>${esc(name)}</b>`,
+      chatId,
+      'group'
+    ).catch(() => {})
+  ));
+
+  return chatId;
+}
+
+/* ============================================================
+   ℹ️ معلومات المجموعة — إدارة الأعضاء
+   ============================================================ */
+function openChatGroupInfoModal(){
+  if(state.chatType !== 'group') return;
+  const chat = state.chatMeta;
+  if(!chat) return;
+
+  const myUid = state.user.uid;
+  const isAdmin = (chat.admins || []).includes(myUid);
+  const members = chat.participants || [];
+  const memberUsers = members.map(uid => ({
+    uid,
+    ...(state.users[uid] || { name: 'لاعب', username: '' }),
+  }));
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">👥 معلومات المجموعة</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+
+    <!-- رأس المجموعة -->
+    <div style="text-align:center;padding:16px;background:rgba(255,255,255,.04);
+                border:1px solid var(--line);border-radius:16px;margin-bottom:14px">
+      <div style="font-size:52px;line-height:1;margin-bottom:8px">${esc(chat.avatar || '👥')}</div>
+      <div style="font-size:17px;font-weight:900">${esc(chat.name || 'مجموعة')}</div>
+      <div class="muted" style="font-size:11.5px;margin-top:4px">
+        ${members.length} عضو · ${(chat.admins||[]).length} مشرف
+      </div>
+    </div>
+
+    <!-- الأعضاء -->
+    <div class="chat-info-section-title">
+      ${ic('users','xs')} الأعضاء (${members.length})
+      ${isAdmin ? `<button class="chat-info-add-btn" data-action="group-add-members">
+        ${ic('plus','xs')} إضافة
+      </button>` : ''}
+    </div>
+
+    <div class="group-members-list" style="max-height:320px">
+      ${memberUsers.map(u => {
+        const isUAdmin = (chat.admins || []).includes(u.uid);
+        const isMe = u.uid === myUid;
+        return `
+          <div class="group-member-row">
+            ${avatar(u, 38)}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:4px">
+                ${esc(u.name)}
+                ${isMe ? '<span class="pill" style="font-size:8px">أنت</span>' : ''}
+                ${isUAdmin ? '<span class="pill gold" style="font-size:8px">مشرف</span>' : ''}
+              </div>
+              <div class="muted" style="font-size:10px">@${esc(u.username || '')}</div>
+            </div>
+            ${isAdmin && !isMe ? `
+              <button class="group-member-action-btn"
+                      data-action="group-member-menu"
+                      data-uid="${u.uid}">
+                ${ic('dots','sm')}
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <!-- إجراءات -->
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">
+      ${isAdmin ? `
+        <button class="set-row" data-action="group-rename">
+          ${ic('edit','sm')} <span class="sr-txt"><span class="sr-n">تغيير الاسم</span></span>
+        </button>
+        <button class="set-row" data-action="group-change-avatar">
+          ${ic('image','sm')} <span class="sr-txt"><span class="sr-n">تغيير الأيقونة</span></span>
+        </button>
+      ` : ''}
+      <button class="set-row" data-action="group-leave" style="color:#ff7b9d">
+        ${ic('logout','sm')}
+        <span class="sr-txt">
+          <span class="sr-n" style="color:#ff7b9d">مغادرة المجموعة</span>
+        </span>
+      </button>
+    </div>
+  `);
+}
+
+/* ═══ قائمة إجراءات العضو ═══ */
+function openGroupMemberMenu(uid){
+  const chat = state.chatMeta;
+  if(!chat) return;
+  const u = state.users[uid];
+  if(!u) return;
+  const isUAdmin = (chat.admins || []).includes(uid);
+
+  openModal(`
+    <div style="text-align:center;margin-bottom:14px">
+      ${avatar(u, 60)}
+      <div style="font-size:14px;font-weight:900;margin-top:8px">${esc(u.name)}</div>
+      <div class="muted" style="font-size:11px">@${esc(u.username)}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button class="set-row" data-view-profile="${uid}" data-close-modal="1">
+        ${ic('user','sm')} <span class="sr-txt"><span class="sr-n">عرض الملف</span></span>
+      </button>
+      ${!isUAdmin ? `
+        <button class="set-row" data-action="group-promote" data-uid="${uid}" data-close-modal="1">
+          ${ic('crown','sm')} <span class="sr-txt"><span class="sr-n">ترقية لمشرف</span></span>
+        </button>
+      ` : `
+        <button class="set-row" data-action="group-demote" data-uid="${uid}" data-close-modal="1">
+          ${ic('user','sm')} <span class="sr-txt"><span class="sr-n">إلغاء الإشراف</span></span>
+        </button>
+      `}
+      <button class="set-row" data-action="group-remove-member" data-uid="${uid}" data-close-modal="1"
+              style="color:#ff7b9d">
+        ${ic('trash','sm')} <span class="sr-txt"><span class="sr-n" style="color:#ff7b9d">إزالة من المجموعة</span></span>
+      </button>
+    </div>
+  `);
+}
+
+function openAddGroupMembersModal(){
+  const chat = state.chatMeta;
+  if(!chat) return;
+  const me = state.user.uid;
+  const isAdmin = (chat.admins || []).includes(me);
+  if(!isAdmin) return toast('غير مصرح', 'error');
+
+  const existing = new Set(chat.participants || []);
+  const candidates = Object.values(state.users || {})
+    .filter(u => u.uid !== me && !existing.has(u.uid) && !state.profile?.blockedUsers?.includes(u.uid))
+    .sort((a, b) => {
+      const aF = state.followed.has(a.uid);
+      const bF = state.followed.has(b.uid);
+      if(aF !== bF) return aF ? -1 : 1;
+      return (b.level || 1) - (a.level || 1);
+    })
+    .slice(0, 50);
+
+  if(!candidates.length){
+    return toast('لا يوجد مستخدمون متاحون للإضافة');
+  }
+
+  const selected = new Set();
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">➕ إضافة أعضاء</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+
+    <div class="field">
+      <div class="group-member-search">
+        ${ic('search','xs')}
+        <input type="text" id="addMemberSearch" placeholder="ابحث…" autocomplete="off">
+      </div>
+      <div class="group-members-list" id="addMembersList" style="max-height:340px">
+        ${candidates.map(u => `
+          <button type="button" class="group-member-pick" data-add-member="${u.uid}">
+            <div class="gmp-check">${ic('check','xs')}</div>
+            ${avatar(u, 36)}
+            <div class="gmp-info">
+              <div class="gmp-name">${esc(u.name)}</div>
+              <div class="gmp-username">@${esc(u.username)}</div>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="addMembersConfirm" disabled>
+        ${ic('plus','sm')} إضافة (<span id="addMemberCount">0</span>)
+      </button>
+    </div>
+  `);
+
+  const countEl = document.getElementById('addMemberCount');
+  const confirmBtn = document.getElementById('addMembersConfirm');
+
+  document.querySelectorAll('[data-add-member]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const uid = btn.dataset.addMember;
+      if(selected.has(uid)){
+        selected.delete(uid);
+        btn.classList.remove('selected');
+      } else {
+        selected.add(uid);
+        btn.classList.add('selected');
+      }
+      countEl.textContent = selected.size;
+      confirmBtn.disabled = selected.size === 0;
+    });
+  });
+
+  const searchInput = document.getElementById('addMemberSearch');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    document.querySelectorAll('[data-add-member]').forEach(btn => {
+      const u = state.users[btn.dataset.addMember];
+      if(!u) return;
+      const match = !q
+        || (u.name || '').toLowerCase().includes(q)
+        || (u.username || '').toLowerCase().includes(q);
+      btn.style.display = match ? '' : 'none';
+    });
+  });
+
+  confirmBtn.addEventListener('click', async () => {
+    if(!selected.size) return;
+    confirmBtn.disabled = true;
+    confirmBtn.classList.add('loading');
+
+    try {
+      const newMembers = [...selected];
+      await addMembersToGroup(state.chatId, newMembers);
+      closeModal();
+      toast(`✓ تمت إضافة ${newMembers.length} عضو`, 'success');
+    } catch(e){
+      console.error('addMembers:', e);
+      toast('فشل الإضافة', 'error');
+      confirmBtn.disabled = false;
+      confirmBtn.classList.remove('loading');
+    }
+  });
+}
+
+/* ═══ إضافة أعضاء فعلياً ═══ */
+async function addMembersToGroup(chatId, newUids){
+  const me = state.user.uid;
+  const chatSnap = await getDoc(doc(db, 'chats', chatId));
+  if(!chatSnap.exists()) throw new Error('chat not found');
+  const chat = chatSnap.data();
+
+  if(!(chat.admins || []).includes(me)) throw new Error('not admin');
+
+  const updates = {
+    participants: arrayUnion(...newUids),
+  };
+
+  /* تهيئة unreadCounts */
+  newUids.forEach(uid => {
+    updates[`unreadCounts.${uid}`] = 0;
+  });
+
+  await updateDoc(doc(db, 'chats', chatId), updates);
+
+  /* إشعارات */
+  await Promise.all(newUids.map(uid =>
+    notify(
+      uid,
+      'group_added',
+      `<b>${esc(state.profile.name)}</b> أضافك إلى مجموعة <b>${esc(chat.name)}</b>`,
+      chatId,
+      'group'
+    ).catch(() => {})
+  ));
+}
+
+/* ═══ مغادرة المجموعة ═══ */
+async function leaveGroupChat(){
+  const chat = state.chatMeta;
+  if(!chat) return;
+  const me = state.user.uid;
+
+  const isAdmin = (chat.admins || []).includes(me);
+  const otherAdmins = (chat.admins || []).filter(a => a !== me);
+
+  if(isAdmin && otherAdmins.length === 0 && (chat.participants || []).length > 1){
+    return toast('عيّن مشرفاً آخر قبل المغادرة', 'warning');
+  }
+
+  const confirmed = await confirmDialog({
+    title: 'مغادرة المجموعة؟',
+    message: `هل تريد مغادرة «${chat.name}»؟`,
+    confirmText: 'مغادرة',
+    danger: true,
+  });
+  if(!confirmed) return;
+
+  try {
+    await updateDoc(doc(db, 'chats', state.chatId), {
+      participants: arrayRemove(me),
+      admins: arrayRemove(me),
+    });
+
+    closeModal();
+    toast('✓ غادرت المجموعة');
+    setTimeout(() => go('messages'), 300);
+  } catch(e){
+    console.error('leaveGroup:', e);
+    toast('فشل المغادرة', 'error');
+  }
+}
+
+/* ═══ إزالة عضو ═══ */
+async function removeGroupMember(uid){
+  const chat = state.chatMeta;
+  if(!chat) return;
+  const me = state.user.uid;
+  if(!(chat.admins || []).includes(me)) return toast('غير مصرح', 'error');
+  if(uid === me) return toast('لا يمكنك إزالة نفسك');
+
+  const u = state.users[uid];
+  if(!u) return;
+
+  const confirmed = await confirmDialog({
+    title: `إزالة ${u.name}؟`,
+    message: 'سيتم إزالة العضو من المجموعة',
+    confirmText: 'إزالة',
+    danger: true,
+  });
+  if(!confirmed) return;
+
+  try {
+    await updateDoc(doc(db, 'chats', state.chatId), {
+      participants: arrayRemove(uid),
+      admins: arrayRemove(uid),
+    });
+
+    await notify(uid, 'group_removed',
+      `تمت إزالتك من مجموعة <b>${esc(chat.name)}</b>`);
+
+    closeModal();
+    toast('✓ تمت الإزالة');
+  } catch(e){
+    console.error('removeMember:', e);
+    toast('فشل', 'error');
+  }
+}
+
+/* ═══ ترقية إلى مشرف ═══ */
+async function promoteGroupAdmin(uid){
+  try {
+    await updateDoc(doc(db, 'chats', state.chatId), {
+      admins: arrayUnion(uid),
+    });
+    toast('✓ تمت الترقية');
+    closeModal();
+    setTimeout(() => openChatGroupInfoModal(), 200);
+  } catch(e){
+    toast('فشل', 'error');
+  }
+}
+
+/* ═══ إلغاء الإشراف ═══ */
+async function demoteGroupAdmin(uid){
+  try {
+    await updateDoc(doc(db, 'chats', state.chatId), {
+      admins: arrayRemove(uid),
+    });
+    toast('✓ تم إلغاء الإشراف');
+    closeModal();
+    setTimeout(() => openChatGroupInfoModal(), 200);
+  } catch(e){
+    toast('فشل', 'error');
+  }
+}
+
+function confirmDialog({ title, message, confirmText = 'تأكيد', danger = false }){
+  return new Promise(resolve => {
+    openModal(`
+      <h3 style="margin-bottom:8px">${esc(title)}</h3>
+      <p class="muted" style="margin-bottom:18px;line-height:1.7">${esc(message)}</p>
+      <div class="row" style="gap:8px">
+        <button class="btn btn-ghost" style="flex:1" id="cdCancel">إلغاء</button>
+        <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" style="flex:1" id="cdConfirm">
+          ${esc(confirmText)}
+        </button>
+      </div>
+    `);
+    document.getElementById('cdCancel').onclick = () => { closeModal(); resolve(false); };
+    document.getElementById('cdConfirm').onclick = () => { closeModal(); resolve(true); };
+  });
 }
 
 /* ═══ تجميع الرسائل ═══ */
@@ -4550,19 +5364,58 @@ function groupChatMessages(messages){
   return groups;
 }
 
-/* ═══ رسم رسائل المحادثة ═══ */
-function renderChatMessages(){
+/* ═══ 4) رسم الرسائل — مع hash check لمنع الفلاش ═══ */
+function computeChatHash(){
+  const myUid = state.user?.uid;
+  return state.chatMessages.map(m => {
+    const isMine = m.senderId === myUid;
+    const readKey = isMine ? (m.readBy?.length || 0) : 0;
+
+    const reactKey = Object.entries(m.reactions || {})
+      .map(([e, u]) => `${e}:${u?.length || 0}`)
+      .sort()
+      .join(',');
+
+    /* ★ حالة التحدي — يُحدّث الـ hash عند القبول/الرفض */
+    const challengeKey = m.type === 'challenge'
+      ? `c:${m.challenge?.status || '?'}:${m.challenge?.roomId || ''}`
+      : '';
+
+    return `${m.id}:${m.edited?1:0}:${m.deleted?1:0}:r${readKey}:x${reactKey}:${challengeKey}`;
+  }).join('|');
+}
+
+function renderChatMessages(force = false){
   const listEl = document.getElementById('chatMessagesList');
   if(!listEl) return;
 
+  if(!force){
+    const hash = computeChatHash();
+    if(state._chatRenderHash === hash) return;
+    state._chatRenderHash = hash;
+  }
+
+  /* ★ حالة تحميل أول — لا تعرض "ابدأ المحادثة" خطأً */
+  if(!state.chatInitialLoaded){
+    listEl.innerHTML = `
+      <div class="comments-loading">
+        <div class="spinner"></div>
+        <span>جارٍ تحميل الرسائل…</span>
+      </div>`;
+    return;
+  }
+
   if(!state.chatMessages.length){
+    const displayName = state.chatWith
+      ? (state.users[state.chatWith]?.name || '')
+      : (state.chatMeta?.name || '');
     listEl.innerHTML = `
       <div class="chat-empty-conversation">
         <div style="font-size:56px;margin-bottom:14px">💬</div>
         <div style="font-size:15px;font-weight:900;color:var(--txt);margin-bottom:6px">ابدأ المحادثة</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.6">
           أرسل أول رسالة لبدء المحادثة<br>
-          مع <b style="color:var(--brand-2)">${esc(state.users[state.chatWith]?.name || '')}</b>
+          مع <b style="color:var(--brand-2)">${esc(displayName)}</b>
         </div>
       </div>`;
     return;
@@ -4588,32 +5441,35 @@ function renderChatMessages(){
 
   const groups = groupChatMessages(filtered);
   const myUid = state.user.uid;
-  const other = state.users[state.chatWith] || { name: 'لاعب' };
+  const otherUid = state.chatWith;
+  const isGroupChat = state.chatType === 'group';
 
   listEl.innerHTML = groups.map(g => {
     if(g.type === 'date') return renderChatDateSep(g.date, g.key);
-
     const isMine = g.senderId === myUid;
+    const showSender = isGroupChat && !isMine;
+    let senderHeader = '';
+    if(showSender){
+      const senderUser = state.users[g.senderId] || { name: 'لاعب' };
+      senderHeader = `
+        <div class="chat-sender-header">
+          ${avatar(senderUser, 22)}
+          <span class="chat-sender-name">${esc(senderUser.name || 'لاعب')}</span>
+        </div>
+      `;
+    }
     const msgsHtml = g.messages.map((m, idx) =>
-      renderChatMessage(m, isMine, idx === 0, idx === g.messages.length - 1, g.messages.length > 1)
+      renderChatMessage(m, isMine, idx === 0, idx === g.messages.length - 1, g.messages.length > 1, otherUid)
     ).join('');
-
     return `
       <div class="chat-msg-group ${isMine ? 'mine' : ''}">
-        <div class="chat-msg-bubble-wrap">
-          ${msgsHtml}
-        </div>
+        ${senderHeader}
+        <div class="chat-msg-bubble-wrap">${msgsHtml}</div>
       </div>
     `;
   }).join('');
 
-  /* highlight search matches */
-  if(state.chatSearchQuery){
-    requestAnimationFrame(() => {
-      const firstMatch = listEl.querySelector('.chat-msg-bubble');
-      if(firstMatch) firstMatch.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    });
-  }
+  updateChatNoMoreHint();
 }
 
 /* ═══ فاصل تاريخ ═══ */
@@ -4628,8 +5484,10 @@ function renderChatDateSep(date, key){
   return `<div class="chat-date-sep"><span>${label}</span></div>`;
 }
 
-/* ═══ رسالة واحدة ═══ */
-function renderChatMessage(m, isMine, isFirst, isLast, isGroup){
+/* ============================================================
+   💬 رسم رسالة واحدة — يدعم النص + البطاقات
+   ============================================================ */
+function renderChatMessage(m, isMine, isFirst, isLast, isGroup, otherUid){
   if(m.deleted){
     return `
       <div class="chat-msg-bubble deleted ${m._chain ? 'chain' : ''} ${isLast ? 'last' : ''}">
@@ -4637,9 +5495,13 @@ function renderChatMessage(m, isMine, isFirst, isLast, isGroup){
       </div>`;
   }
 
+  /* ★★ بطاقة التحدي ★★ */
+  if(m.type === 'challenge' && m.challenge){
+    return renderChallengeCard(m, isMine);
+  }
+
+  /* ═══ رسالة نصية عادية ═══ */
   const time = timeAgo(m.createdAt);
-  const readBy = m.readBy || [];
-  const isRead = readBy.length >= 2;
   const timeStr = m.createdAt?.toDate?.()
     ? m.createdAt.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
     : '';
@@ -4663,26 +5525,310 @@ function renderChatMessage(m, isMine, isFirst, isLast, isGroup){
 
   const editedBadge = m.edited ? ' <span style="opacity:.6;font-size:9px">(معدّل)</span>' : '';
 
-  const readIcon = isMine
-    ? `<svg class="chat-read-icon" viewBox="0 0 24 24" fill="none" stroke="${isRead ? '#5fe3ff' : 'rgba(255,255,255,.5)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-         ${isRead
-           ? '<path d="M1 12l5 5L17 6"/><path d="M9 12l5 5L23 6"/>'
-           : '<path d="M20 6L9 17l-5-5"/>'}
-       </svg>`
+  const statusHTML = isMine
+    ? renderMessageStatusIcon(m, state.user.uid, otherUid)
     : '';
+
+  const menuHint = `<button type="button" class="chat-msg-menu-hint"
+    data-chat-msg-id="${m.id}" title="خيارات">
+    ${ic('dots','xs')}
+  </button>`;
 
   return `
     <div class="chat-msg-bubble ${isFirst ? 'first' : 'chain'} ${isLast ? 'last' : ''} ${isMine ? 'mine' : 'theirs'}"
          data-chat-msg-id="${m.id}" data-chat-id="${state.chatId}">
+      ${menuHint}
       ${replyHtml}
       <div class="chat-msg-text">${esc(m.text || '')}${editedBadge}</div>
       ${reactionsHtml ? `<div class="chat-msg-reactions">${reactionsHtml}</div>` : ''}
       <div class="chat-msg-meta">
         <span class="chat-msg-time">${timeStr || time}</span>
-        ${readIcon}
+        ${statusHTML}
       </div>
     </div>
   `;
+}
+
+/* ============================================================
+   ⚔️ رسم بطاقة التحدي داخل المحادثة
+   ============================================================ */
+function renderChallengeCard(m, isMine){
+  const c = m.challenge || {};
+  const cId = m.challengeId;
+  const msgId = m.id;
+  const chatId = state.chatId;
+
+  /* ═══ حالة فعلية (مع فحص انتهاء الصلاحية محلياً) ═══ */
+  const expiresAt = c.expiresAt?.toDate?.() || (c.expiresAt ? new Date(c.expiresAt) : null);
+  const isExpiredLocally = c.status === 'pending' && expiresAt && expiresAt < new Date();
+  const status = isExpiredLocally ? 'expired' : (c.status || 'pending');
+
+  /* ═══ بيانات الحالة للعرض ═══ */
+  const statusInfo = {
+    pending:   { label: 'بانتظار الرد',   color: '#f5b301', icon: '⏳' },
+    accepted:  { label: 'مقبول',           color: '#22c55e', icon: '✓' },
+    rejected:  { label: 'مرفوض',           color: '#ff3d71', icon: '✗' },
+    expired:   { label: 'انتهت الصلاحية',  color: '#8a95ad', icon: '⌛' },
+    cancelled: { label: 'ملغى',            color: '#8a95ad', icon: '⊘' },
+  }[status] || { label: status, color: '#8a95ad', icon: '?' };
+
+  const timeStr = m.createdAt?.toDate?.()
+    ? m.createdAt.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  /* ═══ زر الإجراء حسب الحالة والدور ═══ */
+  let actionsHtml = '';
+
+  if(status === 'pending'){
+    if(isMine){
+      actionsHtml = `
+        <div class="ccc-waiting">
+          <span class="ccc-spinner"></span>
+          بانتظار الرد…
+        </div>
+        <button type="button" class="ccc-btn cancel"
+                data-cancel-challenge-chat="${cId}"
+                data-msg-id="${msgId}"
+                data-chat-id="${chatId}">
+          ⊘ إلغاء
+        </button>
+      `;
+    } else {
+      actionsHtml = `
+        <button type="button" class="ccc-btn accept"
+                data-accept-challenge-chat="${cId}"
+                data-msg-id="${msgId}"
+                data-chat-id="${chatId}">
+          ${ic('check','xs')} قبول
+        </button>
+        <button type="button" class="ccc-btn reject"
+                data-reject-challenge-chat="${cId}"
+                data-msg-id="${msgId}"
+                data-chat-id="${chatId}">
+          ✗ رفض
+        </button>
+      `;
+    }
+  } else if(status === 'accepted' && c.roomId){
+    actionsHtml = `
+      <button type="button" class="ccc-btn enter"
+              data-enter-match="${c.roomId}"
+              data-game-id="${c.gameId}">
+        ${ic('play','xs')} دخول المباراة
+      </button>
+    `;
+  }
+
+  return `
+    <div class="chat-challenge-card status-${status} ${isMine ? 'mine' : 'theirs'}"
+         data-chat-msg-id="${msgId}"
+         data-chat-id="${chatId}">
+
+      <!-- الرأس -->
+      <div class="ccc-header">
+        <div class="ccc-icon" style="background:${c.gameGrad || 'var(--grad)'}">
+          ${ic(c.gameIcon || 'bolt','sm')}
+        </div>
+        <div class="ccc-title">
+          <span class="ccc-label">⚔️ تحدي</span>
+          <span class="ccc-game">${esc(c.gameName || 'لعبة')}</span>
+        </div>
+        <span class="ccc-status"
+              style="color:${statusInfo.color};
+                     background:${statusInfo.color}18;
+                     border-color:${statusInfo.color}55">
+          ${statusInfo.icon} ${statusInfo.label}
+        </span>
+      </div>
+
+      <!-- رسالة اختيارية -->
+      ${c.message ? `<div class="ccc-message">"${esc(c.message)}"</div>` : ''}
+
+      <!-- الأزرار -->
+      ${actionsHtml ? `<div class="ccc-actions">${actionsHtml}</div>` : ''}
+
+      <!-- الوقت -->
+      <div class="ccc-time">
+        ${ic('clock','xs')} ${timeStr || timeAgo(m.createdAt)}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   ✓ قبول التحدي من الدردشة
+   ============================================================ */
+async function acceptChallengeFromChat(challengeId, messageId, chatId){
+  try {
+    const chRef = doc(db, 'challenges', challengeId);
+    const chSnap = await getDoc(chRef);
+    if(!chSnap.exists()) return toast('التحدي غير موجود');
+    const ch = chSnap.data();
+
+    if(ch.status !== 'pending') return toast('التحدي لم يعد متاحاً');
+    if(ch.to !== state.user.uid) return toast('هذا التحدي ليس لك');
+
+    const exp = ch.expiresAt?.toDate?.() || new Date(0);
+    if(exp < new Date()){
+      await updateDoc(chRef, { status: 'expired' });
+      await updateDoc(doc(db, 'chats', chatId, 'messages', messageId), {
+        'challenge.status': 'expired',
+      });
+      return toast('انتهت صلاحية التحدي', 'warning');
+    }
+
+    /* 1) إنشاء الغرفة */
+    const roomRef = await addDoc(collection(db, 'rooms'), {
+      gameId: ch.gameId,
+      hostId: ch.from,
+      name: 'تحدي ' + (ch.fromName || 'لاعب'),
+      players: [ch.from, ch.to],
+      maxPlayers: 2,
+      mode: '1v1',
+      public: false,
+      status: 'waiting',
+      createdAt: serverTimestamp(),
+      scores: {},
+      answers: {},
+    });
+
+    /* 2) تحديث مستند التحدي */
+    await updateDoc(chRef, {
+      status: 'accepted',
+      roomId: roomRef.id,
+    });
+
+    /* 3) ★ تحديث حالة البطاقة في المحادثة ★ */
+    await updateDoc(doc(db, 'chats', chatId, 'messages', messageId), {
+      'challenge.status': 'accepted',
+      'challenge.roomId': roomRef.id,
+    });
+
+    /* 4) إشعار للخصم */
+    await notify(
+      ch.from,
+      'game',
+      `<b>${esc(state.profile.name)}</b> قبل تحديك في <b>${esc(ch.gameName)}</b> — المباراة جاهزة!`,
+      roomRef.id,
+      'room'
+    );
+
+    toast('✓ قُبل التحدي — بدء المباراة');
+
+    /* 5) بدء المباراة حسب اللعبة */
+    setTimeout(() => {
+      if(ch.gameId === 'g3'){
+        startQuizMatch(roomRef.id, false);
+      } else {
+        toast('هذه اللعبة قيد التطوير');
+      }
+    }, 600);
+  } catch(e){
+    console.error('acceptChallengeFromChat:', e);
+    toast('فشل القبول', 'error');
+  }
+}
+
+/* ============================================================
+   ✗ رفض التحدي من الدردشة
+   ============================================================ */
+async function rejectChallengeFromChat(challengeId, messageId, chatId){
+  try {
+    const chRef = doc(db, 'challenges', challengeId);
+    const chSnap = await getDoc(chRef);
+    if(!chSnap.exists()) return;
+    const ch = chSnap.data();
+    if(ch.status !== 'pending') return;
+    if(ch.to !== state.user.uid) return;
+
+    await updateDoc(chRef, { status: 'rejected' });
+    await updateDoc(doc(db, 'chats', chatId, 'messages', messageId), {
+      'challenge.status': 'rejected',
+    });
+
+    await notify(
+      ch.from,
+      'challenge_rejected',
+      `<b>${esc(state.profile.name)}</b> رفض تحديك في <b>${esc(ch.gameName)}</b>`
+    );
+
+    toast('تم الرفض');
+  } catch(e){
+    console.error('rejectChallengeFromChat:', e);
+    toast('فشل', 'error');
+  }
+}
+
+/* ============================================================
+   ⊘ إلغاء التحدي (المرسل فقط)
+   ============================================================ */
+async function cancelChallengeFromChat(challengeId, messageId, chatId){
+  try {
+    const chRef = doc(db, 'challenges', challengeId);
+    const chSnap = await getDoc(chRef);
+    if(!chSnap.exists()) return;
+    const ch = chSnap.data();
+    if(ch.status !== 'pending') return;
+    if(ch.from !== state.user.uid) return;
+
+    await updateDoc(chRef, { status: 'cancelled' });
+    await updateDoc(doc(db, 'chats', chatId, 'messages', messageId), {
+      'challenge.status': 'cancelled',
+    });
+
+    toast('تم الإلغاء');
+  } catch(e){
+    console.error('cancelChallengeFromChat:', e);
+    toast('فشل', 'error');
+  }
+}
+
+/* ============================================================
+   ✓✓ حالة تسليم/قراءة الرسالة
+   ============================================================ */
+function getMessageStatus(msg, myUid, otherUid){
+  if(msg.senderId !== myUid) return null;
+
+  const readBy = msg.readBy || [];
+
+  /* ★★ للمجموعات ★★ */
+  if(state.chatType === 'group'){
+    const participants = state.chatMeta?.participants || [];
+    const others = participants.filter(p => p !== myUid);
+    if(others.length === 0) return { type: 'sent', icon: '✓', color: 'rgba(255,255,255,.4)', title: 'أُرسلت' };
+
+    const readCount = others.filter(p => readBy.includes(p)).length;
+    if(readCount === others.length){
+      return { type: 'read', icon: '✓✓', color: '#5fe3ff', title: 'قرأها الجميع' };
+    }
+    if(readCount > 0){
+      return { type: 'delivered', icon: '✓✓', color: 'rgba(255,255,255,.6)', title: `قرأها ${readCount} من ${others.length}` };
+    }
+    return { type: 'sent', icon: '✓', color: 'rgba(255,255,255,.4)', title: 'أُرسلت' };
+  }
+
+  /* للمحادثات الفردية */
+  if(readBy.includes(otherUid)){
+    return { type: 'read', icon: '✓✓', color: '#5fe3ff', title: 'مقروءة' };
+  }
+  if(isUserOnline(otherUid)){
+    return { type: 'delivered', icon: '✓✓', color: 'rgba(255,255,255,.7)', title: 'وصلت' };
+  }
+  const other = state.users?.[otherUid];
+  const lastSeen = other?.lastSeen?.toDate?.() || null;
+  const msgTime = msg.createdAt?.toDate?.() || null;
+  if(lastSeen && msgTime && lastSeen.getTime() > msgTime.getTime()){
+    return { type: 'delivered', icon: '✓✓', color: 'rgba(255,255,255,.5)', title: 'وصلت' };
+  }
+  return { type: 'sent', icon: '✓', color: 'rgba(255,255,255,.4)', title: 'أُرسلت' };
+}
+
+function renderMessageStatusIcon(msg, myUid, otherUid){
+  const status = getMessageStatus(msg, myUid, otherUid);
+  if(!status) return '';
+  return `<span class="msg-status-icon status-${status.type}"
+                style="color:${status.color}"
+                title="${status.title}">${status.icon}</span>`;
 }
 
 /* ═══ سياق الرد ═══ */
@@ -4756,28 +5902,105 @@ function openChatMsgActionsModal(msgId){
   `);
 }
 
-/* ═══ منتقي الإيموجي ═══ */
-function toggleChatEmojiPicker(){
-  state.chatEmojiOpen = !state.chatEmojiOpen;
-  const wrap = document.getElementById('chatEmojiPickerWrap');
-  if(wrap) wrap.style.display = state.chatEmojiOpen ? 'block' : 'none';
-}
-
 /* ═══ إعادة رسم صفحة الرسائل عند فتحها ═══ */
 function renderChatPage(){
   if(state.page !== 'chat') return;
   render();
 }
 
-/* ★★★ فتح محادثة → صفحة `chat` المستقلة ★★★ */
+function initChatPage(){
+  if(state._chatPageInit) return;
+
+  const scrollEl = document.getElementById('chatMessagesScroll');
+  if(!scrollEl){
+    /* ★ DOM غير جاهز — أعد المحاولة في الإطار التالي */
+    requestAnimationFrame(initChatPage);
+    return;
+  }
+
+  state._chatPageInit = true;
+
+  scrollEl.addEventListener('scroll', () => {
+    const near = (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight) < 120;
+    state.chatScrollBtn = !near;
+    updateChatScrollBtn();
+
+    if(near && state.chatNewMsgBadge){
+      state.chatNewMsgBadge = false;
+      updateChatNewBadge();
+      markChatAsRead(state.chatId);
+    }
+
+    if(scrollEl.scrollTop < 150
+       && state.chatHasMore
+       && !state.chatLoadingOlder
+       && state.chatInitialLoaded){
+      loadOlderChatMessages(state.chatId);
+    }
+  });
+
+  renderChatMessages();
+  renderChatReplyContext();
+  updateChatSendBtn();
+
+  const input = document.getElementById('chatInput');
+  if(input) setTimeout(() => input.focus(), 100);
+}
+
 async function openChat(uid){
   if(!uid || uid === state.user.uid) return toast('لا يمكنك مراسلة نفسك');
   const other = state.users[uid];
   if(!other) return toast('المستخدم غير موجود');
 
-  const chatId = await openOrCreateChat(uid);
+  /* ★ 1) احسب chatId فوراً — بدون Firestore */
+  const chatId = [state.user.uid, uid].sort().join('_');
+
+  /* ★ 2) إعادة تعيين الحالة */
+  resetChatState();
   state.chatId = chatId;
   state.chatWith = uid;
+  state.chatType = 'direct';
+
+  /* ★ 3) افتح الصفحة فوراً (تعرض loading) */
+  go('chat');
+
+  /* ★ 4) ابدأ الاستماع فوراً — بدون انتظار */
+  subscribeToChatMessages(chatId);
+
+  /* ★ 5) تأكد من وجود مستند المحادثة بالخلفية */
+  ensureChatExists(uid, chatId).catch(e => console.warn('ensureChat:', e));
+
+  /* ★ 6) تهيئة الواجهة */
+  requestAnimationFrame(() => initChatPage());
+}
+
+/* ═══ دالة جديدة — إنشاء المحادثة إن لم توجد ═══ */
+async function ensureChatExists(otherUid, chatId){
+  const chatRef = doc(db, 'chats', chatId);
+  try {
+    const snap = await getDoc(chatRef);
+    if(!snap.exists()){
+      await setDoc(chatRef, {
+        participants: [state.user.uid, otherUid],
+        lastMessage: '',
+        lastSender: '',
+        lastTime: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        unreadCounts: {
+          [state.user.uid]: 0,
+          [otherUid]: 0,
+        },
+        typing: {},
+        lastSeen: {},
+      });
+    }
+  } catch(e){
+    console.warn('ensureChatExists:', e);
+  }
+}
+
+/* ═══ دالة موحّدة لإعادة تعيين حالة المحادثة ═══ */
+function resetChatState(){
   state.chatReplyTo = null;
   state.chatEditingId = null;
   state.chatEmojiOpen = false;
@@ -4785,11 +6008,41 @@ async function openChat(uid){
   state.chatSearchQuery = '';
   state.chatScrollBtn = false;
   state.chatNewMsgBadge = false;
-  state.chatMessages = [];
   state.chatMeta = null;
+  state.chatMessages = [];
+  state.chatHasMore = true;
+  state.chatOldestCursor = null;
+  state.chatLoadingOlder = false;
+  state.chatInitialLoaded = false;
+  state._chatRenderHash = null;
+  state._chatPageInit = false;
+  state.chatGroupInfo = null;
+}
 
-  go('chat');
-  subscribeToChatMessages(chatId);
+async function openGroupChat(chatId){
+  if(!chatId) return;
+  try {
+    const snap = await getDoc(doc(db, 'chats', chatId));
+    if(!snap.exists()) return toast('المجموعة غير موجودة');
+    const data = snap.data();
+    if(!data.participants?.includes(state.user.uid)){
+      return toast('لست عضواً في هذه المجموعة');
+    }
+
+    resetChatState();
+    state.chatId = chatId;
+    state.chatWith = null;
+    state.chatType = 'group';
+    state.chatMeta = data;
+    state.chatGroupInfo = data;
+
+    go('chat');
+    subscribeToChatMessages(chatId);   // ★ مباشرة
+    requestAnimationFrame(() => initChatPage());
+  } catch(e){
+    console.error('openGroupChat:', e);
+    toast('فشل فتح المجموعة', 'error');
+  }
 }
 
 /* ============ Games ============ */
@@ -5219,25 +6472,244 @@ async function unequipItem(category){
 }
 
 /* ============================================================
+   ⚔️ منتقي التحدي — اختيار لعبة وإعدادات ثم إرسال
+   ============================================================ */
+function openChatChallengePicker(targetUid){
+  const other = state.users[targetUid];
+  if(!other) return toast('المستخدم غير موجود');
+
+  const games = GAMES.map(g => ({
+    ...g,
+    available: g.playable === true,
+  }));
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">⚔️ تحدي</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+
+    <!-- معلومات الخصم -->
+    <div style="display:flex;align-items:center;gap:10px;padding:12px;margin-bottom:14px;
+                background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px">
+      ${avatar(other, 40)}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:900">${esc(other.name)}</div>
+        <div class="muted" style="font-size:10.5px">@${esc(other.username)}</div>
+      </div>
+      <span class="pill">الخصم</span>
+    </div>
+
+    <!-- اختيار اللعبة -->
+    <div class="challenge-picker-label">🎮 اختر لعبة</div>
+    <div class="challenge-game-list" id="challengeGameList">
+      ${games.map(g => `
+        <button type="button"
+                class="challenge-game-card ${g.available ? '' : 'disabled'}"
+                data-challenge-game="${g.id}"
+                ${g.available ? '' : 'disabled'}>
+          <div class="cgc-icon" style="background:${g.grad}">
+            ${ic(g.icon,'sm')}
+          </div>
+          <div class="cgc-body">
+            <div class="cgc-name">${esc(g.name)}</div>
+            <div class="cgc-meta">${esc(g.cat)} · ${g.modes.join(' · ')}</div>
+          </div>
+          ${g.available
+            ? `<span class="cgc-badge ready">${ic('check','xs')} جاهزة</span>`
+            : `<span class="cgc-badge soon">قريباً</span>`}
+        </button>
+      `).join('')}
+    </div>
+
+    <!-- إعدادات (مستقبلاً) -->
+    <div class="challenge-settings-disabled" id="challengeSettings">
+      <div class="csd-header">
+        ${ic('settings','xs')} إعدادات المباراة
+        <span class="csd-soon">قريباً</span>
+      </div>
+      <div class="csd-hint">
+        ستتمكن قريباً من تحديد عدد الأسئلة، الوقت، نوع الأسئلة، ومكافآت خاصة
+      </div>
+    </div>
+
+    <!-- رسالة اختيارية -->
+    <div class="field" style="margin-top:14px">
+      <label>رسالة تحدي (اختياري)</label>
+      <input class="input" id="challengeMessage" type="text"
+             maxlength="100"
+             placeholder="مثال: تحدي سريع!">
+    </div>
+
+    <!-- أزرار -->
+    <div class="row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إلغاء</button>
+      <button class="btn btn-primary" style="flex:1" id="sendChallengeBtn" disabled>
+        ${ic('bolt','sm')} إرسال التحدي
+      </button>
+    </div>
+  `);
+
+  let selectedGameId = null;
+  const gameList = document.getElementById('challengeGameList');
+  const sendBtn  = document.getElementById('sendChallengeBtn');
+
+  /* اختيار اللعبة */
+  gameList.querySelectorAll('[data-challenge-game]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(btn.disabled) return;
+      gameList.querySelectorAll('[data-challenge-game]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedGameId = btn.dataset.challengeGame;
+      sendBtn.disabled = false;
+    });
+  });
+
+  /* إرسال */
+  sendBtn.addEventListener('click', async () => {
+    if(!selectedGameId) return toast('اختر لعبة أولاً');
+
+    const message = document.getElementById('challengeMessage')?.value.trim() || '';
+
+    sendBtn.disabled = true;
+    sendBtn.classList.add('loading');
+
+    try {
+      await sendChallenge(targetUid, selectedGameId, message);
+      closeModal();
+    } catch(e){
+      console.error(e);
+      toast('فشل إرسال التحدي', 'error');
+      sendBtn.disabled = false;
+      sendBtn.classList.remove('loading');
+    }
+  });
+}
+
+/* ============================================================
    ⚔️ تحديات 1v1
    ============================================================ */
-async function sendChallenge(targetUid){
+/* ============================================================
+   ⚔️ إرسال التحدي — يرسل بطاقة داخل المحادثة
+   ============================================================ */
+async function sendChallenge(targetUid, gameId = 'g3', message = ''){
+  if(!targetUid) return toast('الخصم غير محدد');
   if(targetUid === state.user.uid) return toast('لا يمكنك تحدي نفسك');
+
+  const game = GAMES.find(g => g.id === gameId);
+  if(!game) return toast('اللعبة غير موجودة');
+  if(!game.playable) return toast('هذه اللعبة غير متاحة بعد');
+
+  /* منع تحدي نشط مكرر */
   try {
-    const chRef = await addDoc(collection(db,'challenges'), {
+    const q = query(
+      collection(db, 'challenges'),
+      where('from', '==', state.user.uid),
+      where('to', '==', targetUid),
+      where('status', '==', 'pending'),
+      limit(5)
+    );
+    const snap = await getDocs(q);
+    const active = snap.docs.find(d => {
+      const exp = d.data().expiresAt?.toDate?.() || new Date(0);
+      return exp > new Date();
+    });
+    if(active){
+      return toast('لديك تحدي نشط مع هذا اللاعب');
+    }
+  } catch(e){}
+
+  try {
+    /* 1) إنشاء/جلب المحادثة */
+    const chatId = await openOrCreateChat(targetUid);
+
+    /* 2) حساب expiresAt */
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    /* 3) إنشاء مستند التحدي */
+    const chRef = await addDoc(collection(db, 'challenges'), {
       from: state.user.uid,
       fromName: state.profile.name,
       fromAvatar: state.profile.avatarUrl || '',
       to: targetUid,
-      gameId: 'g3',
-      gameName: 'Quiz Clash',
+      gameId,
+      gameName: game.name,
+      message: (message || '').slice(0, 100),
+      chatId,
       status: 'pending',
       createdAt: serverTimestamp(),
-      expiresAt: new Date(Date.now() + 5*60*1000),
+      expiresAt,
     });
-    await notify(targetUid, 'challenge', `<b>${esc(state.profile.name)}</b> تحدّاك في Quiz Clash!`, chRef.id);
-    toast('تم إرسال التحدي ⚔️');
-  } catch(e){ console.error(e); toast('فشل'); }
+
+    /* 4) ★ إرسال بطاقة التحدي في المحادثة */
+    const payload = {
+      senderId: state.user.uid,
+      type: 'challenge',
+      challengeId: chRef.id,
+      challenge: {
+        gameId,
+        gameName: game.name,
+        gameIcon: game.icon,
+        gameGrad: game.grad,
+        status: 'pending',
+        message: (message || '').slice(0, 100),
+        expiresAt,
+        fromName: state.profile.name,
+        roomId: null,
+      },
+      createdAt: serverTimestamp(),
+      readBy: [state.user.uid],
+      edited: false,
+      deleted: false,
+      reactions: {},
+    };
+
+    const msgRef = await addDoc(
+      collection(db, 'chats', chatId, 'messages'),
+      payload
+    );
+
+    /* 5) ربط messageId بالتحدي (للرجوع) */
+    await updateDoc(chRef, { messageId: msgRef.id });
+
+    /* 6) تحديث ميتا المحادثة */
+    await updateDoc(doc(db, 'chats', chatId), {
+      lastMessage: `⚔️ تحدي: ${game.name}`,
+      lastSender: state.user.uid,
+      lastTime: serverTimestamp(),
+      [`unreadCounts.${targetUid}`]: increment(1),
+      [`typing.${state.user.uid}`]: false,
+    });
+
+    /* 7) إشعار (اختياري — يدعم Push لاحقاً) */
+    await notify(
+      targetUid,
+      'challenge',
+      `<b>${esc(state.profile.name)}</b> تحدّاك في <b>${esc(game.name)}</b>${message ? ' — ' + esc(message) : ''}`,
+      chRef.id,
+      'challenge'
+    );
+
+    /* 8) سجل النشاط */
+    await logActivity(
+      'challenge_sent',
+      `أرسلت تحدياً إلى ${state.users[targetUid]?.name || 'لاعب'} في ${game.name}`,
+      '⚔️'
+    );
+
+    toast('⚔️ تم إرسال التحدي', 'success');
+
+    /* 9) ★ فتح المحادثة إذا لم نكن فيها */
+    if(state.page !== 'chat' || state.chatWith !== targetUid){
+      setTimeout(() => openChat(targetUid), 300);
+    }
+  } catch(e){
+    console.error('sendChallenge:', e);
+    toast('فشل إرسال التحدي', 'error');
+    throw e;
+  }
 }
 
 async function openChallengesModal(){
@@ -5288,7 +6760,7 @@ async function openChallengesModal(){
 
 async function acceptChallenge(challengeId){
   try {
-    const chRef = doc(db,'challenges',challengeId);
+    const chRef = doc(db, 'challenges', challengeId);
     const chSnap = await getDoc(chRef);
     if(!chSnap.exists()) return toast('التحدي غير موجود');
     const ch = chSnap.data();
@@ -5296,26 +6768,44 @@ async function acceptChallenge(challengeId){
     const exp = ch.expiresAt?.toDate?.() || new Date(0);
     if(exp < new Date()) return toast('انتهت صلاحية التحدي');
 
-    const roomRef = await addDoc(collection(db,'rooms'), {
+    const roomRef = await addDoc(collection(db, 'rooms'), {
       gameId: ch.gameId,
       hostId: ch.from,
       name: 'تحدي ' + (ch.fromName || 'لاعب'),
       players: [ch.from, ch.to],
-      maxPlayers: 2, mode: '1v1',
-      public: false, status: 'waiting',
+      maxPlayers: 2,
+      mode: '1v1',
+      public: false,
+      status: 'waiting',
       createdAt: serverTimestamp(),
-      scores: {}, answers: {},
+      scores: {},
+      answers: {},
     });
 
     await updateDoc(chRef, { status: 'accepted', roomId: roomRef.id });
-    await notify(ch.from, 'game',
-  `<b>${esc(state.profile.name)}</b> قبل تحديك — المباراة جاهزة!`,
-  roomRef.id, 'room');
+    await notify(
+      ch.from,
+      'game',
+      `<b>${esc(state.profile.name)}</b> قبل تحديك في ${esc(ch.gameName)} — المباراة جاهزة!`,
+      roomRef.id,
+      'room'
+    );
 
     closeModal();
-    toast('قُبل التحدي — بدء المباراة');
-    setTimeout(() => startQuizMatch(roomRef.id, state.user.uid === ch.from), 600);
-  } catch(e){ console.error(e); toast('فشل القبول'); }
+    toast('✓ قُبل التحدي — بدء المباراة');
+
+    /* ★ توجيه حسب اللعبة */
+    setTimeout(() => {
+      if(ch.gameId === 'g3'){
+        startQuizMatch(roomRef.id, state.user.uid === ch.from);
+      } else {
+        toast('هذه اللعبة قيد التطوير');
+      }
+    }, 600);
+  } catch(e){
+    console.error('acceptChallenge:', e);
+    toast('فشل القبول', 'error');
+  }
 }
 
 async function rejectChallenge(challengeId){
@@ -6369,6 +7859,7 @@ function initSeenPosts(){
               if(!state.seenPosts.has(postId)){
                 state.seenPosts.add(postId);
                 persistSeenPosts();
+                recordPostView(postId);   // ★ أضف هذا السطر
               }
               el._seenTimer = null;
             }, 2000);
@@ -6579,6 +8070,31 @@ function suggestCard(u){
   </div>`;
 }
 
+/* ============================================================
+   👁️ تسجيل مشاهدة منشور (مرة واحدة لكل مستخدم)
+   ============================================================ */
+async function recordPostView(postId){
+  if(!state.user?.uid || !postId) return;
+
+  const viewRef = doc(db, 'postViews', `${state.user.uid}_${postId}`);
+  try {
+    const snap = await getDoc(viewRef);
+    if(snap.exists()) return;  // سبق رآه
+
+    await setDoc(viewRef, {
+      uid: state.user.uid,
+      postId,
+      viewedAt: serverTimestamp(),
+    });
+
+    await updateDoc(doc(db, 'posts', postId), {
+      views: increment(1),
+    });
+  } catch(e){
+    console.warn('recordPostView:', e);
+  }
+}
+
 function postCard(p, trendMode=false, trendingScore=null, showFull=false){
   /* ♻️ إعادة نشر — مع حماية كاملة */
   if(p && p.reblogOf){
@@ -6631,6 +8147,7 @@ function postCard(p, trendMode=false, trendingScore=null, showFull=false){
           ${p.edited?'· <span>معدّل</span>':''}
           ${visLabel?`· <span class="visibility-badge">${ic(visIcon,'xs')} ${visLabel}</span>`:''}
           ${p.place?`·<span style="display:inline-flex;align-items:center;gap:3px">${ic('location','xs')}${esc(p.place)}</span>`:''}
+          ${(p.views || 0) > 0 ? `· <span class="post-views">${ic('eye','xs')} ${nf(p.views)}</span>` : ''}
         </div>
       </div>
       ${trendMode ? (() => {
@@ -6974,7 +8491,7 @@ async function loadRelationData(otherUid){
     if(state.viewingRelationUid !== otherUid) return;
 
     state.relationData = stats;
-    if(state.page === 'relation' && state.viewingRelationUid === otherUid) render();
+    if(state.page === 'relation' && state.viewingRelationUid === otherUid) scheduleRender();
   } catch(e){
     console.error('relation load:', e);
     if(state.viewingRelationUid !== otherUid) return;
@@ -7872,11 +9389,24 @@ function editPostModal(postId){
   }
   if(p.reblogOf) return toast('لا يمكن تعديل إعادة النشر');
 
-  /* إعادة تعيين الحالة */
-  state.editPostId = postId;
-  state.editTab = 'write';
+  /* ═══════ 1) تنظيف الجلسة السابقة (ذاكرة) ═══════ */
+  if(state.editImages && state.editImages.length){
+    state.editImages.forEach(img => {
+      if(img?.type === 'new' && img.preview){
+        try { URL.revokeObjectURL(img.preview); } catch(e){}
+      }
+    });
+  }
+  if(state._editObserver){
+    try { state._editObserver.disconnect(); } catch(e){}
+    state._editObserver = null;
+  }
+
+  /* ═══════ 2) إعادة تعيين الحالة ═══════ */
+  state.editPostId    = postId;
+  state.editTab       = 'write';
   state.editVisibility = p.visibility || 'public';
-  state.editLocation = p.place || '';
+  state.editLocation  = p.place || '';
 
   /* بناء الصور الموجودة */
   const existingUrls = (p.mediaUrls && p.mediaUrls.length)
@@ -7887,9 +9417,10 @@ function editPostModal(postId){
   state.editImages = existingUrls.map((url, i) => ({
     type: 'existing',
     url,
-    alt: existingAlts[i] || '',
+    alt:  existingAlts[i] || '',
   }));
 
+  /* ═══════ 3) بناء المودال ═══════ */
   openModal(`
     <div class="compose-modal-inner">
       <div class="compose-header">
@@ -7920,12 +9451,12 @@ function editPostModal(postId){
               <button type="button" class="compose-author-vis" data-action="edit-visibility">
                 <span id="editVisIcon">${
                   state.editVisibility === 'followers' ? ic('users','xs') :
-                  state.editVisibility === 'private' ? ic('lock','xs') :
+                  state.editVisibility === 'private'   ? ic('lock','xs')  :
                   ic('globe','xs')
                 }</span>
                 <span id="editVisLabel">${
                   state.editVisibility === 'followers' ? 'المتابعون فقط' :
-                  state.editVisibility === 'private' ? 'خاص' : 'عام'
+                  state.editVisibility === 'private'   ? 'خاص'           : 'عام'
                 }</span>
               </button>
             </div>
@@ -8000,15 +9531,17 @@ function editPostModal(postId){
         </button>
       </div>
     </div>
-  `);
+  `, 'compose-modal edit-post-modal');   /* ← ★ الكلاسان المهمّان */
 
-  /* ═══════ التهيئة ═══════ */
+  /* ═══════ 4) التهيئة بعد الرسم ═══════ */
   refreshEditGallery();
 
   const textarea = document.getElementById('editPostText');
   if(textarea){
     textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+    try {
+      textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+    } catch(e){}
 
     textarea.addEventListener('input', onEditTextChange);
 
@@ -8073,6 +9606,29 @@ function editPostModal(postId){
   }
 
   updateEditCounter((p.text || '').length);
+
+  /* ═══════ 5) MutationObserver — تنظيف الصور عند الإلغاء ═══════ */
+  const root = document.getElementById('modalRoot');
+  if(root){
+    const obs = new MutationObserver(() => {
+      if(!root.innerHTML.trim()){
+        /* أُغلق المودال */
+        state.editImages.forEach(img => {
+          if(img?.type === 'new' && img.preview){
+            try { URL.revokeObjectURL(img.preview); } catch(e){}
+          }
+        });
+
+        /* ★ لا نمسح editPostId هنا — savePostEdit يمسحه بنفسه */
+
+        obs.disconnect();
+        if(state._editObserver === obs) state._editObserver = null;
+      }
+    });
+    obs.observe(root, { childList: true, subtree: true });
+
+    state._editObserver = obs;
+  }
 }
 
 async function savePostEdit(postId){
@@ -8234,16 +9790,19 @@ function pageMessages(){
     <!-- Hero -->
     <div class="home-top">
       <h1 class="page-title">الرسائل</h1>
-      <div style="display:flex;gap:6px">
-        ${totalUnread > 0 ? `
-          <span class="pill pink" style="padding:6px 12px">
-            ${ic('bell','xs')} ${totalUnread} جديد
-          </span>
-        ` : ''}
-        <button class="icon-btn" data-action="new-chat" title="محادثة جديدة">
-          ${ic('plus','sm')}
-        </button>
-      </div>
+<div style="display:flex;gap:6px">
+  ${totalUnread > 0 ? `
+    <span class="pill pink" style="padding:6px 12px">
+      ${ic('bell','xs')} ${totalUnread} جديد
+    </span>
+  ` : ''}
+  <button class="icon-btn" data-action="new-chat" title="محادثة جديدة">
+    ${ic('plus','sm')}
+  </button>
+  <button class="icon-btn" data-action="new-group" title="مجموعة جديدة">
+    ${ic('users','sm')}
+  </button>
+</div>
     </div>
 
     <!-- Search -->
@@ -8302,30 +9861,55 @@ function pageMessages(){
 
 /* ═══ عنصر في قائمة المحادثات ═══ */
 function renderChatListItem(chat, me){
-  const otherId = chat.participants.find(p => p !== me);
-  const other = state.users[otherId];
-  if(!other) return '';
+  const isGroup = chat.type === 'group';
+  const otherId = isGroup ? null : chat.participants.find(p => p !== me);
+  const other = otherId ? state.users[otherId] : null;
+
+  if(!isGroup && !other) return '';
+
+  /* ═══ بيانات العرض ═══ */
+  const displayName = isGroup
+    ? (chat.name || 'مجموعة')
+    : other.name;
+
+  const displayAvatar = isGroup
+    ? `<div class="group-list-avatar">${esc(chat.avatar || '👥')}</div>`
+    : avatar(other, 50);
 
   const unread = chat.unreadCounts?.[me] || 0;
-  const online = ['available','playing'].includes(other.status || 'available');
-  const isTyping = chat.typing?.[otherId] === true;
+  const online = !isGroup && isUserOnline(otherId);
+  const isTyping = !isGroup && chat.typing?.[otherId] === true;
   const lastSender = chat.lastSender;
   const isMyLast = lastSender === me;
+  const lastSenderName = isGroup && !isMyLast && lastSender
+    ? (state.users[lastSender]?.name?.split(' ')[0] || 'عضو')
+    : null;
 
-  const preview = chat.lastMessage
-    ? (isMyLast ? '✓ ' : '') + chat.lastMessage
-    : 'ابدأ المحادثة…';
+  /* ═══ معاينة النص ═══ */
+  let preview = '';
+  if(chat.lastMessage){
+    if(isMyLast) preview = '✓ ' + chat.lastMessage;
+    else if(lastSenderName) preview = `${lastSenderName}: ${chat.lastMessage}`;
+    else preview = chat.lastMessage;
+  } else {
+    preview = 'ابدأ المحادثة…';
+  }
 
+  /* ═══ القائمة ═══ */
   return `
     <button type="button" class="chat-list-item ${unread > 0 ? 'unread' : ''}"
-            data-open-chat="${otherId}">
+            data-open-chat-item="${chat.id}">
       <div class="chat-list-avatar">
-        ${avatar(other, 50)}
+        ${displayAvatar}
         ${online ? '<div class="chat-online-dot"></div>' : ''}
+        ${isGroup ? `<div class="group-member-badge">${(chat.participants||[]).length}</div>` : ''}
       </div>
       <div class="chat-list-body">
         <div class="chat-list-top">
-          <div class="chat-list-name">${esc(other.name)}</div>
+          <div class="chat-list-name">
+            ${esc(displayName)}
+            ${isGroup ? '<span class="group-tag">👥</span>' : getAdminBadge(other)}
+          </div>
           <div class="chat-list-time">${chat.lastTime ? timeAgo(chat.lastTime) : ''}</div>
         </div>
         <div class="chat-list-preview">
@@ -8345,37 +9929,61 @@ function renderChatListItem(chat, me){
    💬 صفحة المحادثة الجديدة — متطورة
    ============================================================ */
 function pageChat(){
+  const isGroup = state.chatType === 'group';
   const otherUid = state.chatWith;
-  if(!otherUid) {
+  const groupMeta = state.chatMeta;
+
+  /* ═══ حالات التحقق ═══ */
+  if(!isGroup && !otherUid){
     setTimeout(() => go('messages'), 0);
     return emptyState('جارٍ العودة…','message');
   }
+  if(isGroup && !groupMeta){
+    return emptyState('جارٍ التحميل…','message');
+  }
 
-  const other = state.users[otherUid];
-  if(!other) return emptyState('المستخدم غير موجود','user');
+  const other = isGroup ? null : state.users[otherUid];
+  if(!isGroup && !other) return emptyState('المستخدم غير موجود','user');
 
-  const meta = state.chatMeta || {};
-  const online = ['available','playing'].includes(other.status || 'available');
-  const otherTyping = meta.typing?.[otherUid] === true;
+  /* ═══ الحالة والنص ═══ */
+  const meta          = state.chatMeta || {};
+  const online        = !isGroup && isUserOnline(otherUid);
+  const playerStatus  = !isGroup
+    ? (PLAYER_STATUSES[other.status || 'available'] || PLAYER_STATUSES.available)
+    : null;
+  const otherTyping   = isGroup
+    ? Object.keys(meta.typing || {})
+        .filter(uid => uid !== state.user.uid && meta.typing[uid] === true)
+        .length > 0
+    : meta.typing?.[otherUid] === true;
 
-  /* الحالة */
   let statusText, statusColor;
-  if(otherTyping){
-    statusText = '✍️ يكتب…';
+  if(isGroup){
+    const count = (meta.participants || []).length;
+    statusText = `${count} عضو`;
+    statusColor = 'var(--muted)';
+  } else if(otherTyping){
+    statusText  = '✍️ يكتب…';
     statusColor = 'var(--brand-2)';
   } else if(online){
-    statusText = `متصل الآن · ${esc(other.name)}`;
+    statusText  = 'متصل الآن';
     statusColor = 'var(--ok)';
   } else {
-    const lastSeen = meta.lastSeen?.[otherUid]?.toDate?.();
-    statusText = lastSeen ? `آخر ظهور ${timeAgo(lastSeen)}` : `@${esc(other.username)}`;
+    statusText  = getLastSeenText(otherUid);
     statusColor = 'var(--muted)';
   }
 
-  /* Emoji picker */
-  const pickerEmojis = ['😀','😃','😂','🤣','😊','😍','🥰','😘','😎','🤔','😅','😭','😡','🥳','🤗','😴',
-    '👍','👎','👏','🙌','🤝','💪','👊','✌️','🔥','✨','💯','🎉','❤️','💖','💙','💚','💜','🖤','🤍','💔',
-    '🌹','🌸','🌺','🎁','🏆','⭐','💎','👑','🍕','🍔','☕','🍺','🌈','🌙','☀️','☕'];
+  /* ═══ اسم وصورة الرأس ═══ */
+  const headerAvatar = isGroup
+    ? `<div class="group-header-avatar">${esc(groupMeta.avatar || '👥')}</div>`
+    : avatar(other, 40);
+
+  const headerName = isGroup
+    ? esc(groupMeta.name || 'مجموعة')
+    : `${esc(other.name)} ${getAdminBadge(other)}`;
+
+  /* ═══ Emoji picker (لم يعد مستخدماً — احتفظ به فارغاً) ═══ */
+  const pickerEmojis = [];
 
   return `
     <div class="chat-page">
@@ -8386,18 +9994,32 @@ function pageChat(){
           ${ic('back','sm')}
         </button>
 
-        <div class="chat-page-avatar" data-view-profile="${otherUid}" style="cursor:pointer">
-          ${avatar(other, 40)}
+        <div class="chat-page-avatar"
+             ${isGroup
+               ? `data-action="chat-group-info"`
+               : `data-view-profile="${otherUid}"`}
+             style="cursor:pointer">
+          ${headerAvatar}
         </div>
 
-        <div class="chat-page-info" data-view-profile="${otherUid}" style="cursor:pointer;flex:1;min-width:0">
+        <div class="chat-page-info"
+             ${isGroup
+               ? `data-action="chat-group-info"`
+               : `data-view-profile="${otherUid}"`}
+             style="cursor:pointer;flex:1;min-width:0">
           <div class="chat-page-name">
-            ${esc(other.name)}
-            ${getAdminBadge(other)}
+            ${headerName}
           </div>
           <div class="chat-page-status" style="color:${statusColor}">
             ${otherTyping ? '<span class="chat-typing-dots-mini"><span></span><span></span><span></span></span>' : ''}
-            ${statusText}
+            <span>${statusText}</span>
+            ${!isGroup ? `
+              <span class="chat-player-status-inline"
+                    style="color:${playerStatus.color}"
+                    title="${playerStatus.label}">
+                ${playerStatus.icon}
+              </span>
+            ` : ''}
           </div>
         </div>
 
@@ -8405,9 +10027,10 @@ function pageChat(){
                 style="width:38px;height:38px" title="بحث">
           ${ic('search','sm')}
         </button>
-        <button type="button" class="icon-btn" data-action="chat-menu"
-                style="width:38px;height:38px" title="خيارات">
-          ${ic('dots','sm')}
+        <button type="button" class="icon-btn"
+                ${isGroup ? 'data-action="chat-group-info"' : 'data-action="chat-menu"'}
+                style="width:38px;height:38px" title="معلومات">
+          ${ic(isGroup ? 'users' : 'dots','sm')}
         </button>
       </div>
 
@@ -8426,31 +10049,36 @@ function pageChat(){
         </div>
       ` : ''}
 
-      <!-- ═══ Messages area ═══ -->
+      <!-- ═══ Messages area (كما هو) ═══ -->
       <div class="chat-page-messages-wrap">
         <div class="chat-page-messages" id="chatMessagesScroll">
-          <div id="chatMessagesList">
-            ${state.chatMessages.length
-              ? '<div class="comments-loading"><div class="spinner"></div></div>'
-              : ''}
+          <div class="chat-loading-older" id="chatLoadingOlder" style="display:none">
+            <div class="spinner" style="width:20px;height:20px;margin:0 auto;"></div>
           </div>
-
-          <!-- Typing indicator -->
-          <div id="chatTypingIndicator" class="chat-typing-indicator" style="display:${otherTyping ? 'flex' : 'none'}">
+          <div class="chat-no-more" id="chatNoMore" style="display:none">
+            💬 بداية المحادثة
+          </div>
+<div id="chatMessagesList">
+  ${!state.chatInitialLoaded
+    ? '<div class="comments-loading"><div class="spinner"></div><span>جارٍ تحميل الرسائل…</span></div>'
+    : state.chatMessages.length
+      ? '<div class="comments-loading"><div class="spinner"></div></div>'
+      : ''}
+</div>
+          <div id="chatTypingIndicator" class="chat-typing-indicator"
+               style="display:${otherTyping ? 'flex' : 'none'}">
             <span class="chat-typing-dot"></span>
             <span class="chat-typing-dot"></span>
             <span class="chat-typing-dot"></span>
           </div>
         </div>
 
-        <!-- New messages badge -->
         <div id="chatNewBadge" class="chat-new-badge"
              data-action="chat-scroll-new"
              style="display:${state.chatNewMsgBadge ? 'block' : 'none'}">
           ⬇️ رسائل جديدة
         </div>
 
-        <!-- Scroll to bottom -->
         <button type="button" id="chatScrollBtn"
                 class="chat-scroll-bottom ${state.chatScrollBtn ? 'show' : ''}"
                 data-action="chat-scroll-bottom-btn">
@@ -8463,9 +10091,11 @@ function pageChat(){
         <div id="chatReplyContextWrap"></div>
 
         <div class="chat-input-row">
-          <button type="button" class="chat-input-btn"
-                  data-action="chat-emoji-toggle" title="إيموجي">
-            😊
+          <button type="button" class="chat-input-btn challenge"
+                  data-action="chat-open-challenge"
+                  title="${isGroup ? 'التحدي غير متاح في المجموعات' : 'تحدي بلعبة'}"
+                  ${isGroup ? 'disabled' : ''}>
+            ⚔️
           </button>
 
           <textarea id="chatInput"
@@ -8479,12 +10109,6 @@ function pageChat(){
                   id="chatSendBtn" disabled>
             ${ic('send','sm')}
           </button>
-        </div>
-
-        <!-- Emoji picker -->
-        <div id="chatEmojiPickerWrap" class="chat-emoji-picker"
-             style="display:${state.chatEmojiOpen ? 'block' : 'none'}">
-          ${pickerEmojis.map(e => `<button type="button" data-chat-insert-emoji="${e}">${e}</button>`).join('')}
         </div>
       </div>
     </div>
@@ -8522,17 +10146,25 @@ function openNewChatPicker(){
         ${ic('close','sm')}
       </button>
     </div>
+
     <div class="chats-search" style="margin-bottom:14px">
       ${ic('search','xs')}
-      <input type="text" id="newChatSearchInput" placeholder="ابحث عن مستخدم…" autocomplete="off">
+      <input type="text" id="newChatSearchInput" placeholder="ابحث…" autocomplete="off">
     </div>
+
+    <button type="button" class="new-group-cta" data-action="new-group" data-close-modal="1">
+      <div class="ngc-icon">👥</div>
+      <div class="ngc-text">
+        <div class="ngc-title">مجموعة جديدة</div>
+        <div class="ngc-sub">ابدأ محادثة مع عدة أشخاص</div>
+      </div>
+      ${ic('back','sm')}
+    </button>
+
     <div id="newChatList" style="max-height:55vh;overflow-y:auto">
       ${users.map(u => `
         <button type="button" class="chat-list-item" data-open-chat="${u.uid}" data-close-modal="1">
-          <div class="chat-list-avatar">
-            ${avatar(u, 44)}
-            ${['available','playing'].includes(u.status || 'available') ? '<div class="chat-online-dot"></div>' : ''}
-          </div>
+          <div class="chat-list-avatar">${avatar(u, 44)}</div>
           <div class="chat-list-body">
             <div class="chat-list-top">
               <div class="chat-list-name">${esc(u.name)} ${getAdminBadge(u)}</div>
@@ -8546,7 +10178,6 @@ function openNewChatPicker(){
     </div>
   `);
 
-  /* بحث فوري */
   setTimeout(() => {
     const input = document.getElementById('newChatSearchInput');
     if(!input) return;
@@ -8561,9 +10192,7 @@ function openNewChatPicker(){
       );
       list.innerHTML = filtered.map(u => `
         <button type="button" class="chat-list-item" data-open-chat="${u.uid}" data-close-modal="1">
-          <div class="chat-list-avatar">
-            ${avatar(u, 44)}
-          </div>
+          <div class="chat-list-avatar">${avatar(u, 44)}</div>
           <div class="chat-list-body">
             <div class="chat-list-top">
               <div class="chat-list-name">${esc(u.name)} ${getAdminBadge(u)}</div>
@@ -12875,6 +14504,60 @@ function pagePosts(){
 }
 
 /* ============================================================
+   📡 نظام الاتصال — تتبع آخر ظهور
+   ============================================================ */
+function startPresenceHeartbeat(){
+  if(state._presenceTimer) clearInterval(state._presenceTimer);
+  if(!state.user?.uid) return;
+
+  const pushSeen = () => {
+    if(!state.user?.uid) return;
+    updateDoc(doc(db, 'users', state.user.uid), {
+      lastSeen: serverTimestamp(),
+    }).catch(() => {});
+  };
+
+  /* عند البدء فوراً */
+  pushSeen();
+
+  /* كل 30 ثانية */
+  state._presenceTimer = setInterval(pushSeen, 30000);
+
+  /* عند العودة للتطبيق */
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden) pushSeen();
+  }, { once: false });
+
+  /* عند الإغلاق — best effort */
+  window.addEventListener('beforeunload', pushSeen, { once: true });
+}
+
+function stopPresenceHeartbeat(){
+  if(state._presenceTimer){
+    clearInterval(state._presenceTimer);
+    state._presenceTimer = null;
+  }
+}
+
+/* هل المستخدم متصل الآن؟ (آخر ظهور أقل من 90 ثانية) */
+function isUserOnline(uid){
+  if(!uid) return false;
+  if(uid === state.user?.uid) return true;
+  const u = state.users?.[uid];
+  if(!u?.lastSeen) return false;
+  const lastSeen = u.lastSeen.toDate?.() || new Date(u.lastSeen);
+  return (Date.now() - lastSeen.getTime()) < 90000;
+}
+
+/* نص آخر ظهور */
+function getLastSeenText(uid){
+  const u = state.users?.[uid];
+  if(!u?.lastSeen) return 'غير متصل';
+  const lastSeen = u.lastSeen.toDate?.() || new Date(u.lastSeen);
+  return `آخر ظهور ${timeAgo(lastSeen)}`;
+}
+
+/* ============================================================
    📄 صفحة المنشور المفرد — شريط رأس موحد + تعليقات متصلة
    ============================================================ */
 function pagePost(){
@@ -13169,6 +14852,13 @@ setTimeout(() => playProfileMusic(p), 100);
            <div class="pc-user ${cust.usernameAnimation !== 'none' ? `anim-name-${cust.usernameAnimation}` : ''}" style="${buildUsernameStyle(cust)};--anim-duration:${unameSpeed}s">
   ${cust.usernameShowAt ? '@' : ''}${esc(p.username)}
 </div>
+${p.status ? `
+  <div class="pc-status" style="--status-color:${PLAYER_STATUSES[p.status]?.color || '#22c55e'}">
+    <span class="pc-status-dot"></span>
+    <span class="pc-status-label">${PLAYER_STATUSES[p.status]?.icon || '🟢'} ${PLAYER_STATUSES[p.status]?.label || 'متاح'}</span>
+    ${p.statusMsg ? `<span class="pc-status-msg">· ${esc(p.statusMsg)}</span>` : ''}
+  </div>
+` : ''}
             <div class="pc-joined" style="color:${cust.joinDateColor}">
               ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
             </div>
@@ -13511,6 +15201,13 @@ setTimeout(() => playProfileMusic(p), 100);
             <div class="pc-user ${cust.usernameAnimation !== 'none' ? `anim-name-${cust.usernameAnimation}` : ''}" style="${buildUsernameStyle(cust)};--anim-duration:${unameSpeed}s">
   ${cust.usernameShowAt ? '@' : ''}${esc(p.username)}
 </div>
+${p.status ? `
+  <div class="pc-status" style="--status-color:${PLAYER_STATUSES[p.status]?.color || '#22c55e'}">
+    <span class="pc-status-dot"></span>
+    <span class="pc-status-label">${PLAYER_STATUSES[p.status]?.icon || '🟢'} ${PLAYER_STATUSES[p.status]?.label || 'متاح'}</span>
+    ${p.statusMsg ? `<span class="pc-status-msg">· ${esc(p.statusMsg)}</span>` : ''}
+  </div>
+` : ''}
             <div class="pc-joined" style="color:${cust.joinDateColor}">
               ${ic('clock','xs')} انضم ${formatJoinDate(p.createdAt)}
             </div>
@@ -15495,7 +17192,7 @@ async function loadCloseFriendsData(){
       stats,
     };
 
-    if(state.page === 'closefriends') render();
+    if(state.page === 'closefriends') scheduleRender();
 
   } catch(e){
     console.error('close friends load:', e);
@@ -16810,7 +18507,37 @@ const PAGES = {
   chat: pageChat,   /* ★ صفحة المحادثة الجديدة */
 };
 
+/* ============================================================
+   ⚡ Render Scheduler — يمنع الريندر المكرر
+   ============================================================ */
+
+let _renderRAF = null;
+let _snapRenderTimer = null;
+
+/* ✅ batching فوري — يلغي أي render مجدول */
 function render(){
+  if(_renderRAF) return;
+  // ألغِ أي render مجدول لأننا سنرندر الآن بأحدث حالة
+  if(_snapRenderTimer){
+    clearTimeout(_snapRenderTimer);
+    _snapRenderTimer = null;
+  }
+  _renderRAF = requestAnimationFrame(() => {
+    _renderRAF = null;
+    _doRender();
+  });
+}
+
+/* ✅ debounce ذكي — يتجاهل الطلب إذا كان هناك render معلّق */
+function scheduleRender(delay = 150){
+  if(_snapRenderTimer || _renderRAF) return;
+  _snapRenderTimer = setTimeout(() => {
+    _snapRenderTimer = null;
+    render();
+  }, delay);
+}
+
+function _doRender(){
   const isMain = MAIN_PAGES.includes(state.page);
 
   const topbar    = document.querySelector('.topbar');
@@ -16856,27 +18583,24 @@ if(pageHeader){
 
 /* ═══ تهيئة صفحة المحادثة ═══ */
 if(state.page === 'chat'){
-  const scrollEl = document.getElementById('chatMessagesScroll');
-  if(scrollEl){
-    scrollEl.addEventListener('scroll', () => {
-      const near = (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight) < 120;
-      state.chatScrollBtn = !near;
-      updateChatScrollBtn();
-      if(near && state.chatNewMsgBadge){
-        state.chatNewMsgBadge = false;
-        updateChatNewBadge();
-        markChatAsRead(state.chatId);
-      }
-    });
-
-    /* رندر أولي + تمرير */
+  if(!state.chatInitialLoaded){
+    const listEl = document.getElementById('chatMessagesList');
+    if(listEl && !listEl.children.length){
+      listEl.innerHTML = `
+        <div class="comments-loading">
+          <div class="spinner"></div>
+          <span>جارٍ تحميل الرسائل…</span>
+        </div>`;
+    }
+  } else if(!document.getElementById('chatMessagesList')?.children.length){
     renderChatMessages();
-    setTimeout(() => scrollChatToBottom(false), 100);
-    renderChatReplyContext();
-    updateChatSendBtn();
+  }
+  renderChatReplyContext();
+  updateChatSendBtn();
 
-    const input = document.getElementById('chatInput');
-    if(input) setTimeout(() => input.focus(), 200);
+  /* ★ أعد المحاولة إن لم تُهيأ بعد */
+  if(!state._chatPageInit){
+    requestAnimationFrame(() => initChatPage());
   }
 }
 
@@ -17436,22 +19160,36 @@ function formatPostText(text, options){
 
 /* ============ Modals with Image Upload ============ */
 function composeModal(){
-  /* ===== استعادة المسودة ===== */
+  /* ═══════ 1) استعادة المسودة ═══════ */
   let draft = { text: '', visibility: 'public', location: '' };
   try {
     const saved = localStorage.getItem('nexus_post_draft');
     if(saved) draft = { ...draft, ...JSON.parse(saved) };
   } catch(e){}
 
-  /* ===== إعادة تعيين الحالة ===== */
-  state.composeImages = [];
-  state.composeTab = 'write';
-  state.composeVisibility = draft.visibility || 'public';
-  state.composeLocation = draft.location || '';
-  state.composeEmojiOpen = false;
+  /* ═══════ 2) تنظيف الجلسة السابقة (ذاكرة) ═══════ */
+  if(state.composeImages && state.composeImages.length){
+    state.composeImages.forEach(img => {
+      if(img?.preview){
+        try { URL.revokeObjectURL(img.preview); } catch(e){}
+      }
+    });
+  }
+  if(state._composeObserver){
+    try { state._composeObserver.disconnect(); } catch(e){}
+    state._composeObserver = null;
+  }
+
+  /* ═══════ 3) إعادة تعيين الحالة ═══════ */
+  state.composeImages      = [];
+  state.composeTab         = 'write';
+  state.composeVisibility  = draft.visibility || 'public';
+  state.composeLocation    = draft.location || '';
+  state.composeEmojiOpen   = false;
   state.composeLocationOpen = !!draft.location;
   state.composeHashtagsOpen = false;
 
+  /* ═══════ 4) بناء المودال ═══════ */
   openModal(`
     <div class="compose-modal-inner">
       <!-- Header -->
@@ -17486,28 +19224,28 @@ function composeModal(){
               <button type="button" class="compose-author-vis" data-action="compose-visibility">
                 <span id="composeVisIcon">${
                   state.composeVisibility === 'followers' ? ic('users','xs') :
-                  state.composeVisibility === 'private' ? ic('lock','xs') :
+                  state.composeVisibility === 'private'   ? ic('lock','xs')  :
                   ic('globe','xs')
                 }</span>
                 <span id="composeVisLabel">${
                   state.composeVisibility === 'followers' ? 'المتابعون فقط' :
-                  state.composeVisibility === 'private' ? 'خاص' : 'عام'
+                  state.composeVisibility === 'private'   ? 'خاص'           : 'عام'
                 }</span>
               </button>
             </div>
           </div>
 
-          <!-- Textarea -->
-<div class="compose-textarea-wrap">
-  <textarea
-    id="composeText"
-    class="compose-textarea"
-    placeholder="بماذا تفكر؟ استخدم # للوسوم و @ للإشارة…"
-    maxlength="${COMPOSE_MAX_CHARS}"
-    autocomplete="off"
-  >${esc(draft.text)}</textarea>
-  <div id="composeAutocomplete" class="compose-autocomplete" style="display:none"></div>
-</div>
+          <!-- Textarea + Autocomplete -->
+          <div class="compose-textarea-wrap">
+            <textarea
+              id="composeText"
+              class="compose-textarea"
+              placeholder="بماذا تفكر؟ استخدم # للوسوم و @ للإشارة…"
+              maxlength="${COMPOSE_MAX_CHARS}"
+              autocomplete="off"
+            >${esc(draft.text)}</textarea>
+            <div id="composeAutocomplete" class="compose-autocomplete" style="display:none"></div>
+          </div>
 
           <!-- Gallery -->
           <div id="composeGalleryWrap"></div>
@@ -17542,12 +19280,8 @@ function composeModal(){
               ${ic('image')}
               <span class="compose-tool-badge" id="composeImgCount" style="${state.composeImages.length ? '' : 'display:none'}">${state.composeImages.length}</span>
             </button>
-            <button type="button" class="compose-tool-btn" data-action="compose-toggle-emoji" title="إيموجي">
-              😊
-            </button>
-            <button type="button" class="compose-tool-btn" data-action="compose-toggle-hashtag" title="وسوم">
-              #
-            </button>
+            <button type="button" class="compose-tool-btn" data-action="compose-toggle-emoji" title="إيموجي">😊</button>
+            <button type="button" class="compose-tool-btn" data-action="compose-toggle-hashtag" title="وسوم">#</button>
             <button type="button" class="compose-tool-btn" data-action="compose-toggle-location" title="الموقع">
               ${ic('location')}
             </button>
@@ -17578,55 +19312,60 @@ function composeModal(){
         </button>
       </div>
     </div>
-  `);
+  `, 'compose-modal');   /* ← ★ الكلاس المهم */
 
-  /* ===== التهيئة بعد الرسم ===== */
+  /* ═══════ 5) التهيئة بعد الرسم ═══════ */
   const textarea = document.getElementById('composeText');
   if(textarea){
     textarea.focus();
+    /* ★ ضع المؤشر في نهاية النص (بعد استعادة المسودة) */
+    try {
+      textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+    } catch(e){}
+
     textarea.addEventListener('input', onComposeTextChange);
-/* لوحة المفاتيح للاقتراحات */
-textarea.addEventListener('keydown', (e) => {
-  if(_acState.items.length > 0){
-    if(e.key === 'ArrowDown'){
-      e.preventDefault();
-      _acState.selectedIdx = Math.min(_acState.selectedIdx + 1, _acState.items.length - 1);
-      updateAcSelection();
-      return;
-    }
-    if(e.key === 'ArrowUp'){
-      e.preventDefault();
-      _acState.selectedIdx = Math.max(_acState.selectedIdx - 1, 0);
-      updateAcSelection();
-      return;
-    }
-    if(e.key === 'Enter' || e.key === 'Tab'){
-      e.preventDefault();
-      selectAutocompleteItem(_acState.selectedIdx);
-      return;
-    }
-    if(e.key === 'Escape'){
-      e.preventDefault();
-      hideComposeAutocomplete();
-      return;
-    }
-  }
 
-  /* النشر بـ Ctrl/Cmd + Enter */
-  if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
-    e.preventDefault();
-    const btn = document.getElementById('composeSubmit');
-    if(btn && !btn.disabled) btn.click();
-  }
-});
+    /* لوحة المفاتيح للاقتراحات */
+    textarea.addEventListener('keydown', (e) => {
+      if(_acState.items.length > 0){
+        if(e.key === 'ArrowDown'){
+          e.preventDefault();
+          _acState.selectedIdx = Math.min(_acState.selectedIdx + 1, _acState.items.length - 1);
+          updateAcSelection();
+          return;
+        }
+        if(e.key === 'ArrowUp'){
+          e.preventDefault();
+          _acState.selectedIdx = Math.max(_acState.selectedIdx - 1, 0);
+          updateAcSelection();
+          return;
+        }
+        if(e.key === 'Enter' || e.key === 'Tab'){
+          e.preventDefault();
+          selectAutocompleteItem(_acState.selectedIdx);
+          return;
+        }
+        if(e.key === 'Escape'){
+          e.preventDefault();
+          hideComposeAutocomplete();
+          return;
+        }
+      }
+      /* النشر بـ Ctrl/Cmd + Enter */
+      if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+        e.preventDefault();
+        const btn = document.getElementById('composeSubmit');
+        if(btn && !btn.disabled) btn.click();
+      }
+    });
 
-/* إعادة الاقتراحات عند تحريك المؤشر */
-textarea.addEventListener('click', detectComposeAutocomplete);
-textarea.addEventListener('keyup', (e) => {
-  if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) detectComposeAutocomplete();
-});
+    /* إعادة الاقتراحات عند تحريك المؤشر */
+    textarea.addEventListener('click', detectComposeAutocomplete);
+    textarea.addEventListener('keyup', (e) => {
+      if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) detectComposeAutocomplete();
+    });
 
-    /* drag & drop */
+    /* Drag & Drop */
     textarea.addEventListener('dragover', (e) => {
       e.preventDefault();
       textarea.classList.add('dragover');
@@ -17672,20 +19411,29 @@ textarea.addEventListener('keyup', (e) => {
     ).join('');
   }
 
-  /* Close observer — save draft on close */
+  /* ═══════ 6) MutationObserver — حفظ المسودة + تنظيف الصور عند الإغلاق ═══════ */
   const root = document.getElementById('modalRoot');
   if(root){
     const obs = new MutationObserver(() => {
       if(!root.innerHTML.trim()){
+        /* أُغلق المودال */
         saveComposeDraft();
+
+        /* نظّف blob URLs */
         state.composeImages.forEach(img => {
-          try { URL.revokeObjectURL(img.preview); } catch(e){}
+          if(img?.preview){
+            try { URL.revokeObjectURL(img.preview); } catch(e){}
+          }
         });
         state.composeImages = [];
+
         obs.disconnect();
+        if(state._composeObserver === obs) state._composeObserver = null;
       }
     });
-    obs.observe(root, { childList: true });
+    obs.observe(root, { childList: true, subtree: true });
+
+    state._composeObserver = obs;
   }
 }
 
@@ -17744,6 +19492,18 @@ function editProfileModal(){
 
     <!-- ===== تبويب تفاصيل ===== -->
     <div id="editTab_details" class="edit-panel hidden">
+    <div class="field">
+  <label>حالة اللاعب <span class="field-hint">(يظهر للآخرين)</span></label>
+  <div class="status-selector" id="epStatusSelector">
+    ${Object.entries(PLAYER_STATUSES).map(([k, s]) => `
+      <button type="button" class="status-btn ${(p.status||'available') === k ? 'active' : ''}"
+              data-status-pick="${k}" style="--status-color:${s.color}">
+        <span class="status-icon">${s.icon}</span>
+        <span class="status-label">${s.label}</span>
+      </button>
+    `).join('')}
+  </div>
+</div>
       <div class="field">
         <label>الموقع</label>
         <input class="input" id="epLocation" value="${esc(cust.location)}"
@@ -17794,6 +19554,13 @@ function editProfileModal(){
   const unameStatus = document.getElementById('epUsernameStatus');
   checkUsernameAvailability(unameEl.value, unameStatus);
   unameEl.addEventListener('input', () => {
+    /* ★ معالج حالة اللاعب */
+document.querySelectorAll('[data-status-pick]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-status-pick]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
     unameEl.value = unameEl.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
     checkUsernameAvailability(unameEl.value, unameStatus);
   });
@@ -17855,6 +19622,8 @@ async function saveProfileData(){
     if(pronouns !== (p.pronouns || '')) updates.pronouns = pronouns;
     if(location !== (p.location || '')) updates.location = location;
     if(birthday !== (p.birthday || '')) updates.birthday = birthday;
+    const newStatus = document.querySelector('[data-status-pick].active')?.dataset.statusPick;
+    if(newStatus && newStatus !== p.status) updates.status = newStatus;
     if(statusMsg !== (p.statusMsg || '')) updates.statusMsg = statusMsg;
 
     let usernameChanged = false;
@@ -18857,7 +20626,7 @@ function refreshCustOptions(){
   const frameId = p.equipped?.frameId || p.frameId || 'none';
   const zone = state.custActiveZone;
   optArea.innerHTML = zone
-    ? renderZoneOptions(zone, p, sub, cust, themeId, frameId)
+    ? renderZoneBody(zone, p, sub, cust, themeId, frameId)  // ✅
     : '';
 }
 
@@ -20958,14 +22727,14 @@ updateZonePreview();
       equipped,
     });
     toast('تم تطبيق الثيم ✓');
-  } catch(e){
+} catch(e){
     console.error('applyTheme:', e);
     toast('فشل التطبيق');
-    /* Rollback — إعادة القراءة من DB */
     try {
       const s = await getDoc(doc(db, 'users', state.user.uid));
       if(s.exists()) state.profile = s.data();
-      if(previewBox) previewBox.innerHTML = renderCustomizationPreview();
+      updateZonePreview();      // ✅ استخدم الدالة الموجودة
+      render();
     } catch(err){}
   }
 }
@@ -21497,6 +23266,11 @@ if(!e.target.closest('#editPostText') && !e.target.closest('#editAutocomplete'))
 
   /* ════════ 1) تحديد العنصر أولاً ════════ */
 const t = e.target.closest(
+  '[data-chat-msg-id],[data-open-chat-item],' +
+  '[data-accept-challenge-chat],[data-reject-challenge-chat],' +
+  '[data-cancel-challenge-chat],[data-enter-match],' +
+  '[data-edit-tab],[data-remove-edit-image],' +
+  '[data-chat-msg-id],' +        // ★ أضف هذا في البداية
   '[data-edit-tab],[data-remove-edit-image],[data-alt-edit-image],' +
   '[data-add-edit-image],[data-insert-edit-emoji],[data-insert-edit-hashtag],' +
   '[data-nav],[data-action],[data-tab],[data-ptab],[data-follow],' +
@@ -21628,6 +23402,17 @@ if(t.dataset.action === 'cancel-reply'){
 
 if(t.dataset.insertCommentEmoji){
   insertCommentEmoji(t.dataset.insertCommentEmoji);
+  return;
+}
+
+/* ★★ فتح منتقي التحدي ★★ */
+if(t.dataset.action === 'chat-open-challenge'){
+  if(state.chatType === 'group'){
+    return toast('التحدي متاح فقط في المحادثات الفردية');
+  }
+  if(state.chatWith){
+    openChatChallengePicker(state.chatWith);
+  }
   return;
 }
 
@@ -22707,6 +24492,46 @@ if(t.dataset.action === 'view-post-media'){
   if(t.dataset.acceptChallenge){ await acceptChallenge(t.dataset.acceptChallenge); return; }
   if(t.dataset.rejectChallenge){ await rejectChallenge(t.dataset.rejectChallenge); return; }
 
+/* ═══ قبول/رفض/إلغاء التحدي من البطاقة ═══ */
+if(t.dataset.acceptChallengeChat){
+  await acceptChallengeFromChat(
+    t.dataset.acceptChallengeChat,
+    t.dataset.msgId,
+    t.dataset.chatId
+  );
+  return;
+}
+
+if(t.dataset.rejectChallengeChat){
+  await rejectChallengeFromChat(
+    t.dataset.rejectChallengeChat,
+    t.dataset.msgId,
+    t.dataset.chatId
+  );
+  return;
+}
+
+if(t.dataset.cancelChallengeChat){
+  await cancelChallengeFromChat(
+    t.dataset.cancelChallengeChat,
+    t.dataset.msgId,
+    t.dataset.chatId
+  );
+  return;
+}
+
+/* ═══ دخول المباراة من البطاقة ═══ */
+if(t.dataset.enterMatch){
+  const roomId = t.dataset.enterMatch;
+  const gameId = t.dataset.gameId;
+  if(gameId === 'g3'){
+    await startQuizMatch(roomId, false);
+  } else {
+    toast('هذه اللعبة قيد التطوير');
+  }
+  return;
+}
+
   /* ============================================================
      23) المقتنيات
      ============================================================ */
@@ -23194,16 +25019,6 @@ if(t.dataset.viewProfile){
     return;
   }
 
-  if(t.dataset.action === 'chat-emoji-toggle'){
-    toggleChatEmojiPicker();
-    return;
-  }
-
-  if(t.dataset.chatInsertEmoji){
-    insertChatEmoji(t.dataset.chatInsertEmoji);
-    return;
-  }
-
   /* إجراءات على الرسائل */
   if(t.dataset.chatMsgId && !t.dataset.chatReact){
     if(e.target.closest('.chat-msg-bubble')){
@@ -23290,6 +25105,86 @@ if(t.dataset.viewProfile){
     }
     return;
   }
+
+/* ═══ مجموعات الدردشة ═══ */
+if(t.dataset.action === 'new-group'){
+  closeModal();
+  setTimeout(openCreateGroupModal, 100);
+  return;
+}
+
+if(t.dataset.action === 'chat-group-info'){
+  openChatGroupInfoModal();
+  return;
+}
+
+if(t.dataset.action === 'group-add-members'){
+  openAddGroupMembersModal();
+  return;
+}
+
+if(t.dataset.action === 'group-member-menu'){
+  openGroupMemberMenu(t.dataset.uid);
+  return;
+}
+
+if(t.dataset.action === 'group-leave'){
+  closeModal();
+  leaveGroupChat();
+  return;
+}
+
+if(t.dataset.action === 'group-remove-member'){
+  removeGroupMember(t.dataset.uid);
+  return;
+}
+
+if(t.dataset.action === 'group-promote'){
+  promoteGroupAdmin(t.dataset.uid);
+  return;
+}
+
+if(t.dataset.action === 'group-demote'){
+  demoteGroupAdmin(t.dataset.uid);
+  return;
+}
+
+if(t.dataset.action === 'group-rename'){
+  closeModal();
+  const newName = prompt('اسم جديد للمجموعة:');
+  if(newName && newName.trim()){
+    updateDoc(doc(db, 'chats', state.chatId), { name: newName.trim().slice(0, 60) })
+      .then(() => toast('✓ تم التحديث', 'success'))
+      .catch(() => toast('فشل', 'error'));
+  }
+  return;
+}
+
+if(t.dataset.action === 'group-change-avatar'){
+  const options = ['👥','🎮','🏆','⭐','🔥','💎','👑','🎯','⚡','🌈','🌟','🎨'];
+  const newAvatar = prompt('اختر رمزاً:\n' + options.join(' '), state.chatMeta?.avatar || '👥');
+  if(newAvatar && options.includes(newAvatar)){
+    updateDoc(doc(db, 'chats', state.chatId), { avatar: newAvatar })
+      .then(() => toast('✓ تم التحديث', 'success'))
+      .catch(() => toast('فشل', 'error'));
+  }
+  return;
+}
+
+/* ★★ فتح محادثة/مجموعة من القائمة ★★ */
+if(t.dataset.openChatItem){
+  const chatId = t.dataset.openChatItem;
+  const chat = state.chats.find(c => c.id === chatId);
+  if(!chat) return;
+
+  if(chat.type === 'group'){
+    openGroupChat(chatId);
+  } else {
+    const otherId = chat.participants.find(p => p !== state.user.uid);
+    if(otherId) openChat(otherId);
+  }
+  return;
+}
 
   /* ============================================================
      32) الألعاب والغرف
