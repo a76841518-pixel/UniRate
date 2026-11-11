@@ -21399,3 +21399,33 @@ html[dir="rtl"] .spa-actions .pact.ml{
   transition: width 0.15s linear, background 0.3s !important;
   will-change: width;
 }
+
+/* ═══════════════════════════════════════════════════════
+   ✅ FIX 1: مودال اختيار اللون — السماح بالنقر
+   ═══════════════════════════════════════════════════════ */
+.uno-color-picker-overlay,
+.uno-color-picker-overlay *,
+.uno-color-card,
+.uno-color-picker-cancel {
+  pointer-events: auto !important;
+}
+
+.uno-color-card,
+.uno-color-picker-cancel {
+  cursor: pointer !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ✅ FIX 3: حركة الإيموجي — position: fixed خارج القص
+   ═══════════════════════════════════════════════════════ */
+.uno-floating-reaction {
+  position: fixed !important;
+  /* ⚠️ تم إزالة top: -8px; left: 50% — تُحدَّد عبر JS */
+  font-size: 34px;
+  pointer-events: none !important;
+  z-index: 10000 !important;
+  animation: unoReactionFloat 1.8s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7));
+  will-change: transform, opacity;
+  text-shadow: 0 0 12px rgba(255,255,255,0.3);
+}

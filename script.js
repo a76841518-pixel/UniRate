@@ -23937,9 +23937,15 @@ function renderUnoGame(){
         </div>
       </div>
 
-      <div class="uno-hand-wrap">
-        <!-- ★ صندوق اللاعب مع الأزرار -->
-        <div class="uno-my-header">
+<div class="uno-hand-wrap">
+    <!-- ✅ FIX 2: شريط وقت دوري -->
+    <div class="uno-my-timer-wrap">
+      <div class="uno-my-timer-fill" id="unoMyTimerFill"
+           style="width:${isMyTurn ? timerPct : 0}%;background:${isMyTurn ? timerColor : 'transparent'}"></div>
+    </div>
+
+    <!-- ★ صندوق اللاعب مع الأزرار -->
+    <div class="uno-my-header">
           <!-- الصورة (تفتح الملف) -->
           <div class="uno-my-avatar ${isMyTurn ? 'active' : ''}" data-view-profile="${state.user.uid}">
             ${avatar(state.profile, 44)}
@@ -24403,31 +24409,35 @@ async function unoSendReaction(emoji){
 /* ══════════════════════════════════════════════
    🎭 عرض الإيموجي طائراً فوق الصورة
    ══════════════════════════════════════════════ */
+/* ✅ FIX 3: عرض الإيموجي في طبقة ثابتة فوق كل شيء */
 function showUnoReactionOverAvatar(uid, emoji){
-  let container = null;
+  let avatarEl = null;
 
   if(uid === state.user.uid){
-    container = document.querySelector('.uno-my-avatar');
+    avatarEl = document.querySelector('.uno-my-avatar');
   } else {
-    const seatEl = document.querySelector(`.uno-seat [data-view-profile="${uid}"]`);
-    container = seatEl?.closest('.uno-seat-avatar-wrap') ||
-                seatEl?.closest('.uno-seat-avatar') ||
-                seatEl;
+    avatarEl = document.querySelector(`.uno-seat [data-view-profile="${uid}"]`);
   }
 
-  if(!container) return;
+  if(!avatarEl) return;
 
-  const style = window.getComputedStyle(container);
-  if(style.position === 'static'){
-    container.style.position = 'relative';
-  }
+  /* احسب موضع الصورة الفعلي على الشاشة */
+  const rect = avatarEl.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const topY = rect.top;
 
   const el = document.createElement('div');
   el.className = 'uno-floating-reaction';
   el.textContent = emoji;
-  container.appendChild(el);
+  el.style.left = centerX + 'px';
+  el.style.top = topY + 'px';
 
-  setTimeout(() => el.remove(), 1800);
+  /* ✅ يُضاف إلى body — يبقى حتى لو renderUnoGame أعاد رسم الـ container */
+  document.body.appendChild(el);
+
+  setTimeout(() => {
+    try { el.remove(); } catch(e){}
+  }, 1900);
 }
 
 /* ══════════════════════════════════════════════
@@ -24526,12 +24536,14 @@ function startUnoTurnTimer(roomId){
     }
 
     const s = m.unoState;
+    const me = state.user.uid;
+    const isMyTurn = s.playerOrder[s.currentTurn] === me;
     const elapsed = (Date.now() - s.turnStartedAt) / 1000;
     const remaining = Math.max(0, s.turnTime - elapsed);
     const pct = Math.max(0, Math.min(100, (remaining / s.turnTime) * 100));
     const color = pct > 50 ? '#22c55e' : pct > 20 ? '#f5b031' : '#ff3d71';
 
-    /* تحديث شريط الوقت للاعب النشط فقط */
+    /* تحديث شريط وقت الخصم النشط */
     const activeTimer = document.querySelector('.uno-seat.active .uno-seat-timer-fill');
     if(activeTimer){
       activeTimer.style.width = `${pct}%`;
@@ -24539,14 +24551,28 @@ function startUnoTurnTimer(roomId){
       activeTimer.style.boxShadow = `0 0 8px ${color}`;
     }
 
+    /* ✅ FIX 2: تحديث شريط وقتي */
+    const myTimer = document.getElementById('unoMyTimerFill');
+    if(myTimer){
+      if(isMyTurn){
+        myTimer.style.width = `${pct}%`;
+        myTimer.style.background = color;
+        myTimer.style.boxShadow = `0 0 8px ${color}`;
+      } else {
+        myTimer.style.width = '0%';
+        myTimer.style.background = 'transparent';
+        myTimer.style.boxShadow = 'none';
+      }
+    }
+
     /* السحب التلقائي */
-if(remaining <= 0 && s.playerOrder[s.currentTurn] === state.user.uid && !s.finished){
-  const turnKey = `${s.currentTurn}_${s.turnStartedAt}`;
-  if(state._unoAutoDrawForTurn !== turnKey){
-    state._unoAutoDrawForTurn = turnKey;
-    handleUnoTimeout(roomId);   /* ← الدالة الجديدة */
-  }
-}
+    if(remaining <= 0 && isMyTurn && !s.finished){
+      const turnKey = `${s.currentTurn}_${s.turnStartedAt}`;
+      if(state._unoAutoDrawForTurn !== turnKey){
+        state._unoAutoDrawForTurn = turnKey;
+        handleUnoTimeout(roomId);
+      }
+    }
   }, 250);
 }
 
@@ -27690,6 +27716,12 @@ if(t.dataset.action === 'uno-draw'){
 
 if(t.dataset.action === 'uno-call'){
   await unoCallUno();
+  return;
+}
+
+/* ✅ FIX 1: النقر على ورقة اللون */
+if(t.dataset.unoColor){
+  unoConfirmColor(t.dataset.unoColor);
   return;
 }
 
