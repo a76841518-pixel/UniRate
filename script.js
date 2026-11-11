@@ -1718,9 +1718,12 @@ unoSettings: {
   maxPlayers: 2,
   initialHand: 7,
   turnTime: 30,
+  teamMode: 'ffa',   /* ★ جديد: 'ffa' | 'teams' */
   isPublic: true,
   password: '',
 },
+_unoChatOpen: false,
+unoChatUnsub: null,
 };
 
 /* استعادة المنشورات المخفية من localStorage */
@@ -1903,11 +1906,15 @@ if(page !== 'profile' && page !== 'userprofile'){
   stopProfileMusic();
 }
 
-/* ★ إعادة تعيين اختيار طور أونو عند مغادرة صفحة الألعاب */
-if(page !== 'games'){
-  state.unoSelectedMode = null;
+/* ★ إعادة تعيين حالة تعديل الإعدادات فقط عند مغادرة صفحة أونو */
+if(state.page === 'uno' && page !== 'uno'){
   state.unoSettingsEditing = false;
   state._unoSettingsBackup = null;
+}
+/* ★ إبقاء طور أونو المختار — لا يُمسح */
+/* ★ مسح activeGame عند الذهاب لأونو */
+if(page === 'uno'){
+  state.activeGame = null;
 }
 
 /* ★ إعادة تحميل بيانات المهام عند دخول الصفحة */
@@ -2700,6 +2707,25 @@ function getPageHeaderConfig(){
       break;
     }
 
+case 'game': {
+  const game = GAMES.find(g => g.id === state.activeGame);
+  cfg.title = game ? `🎮 ${game.name}` : 'لعبة';
+
+  if(game?.id === 'uno'){
+    const mode = state.unoSelectedMode
+      ? UNO.MODES[state.unoSelectedMode]
+      : null;
+    if(mode){
+      cfg.actions = `
+        <button class="page-hbtn" data-action="uno-invite" title="دعوة لاعب">
+          ${ic('users','xs')}<span>دعوة</span>
+        </button>
+      `;
+    }
+  }
+  break;
+}
+
     case 'missions':
   cfg.title = '🎯 المهام والمكافآت';
   cfg.actions = `
@@ -3150,6 +3176,21 @@ await setDoc(doc(db, 'users', user.uid), {
 
     // ★ الإصلاح الأساسي: اعرض الصفحة فوراً
 render();
+
+// ★ التعامل مع رابط الدعوة
+const _urlParams = new URLSearchParams(window.location.search);
+const _urlGame = _urlParams.get('game');
+const _urlMode = _urlParams.get('mode');
+
+if(_urlGame && GAMES.some(g => g.id === _urlGame)){
+  state.activeGame = _urlGame;
+  if(_urlGame === 'uno' && _urlMode && UNO.MODES[_urlMode]){
+    state.unoSelectedMode = _urlMode;
+  }
+  setTimeout(() => go('game'), 400);
+  window.history.replaceState({}, '', window.location.pathname);
+}
+
 // ✅ أجّل heartbeat 2 ثانية حتى يستقر أول ريندر
 setTimeout(() => startPresenceHeartbeat(), 2000);
 
@@ -3199,8 +3240,10 @@ setTimeout(() => startPresenceHeartbeat(), 2000);
 function detachListeners(){
   state.unsubs.forEach(u=>{ try{u();}catch(e){} });
   state.unsubs = [];
-['chatUnsub','matchUnsub','matchChatUnsub','teamChatUnsub','activityUnsub','tournamentUnsub','mmUnsub','teamWarsUnsub','teamTournamentsUnsub','chatMessagesUnsub','chatMetaUnsub']
-    .forEach(k=>{ if(state[k]){ try{state[k]();}catch(e){} state[k]=null; } });
+['chatUnsub','matchUnsub','matchChatUnsub','teamChatUnsub','activityUnsub',
+ 'tournamentUnsub','mmUnsub','teamWarsUnsub','teamTournamentsUnsub',
+ 'chatMessagesUnsub','chatMetaUnsub','unoUnsub','unoChatUnsub']  // ← أضف unoChatUnsub
+  .forEach(k=>{ if(state[k]){ try{state[k]();}catch(e){} state[k]=null; } });
   if(state.matchTimer){ clearInterval(state.matchTimer); state.matchTimer = null; }
   if(state.mmInterval && typeof state.mmInterval === 'number'){
     clearInterval(state.mmInterval);
@@ -10449,51 +10492,6 @@ function updateChatSendBtn(){
 }
 
 function pageGames(){
-  /* ═══ عرض تفاصيل لعبة محددة ═══ */
-  if(state.activeGame){
-    const g = GAMES.find(x => x.id === state.activeGame);
-    if(!g) return emptyState('اللعبة غير موجودة','gamepad');
-
-/* لعبة أونو → لوبي أو إعدادات */
-if(g.id === 'uno'){
-  if(state.unoSelectedMode){
-    return renderUnoSettingsScreen();
-  }
-  return renderUnoLobby();
-}
-
-    /* ألعاب أخرى */
-    const isPlayable = g.playable;
-    return `
-      <div class="row" style="margin-bottom:14px">
-        <button class="icon-btn" data-nav="games" data-reset="game">${ic('back','sm')}</button>
-        <div style="flex:1">
-          <div style="font-size:17px;font-weight:900">${esc(g.name)}</div>
-          <div class="muted" style="font-size:11px">${esc(g.catLabel)}</div>
-        </div>
-        ${isPlayable
-          ? `<span class="pill ok">${ic('play','xs')} جاهزة</span>`
-          : `<span class="pill">قريباً</span>`}
-      </div>
-
-      <div class="card" style="background:${g.grad};border:0;margin-bottom:16px;padding:28px;text-align:center;position:relative;overflow:hidden">
-        <div style="font-size:48px;margin-bottom:8px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.4))">${g.emoji}</div>
-        <div style="font-size:20px;font-weight:900">${esc(g.name)}</div>
-        <div style="font-size:11.5px;opacity:.85;margin-top:4px">${esc(g.catLabel)}</div>
-      </div>
-
-      ${isPlayable
-        ? `<button class="btn btn-primary" style="width:100%;margin-bottom:12px"
-                   data-action="uno-open-lobby">
-             ${ic('play','sm')} العب الآن
-           </button>`
-        : `<div class="card" style="text-align:center;padding:32px">
-             ${ic('clock')}
-             <div style="font-size:14px;font-weight:800;margin-top:10px">قريباً</div>
-             <div class="muted" style="font-size:11.5px;margin-top:6px">هذه اللعبة قيد التطوير</div>
-           </div>`}
-    `;
-  }
 
   /* ═══ قائمة الألعاب حسب الأقسام ═══ */
   loadGameCategoryTab();
@@ -18746,6 +18744,7 @@ const PAGES = {
     relation: pageRelation,
   missions: pageMissions,
   chat: pageChat,   /* ★ صفحة المحادثة الجديدة */
+  game: pageGame,   // ← بدل: uno: pageUno
 };
 
 /* ============================================================
@@ -23464,16 +23463,26 @@ const UNO = {
   },
   INITIAL_HAND: 7,
 
-  MODES: {
-    classic:     { name:'كلاسيكي',      icon:'🎯', desc:'قواعد أونو الرسمية الكلاسيكية',       turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:false, team:false, elimination:false },
-    stacking:    { name:'ستاكينغ',      icon:'📚', desc:'يمكن تكديس +2 و+4 على بعضها',          turnTime:30, stacking:true,  jumpin:false, sevenzero:false, chaos:false, team:false, elimination:false },
-    jumpin:      { name:'جامب إن',      icon:'⚡', desc:'العب ورقة مطابقة حتى خارج دورك',       turnTime:30, stacking:false, jumpin:true,  sevenzero:false, chaos:false, team:false, elimination:false },
-    sevenzero:   { name:'7-صفر',        icon:'🔄', desc:'7 = بدّل الأيدي · 0 = دوران الجميع',    turnTime:30, stacking:false, jumpin:false, sevenzero:true,  chaos:false, team:false, elimination:false },
-    team:        { name:'فريقين (2v2)', icon:'👥', desc:'الزميل الذي يفوز يُفوز معه الفريق',      turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:false, team:true,  elimination:false },
-    elimination: { name:'إقصاء',        icon:'💀', desc:'آخر لاعب صامد يفوز — لا رحمة',         turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:false, team:false, elimination:true  },
-    chaos:       { name:'فوضى نكسوس',   icon:'🌪️', desc:'حدث عشوائي كل 5 أدوار — فوضى كاملة',   turnTime:30, stacking:false, jumpin:false, sevenzero:false, chaos:true,  team:false, elimination:false },
-    speed:       { name:'سرعة',         icon:'⏱️', desc:'15 ثانية فقط لكل دور — من يتردد يخسر', turnTime:15, stacking:true,  jumpin:true,  sevenzero:false, chaos:false, team:false, elimination:false },
+MODES: {
+  classic: {
+    name: 'كلاسيكي', icon: '🎯',
+    desc: 'قواعد أونو الرسمية الكلاسيكية',
+    turnTime: 30, stacking: false, jumpin: false,
+    sevenzero: false, chaos: false, team: false, elimination: false
   },
+  stacking: {
+    name: 'ستاكينغ', icon: '📚',
+    desc: 'يمكن تكديس +2 و+4 على بعضها',
+    turnTime: 30, stacking: true, jumpin: false,
+    sevenzero: false, chaos: false, team: false, elimination: false
+  },
+  chaos: {
+    name: 'فوضى نكسوس', icon: '🌪️',
+    desc: 'حدث عشوائي كل 5 أدوار — فوضى كاملة',
+    turnTime: 30, stacking: false, jumpin: false,
+    sevenzero: false, chaos: true, team: false, elimination: false
+  },
+},
 
   CHAOS_EVENTS: [
     { id:'reverse_all',  name:'انعكاس جماعي', desc:'كل الأيدي تُعكس!',       icon:'🔄' },
@@ -23595,7 +23604,9 @@ if(isHost && !room.unoState){
       turnCount: 0,
       chaosLog: [],
       nextChaosAt: modeCfg.chaos ? 5 : 0,
-      teams: modeCfg.team ? buildUnoTeams(playerOrder) : null,
+      teams: (settings.teamMode === 'teams' && playerOrder.length >= 4)
+  ? buildUnoTeams(playerOrder)
+  : null,
       round: 1,
     };
 
@@ -23610,11 +23621,9 @@ if(isHost && !room.unoState){
 }
 
 function buildUnoTeams(players){
-  /* زوجي: 0+2 ضد 1+3 */
+  if(players.length < 4) return null;
   const teams = {};
-  players.forEach((uid, i) => {
-    teams[uid] = i % 2 === 0 ? 'A' : 'B';
-  });
+  players.forEach((uid, i) => { teams[uid] = i % 2 === 0 ? 'A' : 'B'; });
   return teams;
 }
 
@@ -23623,9 +23632,13 @@ function buildUnoTeams(players){
    ══════════════════════════════════════════════ */
 function subscribeToUnoMatch(roomId){
   if(state.unoUnsub){ try{ state.unoUnsub(); }catch(e){} state.unoUnsub = null; }
+  if(state.unoChatUnsub){ try{ state.unoChatUnsub(); }catch(e){} state.unoChatUnsub = null; }
   if(state.unoTimer){ clearInterval(state.unoTimer); state.unoTimer = null; }
 
   state.activeUnoMatch = { roomId };
+  state._unoChatOpen = false;
+  state.matchChat = [];
+
   document.getElementById('gameOverlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
@@ -23643,12 +23656,36 @@ function subscribeToUnoMatch(roomId){
     renderUnoGame();
     startUnoTurnTimer(roomId);
 
-    /* فوز */
     if(data.unoState.winnerId && !state._unoWinnerShown){
       state._unoWinnerShown = true;
       setTimeout(() => unoShowResult(roomId), 600);
     }
   });
+
+  /* ★ الاشتراك في محادثة المباراة */
+  state.unoChatUnsub = onSnapshot(
+    query(collection(db, 'rooms', roomId, 'chat'), orderBy('createdAt', 'asc'), limit(100)),
+    snap => {
+      state.matchChat = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if(state._unoChatOpen){
+        const container = document.getElementById('unoChatMessages');
+        if(container){
+          container.innerHTML = state.matchChat.length
+            ? state.matchChat.map(msg => {
+                const isMe = msg.uid === state.user.uid;
+                return `
+                  <div class="uno-chat-msg ${isMe ? 'me' : ''}">
+                    ${!isMe ? `<span class="uno-chat-from">${esc(msg.name || 'لاعب')}</span>` : ''}
+                    <span>${esc(msg.text)}</span>
+                  </div>
+                `;
+              }).join('')
+            : '<div class="uno-chat-empty">لا رسائل بعد</div>';
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+    }
+  );
 }
 
 /* ══════════════════════════════════════════════
@@ -23667,114 +23704,112 @@ function renderUnoGame(){
   const isMyTurn = s.playerOrder[s.currentTurn] === me;
   const currentColor = s.currentColor;
   const topCard = s.discard[s.discard.length - 1];
+  const currentPlayer = s.playerOrder[s.currentTurn];
 
   const others = s.playerOrder.filter(uid => uid !== me);
-  const currentPlayer = s.playerOrder[s.currentTurn];
-  const currentPlayerName = (state.users[currentPlayer]?.name || 'لاعب').split(' ')[0];
-
   const elapsed = (Date.now() - s.turnStartedAt) / 1000;
   const remaining = Math.max(0, s.turnTime - elapsed);
+  const timerPct = Math.max(0, Math.min(100, (remaining / s.turnTime) * 100));
+  const timerColor = timerPct > 50 ? '#22c55e' : timerPct > 20 ? '#f5b031' : '#ff3d71';
 
-  /* ترتيب اليد */
   const sortedHand = [...myHand].sort((a, b) => {
-    const colorOrder = { red:0, yellow:1, green:2, blue:3, wild:4 };
-    if(colorOrder[a.color] !== colorOrder[b.color]) return colorOrder[a.color] - colorOrder[b.color];
+    const co = { red:0, yellow:1, green:2, blue:3, wild:4 };
+    if(co[a.color] !== co[b.color]) return co[a.color] - co[b.color];
     return a.value.localeCompare(b.value);
   });
 
-  /* حساب التراكب — كلما زادت البطاقات زاد التراكب لتبقى في الشاشة */
   const cardCount = sortedHand.length;
   const overlap = Math.min(38, Math.max(4, (cardCount - 3) * 5));
+  const positions = getUnoSeatPositions(others.length);
+  const teams = s.teams || {};
+  const myTeam = teams[me];
+
+  /* ★ حفظ قيمة إدخال الشات قبل إعادة الرسم */
+  const savedChatInput = state._unoChatOpen
+    ? (document.getElementById('unoChatInput')?.value || '')
+    : '';
 
   container.innerHTML = `
     <div class="uno-game">
-
-      <!-- ═══ TOP BAR ═══ -->
       <div class="uno-topbar">
-        <button class="uno-exit-btn" data-action="uno-exit" aria-label="خروج">
-          ${ic('close','sm')}
-        </button>
-        <div class="uno-mode-chip">
-          <span>${modeCfg.icon}</span>
-          <span>${modeCfg.name}</span>
-        </div>
-        <div class="uno-timer ${remaining < 5 ? 'danger' : remaining < 10 ? 'warn' : ''}">
-          <span>⏱️</span>
-          <span class="uno-timer-val">${Math.ceil(remaining)}</span>
-        </div>
+        <button class="uno-exit-btn" data-action="uno-exit" aria-label="خروج">${ic('close','sm')}</button>
       </div>
 
-      <!-- ═══ OPPONENTS ═══ -->
-      ${others.length > 0 ? `
-        <div class="uno-opponents">
-          ${others.map(uid => {
-            const u = state.users[uid] || { name:'لاعب' };
-            const isCurrent = currentPlayer === uid;
-            const count = (s.hands[uid] || []).length;
-            const uno = count === 1;
-            return `
-              <div class="uno-opponent ${isCurrent ? 'active' : ''} ${uno ? 'uno-alert' : ''}">
-                ${isCurrent ? '<div class="uno-turn-indicator">▶</div>' : ''}
-                ${uno ? '<div class="uno-badge-uno">UNO!</div>' : ''}
-                <div class="uno-opp-avatar">${avatar(u, 40)}</div>
-                <div class="uno-opp-name">${esc((u.name||'').split(' ')[0])}</div>
-                <div class="uno-opp-cards-stack">
-                  ${Array(Math.min(count, 4)).fill(0).map(() =>
-                    '<span class="uno-mini-card-back"></span>'
-                  ).join('')}
-                  <span class="uno-mini-card-count">${count}</span>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      ` : ''}
+      <div class="uno-table">
+        ${others.map((uid, i) => {
+          const u = state.users[uid] || { name:'لاعب' };
+          const isCurrent = currentPlayer === uid;
+          const count = (s.hands[uid] || []).length;
+          const uno = count === 1;
+          const seatPos = positions[i] || 'top-center';
+          const isTeammate = myTeam && teams[uid] === myTeam;
+          const handCards = s.hands[uid] || [];
+          const showFace = isTeammate;
+          const displayCards = handCards.slice(0, 6);
+          const extraCount = handCards.length - displayCards.length;
 
-      <!-- ═══ PLAY ZONE ═══ -->
-      <div class="uno-play-zone">
-        <div class="uno-piles">
+          return `
+            <div class="uno-seat uno-seat-${seatPos} ${isCurrent?'active':''} ${uno?'uno-alert':''} ${isTeammate?'teammate':''}">
+              ${uno ? '<div class="uno-badge-uno">UNO!</div>' : ''}
+              ${isTeammate ? '<div class="uno-teammate-badge">🤝</div>' : ''}
+
+              <div class="uno-seat-hand">
+                ${displayCards.map((card, idx) => `
+                  <div class="uno-mini-player-card ${showFace ? `uno-color-${card.color}` : 'face-down'}"
+                       style="--i:${idx};--z:${idx}">
+                    ${showFace ? `<span class="umpc-val">${unoCardDisplay(card)}</span>` : ''}
+                  </div>
+                `).join('')}
+                ${extraCount > 0 ? `<div class="uno-extra-count">+${extraCount}</div>` : ''}
+              </div>
+
+              <div class="uno-seat-avatar-wrap">
+                <div class="uno-opp-avatar">${avatar(u, 38)}</div>
+                <div class="uno-seat-count-badge">${count}</div>
+                ${isCurrent ? `
+                  <div class="uno-seat-timer">
+                    <div class="uno-seat-timer-fill" style="width:${timerPct}%;background:${timerColor}"></div>
+                  </div>
+                ` : ''}
+              </div>
+              <div class="uno-opp-name">${esc((u.name||'').split(' ')[0])}</div>
+            </div>
+          `;
+        }).join('')}
+
+        <div class="uno-piles-center">
           <button class="uno-deck-pile" data-action="uno-draw"
-                  ${!isMyTurn || s.finished ? 'disabled' : ''}
-                  aria-label="اسحب ورقة">
+                  ${!isMyTurn || s.finished ? 'disabled' : ''} aria-label="اسحب">
             <div class="uno-deck-back">
               <span class="uno-deck-logo-text">UNO</span>
               <span class="uno-deck-count">${s.deck.length}</span>
             </div>
           </button>
-
-          <div class="uno-discard-pile">
-            ${renderUnoCard(topCard, { discard:true })}
+          <div class="uno-discard-pile">${renderUnoCard(topCard, { discard:true })}</div>
+          <div class="uno-play-info">
+            <div class="uno-color-chip" style="--c:${UNO.COLOR_HEX[currentColor]}">
+              <span class="uno-color-dot"></span>
+            </div>
+            <div class="uno-direction ${s.direction > 0 ? 'cw' : 'ccw'}">
+              ${s.direction > 0 ? '↻' : '↺'}
+            </div>
+            ${s.activePenalty > 0 ? `<div class="uno-penalty-chip">+${s.activePenalty}</div>` : ''}
           </div>
-        </div>
-
-        <div class="uno-play-info">
-          <div class="uno-color-chip" style="--c:${UNO.COLOR_HEX[currentColor]}">
-            <span class="uno-color-dot"></span>
-          </div>
-          <div class="uno-direction ${s.direction > 0 ? 'cw' : 'ccw'}">
-            ${s.direction > 0 ? '↻' : '↺'}
-          </div>
-          ${s.activePenalty > 0 ? `
-            <div class="uno-penalty-chip">+${s.activePenalty}</div>
-          ` : ''}
         </div>
       </div>
 
-      <!-- ═══ TURN INDICATOR ═══ -->
       ${s.finished ? '' : isMyTurn ? `
         <div class="uno-turn-banner my-turn">
-          <span class="uno-turn-pulse"></span>
-          <span>🎯 دورك الآن</span>
+          <span class="uno-turn-pulse"></span><span>🎯 دورك الآن</span>
         </div>
-      ` : `
-        <div class="uno-turn-banner">
-          <span class="uno-turn-dots"><span></span><span></span><span></span></span>
-          <span>بانتظار ${esc(currentPlayerName)}</span>
-        </div>
-      `}
+      ` : ''}
 
-      <!-- ═══ MY HAND ═══ -->
       <div class="uno-hand-wrap ${isMyTurn ? 'my-turn' : ''}">
+        ${isMyTurn && !s.finished ? `
+          <div class="uno-my-timer-wrap">
+            <div class="uno-my-timer-fill" style="width:${timerPct}%;background:${timerColor}"></div>
+          </div>
+        ` : ''}
         ${myHand.length === 1 && !s.unoCalled[me] && !s.finished ? `
           <button class="uno-call-btn" data-action="uno-call">🔔 UNO!</button>
         ` : ''}
@@ -23782,9 +23817,8 @@ function renderUnoGame(){
           ${sortedHand.map((card, i) => {
             const playable = isMyTurn && unoCanPlay(card, topCard, currentColor, s.activePenalty, modeCfg);
             return `
-              <button class="uno-card-btn ${playable ? 'playable' : 'not-playable'}"
-                      data-uno-card="${card.id}"
-                      style="--i:${i}; --z:${i}"
+              <button class="uno-card-btn ${playable?'playable':'not-playable'}"
+                      data-uno-card="${card.id}" style="--i:${i};--z:${i}"
                       ${playable && !s.finished ? '' : 'disabled'}>
                 ${renderUnoCard(card, { playable })}
               </button>
@@ -23793,18 +23827,69 @@ function renderUnoGame(){
         </div>
       </div>
 
-      <!-- ═══ COLOR PICKER ═══ -->
       ${state._unoColorPickerOpen ? renderUnoColorPicker() : ''}
     </div>
+
+    <button class="uno-chat-fab" data-action="uno-chat-toggle" aria-label="مراسلة">
+      ${ic('message','sm')}
+    </button>
+
+    ${state._unoChatOpen ? renderUnoChatModal() : ''}
   `;
 
-  if(state._unoColorPickerOpen){
-    setTimeout(() => {
-      document.querySelectorAll('[data-uno-color]').forEach(btn => {
-        btn.onclick = () => unoConfirmColor(btn.dataset.unoColor);
-      });
-    }, 20);
+  /* ★ استعادة قيمة الإدخال والتمرير */
+  if(state._unoChatOpen){
+    const inp = document.getElementById('unoChatInput');
+    if(inp) inp.value = savedChatInput;
+    const el = document.getElementById('unoChatMessages');
+    if(el) el.scrollTop = el.scrollHeight;
   }
+}
+
+/* ═══ مودال المحادثة ═══ */
+function renderUnoChatModal(){
+  const msgs = state.matchChat || [];
+  const body = msgs.length
+    ? msgs.map(msg => {
+        const isMe = msg.uid === state.user.uid;
+        return `
+          <div class="uno-chat-msg ${isMe ? 'me' : ''}">
+            ${!isMe ? `<span class="uno-chat-from">${esc(msg.name || 'لاعب')}</span>` : ''}
+            <span>${esc(msg.text)}</span>
+          </div>
+        `;
+      }).join('')
+    : `<div class="uno-chat-empty">لا رسائل بعد</div>`;
+
+  return `
+    <div class="uno-chat-modal" id="unoChatModal">
+      <div class="uno-chat-head">
+        <span>💬 المحادثة</span>
+        <button type="button" data-action="uno-chat-toggle" aria-label="إغلاق">
+          ${ic('close','xs')}
+        </button>
+      </div>
+      <div class="uno-chat-messages" id="unoChatMessages">${body}</div>
+      <div class="uno-chat-input-row">
+        <input type="text" id="unoChatInput" placeholder="اكتب رسالة…" maxlength="200" autocomplete="off">
+        <button type="button" data-action="uno-chat-send" aria-label="إرسال">
+          ${ic('send','xs')}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* مواضع اللاعبين حول الطاولة */
+function getUnoSeatPositions(count){
+  const map = {
+    1: ['top-center'],
+    2: ['top-left', 'top-right'],
+    3: ['left', 'top-center', 'right'],
+    4: ['left', 'top-left', 'top-right', 'right'],
+    5: ['left', 'top-left', 'top-center', 'top-right', 'right'],
+  };
+  return map[count] || map[3];
 }
 
 /* ══════════════════════════════════════════════
@@ -23947,27 +24032,11 @@ async function unoPlayCard(cardId, chosenColor = null){
       let finished = false;
       const playerAfter = st.playerOrder[st.currentTurn];
 
-      if(newHands[playerAfter].length === 0){
-        winnerId = playerAfter;
-        finished = true;
-
-        /* في وضع الفريق — الفريق كله يفوز */
-        if(modeCfg.team && st.teams){
-          const winningTeam = st.teams[playerAfter];
-          const teammate = st.playerOrder.find(u => st.teams[u] === winningTeam && u !== playerAfter);
-          if(teammate) winnerId = teammate;
-        }
-      }
-
-      /* فحص الإقصاء */
-      if(!finished && modeCfg.elimination){
-        /* إذا بقي لاعب واحد فقط بأوراق */
-        const active = st.playerOrder.filter(u => (newHands[u] || []).length > 0);
-        if(active.length === 1){
-          winnerId = active[0];
-          finished = true;
-        }
-      }
+if(newHands[playerAfter].length === 0){
+  winnerId = playerAfter;
+  finished = true;
+  /* الفريق يفوز بالكامل — يُعرض في شاشة النتيجة */
+}
 
       /* UNO تلقائي إذا لم ينادي */
       const unoState = { ...st.unoCalled };
@@ -24186,19 +24255,28 @@ function startUnoTurnTimer(roomId){
     const s = m.unoState;
     const elapsed = (Date.now() - s.turnStartedAt) / 1000;
     const remaining = Math.max(0, s.turnTime - elapsed);
+    const pct = Math.max(0, Math.min(100, (remaining / s.turnTime) * 100));
+    const color = pct > 50 ? '#22c55e' : pct > 20 ? '#f5b031' : '#ff3d71';
 
-    const timerEl = document.querySelector('.uno-timer');
-    if(timerEl){
-      timerEl.textContent = `⏱️ ${Math.ceil(remaining)}s`;
-      timerEl.classList.toggle('warn', remaining < 10 && remaining >= 5);
-      timerEl.classList.toggle('danger', remaining < 5);
+    /* شريط اللاعب النشط */
+    const seatTimer = document.querySelector('.uno-seat.active .uno-seat-timer-fill');
+    if(seatTimer){
+      seatTimer.style.width = `${pct}%`;
+      seatTimer.style.background = color;
     }
 
-    /* انتهاء الوقت — سحب قسري */
+    /* شريط دوري */
+    const myTimer = document.querySelector('.uno-my-timer-fill');
+    if(myTimer){
+      myTimer.style.width = `${pct}%`;
+      myTimer.style.background = color;
+    }
+
+    /* انتهاء الوقت */
     if(remaining <= 0 && s.playerOrder[s.currentTurn] === state.user.uid && !s.finished){
       unoDrawCard();
     }
-  }, 500);
+  }, 250);
 }
 
 /* ══════════════════════════════════════════════
@@ -24208,8 +24286,12 @@ async function unoShowResult(roomId){
   const m = state.activeUnoMatch;
   if(!m || !m.unoState) return;
   const winnerId = m.unoState.winnerId;
-  const isWinner = winnerId === state.user.uid;
+  const teams = m.unoState.teams || {};
+  const myTeam = teams[state.user.uid];
+  const isWinner = winnerId === state.user.uid ||
+    (myTeam && teams[winnerId] === myTeam);
   const winnerUser = state.users[winnerId] || { name:'لاعب' };
+  const isTeamWin = myTeam && teams[winnerId] === myTeam;
 
   /* XP/عملات */
   try {
@@ -24258,6 +24340,7 @@ async function unoShowResult(roomId){
    ══════════════════════════════════════════════ */
 function unoExitMatch(){
   if(state.unoUnsub){ try{state.unoUnsub();}catch(e){} state.unoUnsub = null; }
+  if(state.unoChatUnsub){ try{state.unoChatUnsub();}catch(e){} state.unoChatUnsub = null; }
   if(state.unoTimer){ clearInterval(state.unoTimer); state.unoTimer = null; }
   if(state._unoMatchingUnsub){
     try { state._unoMatchingUnsub(); } catch(e){}
@@ -24268,8 +24351,9 @@ function unoExitMatch(){
   state._unoWinnerShown = false;
   state._unoColorPickerOpen = false;
   state._unoPendingWild = null;
+  state._unoChatOpen = false;
+  state.matchChat = [];
 
-  /* ✅ جديد: نظّف حالة الاختيار */
   state.unoSelectedMode = null;
   state.unoSettingsEditing = false;
   state._unoSettingsBackup = null;
@@ -24285,13 +24369,13 @@ function unoExitMatch(){
 function loadUnoSettingsFromDB(){
   if(state.unoSettingsLoaded) return;
   if(!state.profile) return;
-
   const saved = state.profile.unoSettings;
   if(saved && typeof saved === 'object'){
     state.unoSettings = {
       maxPlayers:  Number(saved.maxPlayers)  || 4,
       initialHand: Number(saved.initialHand) || 7,
       turnTime:    Number(saved.turnTime)    || 30,
+      teamMode:    saved.teamMode || 'ffa',      /* ★ */
       isPublic:    saved.isPublic !== false,
       password:    typeof saved.password === 'string' ? saved.password : '',
     };
@@ -24300,38 +24384,24 @@ function loadUnoSettingsFromDB(){
   state.unoSettingsLoaded = true;
 }
 
-/* ══════════════════════════════════════════════
-   💾 حفظ الإعدادات في قاعدة البيانات
-   ══════════════════════════════════════════════ */
 async function persistUnoSettings(){
-  if(!state.user?.uid) return;
+  if(!state.user?.uid) return false;
   try {
     await updateDoc(doc(db, 'users', state.user.uid), {
       unoSettings: {
         maxPlayers:  state.unoSettings.maxPlayers,
         initialHand: state.unoSettings.initialHand,
         turnTime:    state.unoSettings.turnTime,
+        teamMode:    state.unoSettings.teamMode,   /* ★ */
         isPublic:    state.unoSettings.isPublic,
         password:    state.unoSettings.password,
       },
     });
-    /* حدّث الملف الشخصي محلياً */
-    if(state.profile){
-      state.profile.unoSettings = { ...state.unoSettings };
-    }
+    if(state.profile) state.profile.unoSettings = { ...state.unoSettings };
     state.unoHasCustomSettings = true;
-    toast('✓ تم حفظ الإعدادات');
     return true;
-  } catch(e){
-    console.warn('persistUnoSettings:', e);
-    toast('تعذر حفظ الإعدادات');
-    return false;
-  }
+  } catch(e){ console.warn('persistUnoSettings:', e); return false; }
 }
-
-/* ══════════════════════════════════════════════
-   🎯 لوبي أونو
-   ══════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════
    🎯 اللوبي — اختيار الطور فقط
    ══════════════════════════════════════════════ */
@@ -24485,15 +24555,16 @@ function renderUnoSettingsSummary(mode){
    ══════════════════════════════════════════════ */
 function renderUnoSettingsForm(mode){
   const s = state.unoSettings;
+  const showTeamOption = s.maxPlayers >= 4;
+  const teamLabel = s.maxPlayers === 6 ? '3 ضد 3' : '2 ضد 2';
 
   return `
     <div class="row" style="margin-bottom:14px">
-      <button class="icon-btn" data-action="uno-cancel-settings">${ic('back','sm')}</button>
+      <button class="icon-btn" data-action="uno-back-from-settings">${ic('back','sm')}</button>
       <div style="flex:1">
-        <div style="font-size:15px;font-weight:900">${mode.icon} ${mode.name}</div>
-        <div class="muted" style="font-size:10.5px">تعديل الإعدادات</div>
+        <div style="font-size:15px;font-weight:900">⚙️ الإعدادات</div>
+        <div class="muted" style="font-size:10.5px">✓ تُحفظ تلقائياً</div>
       </div>
-      <span class="pill">${ic('settings','xs')} تحرير</span>
     </div>
 
     <div class="uno-settings-mode-card">
@@ -24504,110 +24575,76 @@ function renderUnoSettingsForm(mode){
       </div>
     </div>
 
-    <!-- عدد اللاعبين -->
     <div class="uno-setting-field">
-      <label>
-        <span>👥 عدد اللاعبين</span>
-        <span class="uno-setting-val">${s.maxPlayers}</span>
-      </label>
+      <label><span>👥 عدد اللاعبين</span><span class="uno-setting-val">${s.maxPlayers}</span></label>
       <div class="compact-chips">
-        ${[2, 3, 4, 5, 6].map(n => {
-          const disabled = mode.team && n < 4;
-          return `
-            <button type="button"
-                    class="cchip ${s.maxPlayers === n ? 'active' : ''} ${disabled ? 'is-disabled' : ''}"
-                    data-uno-setting="maxPlayers"
-                    data-val="${n}"
-                    ${disabled ? 'disabled' : ''}>
-              ${n} ${n === 2 ? 'لاعب' : 'لاعبين'}
-            </button>
-          `;
-        }).join('')}
+        ${[2,3,4,5,6].map(n => `
+          <button type="button" class="cchip ${s.maxPlayers===n?'active':''}"
+                  data-uno-setting="maxPlayers" data-val="${n}">
+            ${n} ${n===2?'لاعب':'لاعبين'}
+          </button>`).join('')}
       </div>
-      ${mode.team ? `<div class="info-hint">👥 طور الفريقين يتطلب 4 لاعبين على الأقل</div>` : ''}
     </div>
 
-    <!-- عدد الأوراق -->
+    ${showTeamOption ? `
+      <div class="uno-setting-field">
+        <label>
+          <span>🤝 نمط اللعب</span>
+          <span class="uno-setting-val">${s.teamMode==='teams'?'فرق':'منفرد'}</span>
+        </label>
+        <div class="compact-chips">
+          <button type="button" class="cchip ${s.teamMode==='ffa'?'active':''}"
+                  data-uno-setting="teamMode" data-val="ffa">
+            👤 الجميع ضد الجميع
+          </button>
+          <button type="button" class="cchip ${s.teamMode==='teams'?'active':''}"
+                  data-uno-setting="teamMode" data-val="teams">
+            🤝 ${teamLabel}
+          </button>
+        </div>
+      </div>
+    ` : ''}
+
     <div class="uno-setting-field">
-      <label>
-        <span>🃏 الأوراق الأولية</span>
-        <span class="uno-setting-val">${s.initialHand}</span>
-      </label>
+      <label><span>🃏 الأوراق الأولية</span><span class="uno-setting-val">${s.initialHand}</span></label>
       <div class="compact-chips">
-        ${[5, 7, 10].map(n => `
-          <button type="button"
-                  class="cchip ${s.initialHand === n ? 'active' : ''}"
-                  data-uno-setting="initialHand"
-                  data-val="${n}">
+        ${[5,7,10].map(n => `
+          <button type="button" class="cchip ${s.initialHand===n?'active':''}"
+                  data-uno-setting="initialHand" data-val="${n}">
             ${n} أوراق
-          </button>
-        `).join('')}
+          </button>`).join('')}
       </div>
     </div>
 
-    <!-- وقت الدور -->
     <div class="uno-setting-field">
-      <label>
-        <span>⏱️ وقت الدور</span>
-        <span class="uno-setting-val">${s.turnTime} ثانية</span>
-      </label>
+      <label><span>⏱️ وقت الدور</span><span class="uno-setting-val">${s.turnTime} ثانية</span></label>
       <div class="compact-chips">
-        ${[15, 30, 45, 60].map(n => `
-          <button type="button"
-                  class="cchip ${s.turnTime === n ? 'active' : ''}"
-                  data-uno-setting="turnTime"
-                  data-val="${n}">
+        ${[15,30,45,60].map(n => `
+          <button type="button" class="cchip ${s.turnTime===n?'active':''}"
+                  data-uno-setting="turnTime" data-val="${n}">
             ${n} ثانية
-          </button>
-        `).join('')}
+          </button>`).join('')}
       </div>
     </div>
 
-    <!-- نوع الغرفة -->
     <div class="uno-setting-field">
-      <label>
-        <span>🌐 نوع الغرفة</span>
-      </label>
+      <label><span>🌐 نوع الغرفة</span></label>
       <div class="compact-chips">
-        <button type="button"
-                class="cchip ${s.isPublic ? 'active' : ''}"
-                data-uno-setting="isPublic"
-                data-val="true">
-          🌐 عامة
-        </button>
-        <button type="button"
-                class="cchip ${!s.isPublic ? 'active' : ''}"
-                data-uno-setting="isPublic"
-                data-val="false">
-          🔒 خاصة
-        </button>
+        <button type="button" class="cchip ${s.isPublic?'active':''}"
+                data-uno-setting="isPublic" data-val="true">🌐 عامة</button>
+        <button type="button" class="cchip ${!s.isPublic?'active':''}"
+                data-uno-setting="isPublic" data-val="false">🔒 خاصة</button>
       </div>
     </div>
 
     ${!s.isPublic ? `
       <div class="uno-setting-field">
-        <label>
-          <span>🔑 كلمة المرور</span>
-        </label>
-        <input type="text"
-               class="input"
-               id="unoPasswordInput"
+        <label><span>🔑 كلمة المرور</span></label>
+        <input type="text" class="input" id="unoPasswordInput"
                value="${esc(s.password || '')}"
                placeholder="اتركها فارغة للدخول الحر"
-               maxlength="20"
-               autocomplete="off">
-      </div>
-    ` : ''}
-
-    <!-- أزرار -->
-    <div class="row" style="gap:8px;margin-top:20px">
-      <button class="btn btn-ghost" style="flex:1" data-action="uno-cancel-settings">
-        ${ic('close','xs')} إلغاء
-      </button>
-      <button class="btn btn-primary" style="flex:2" data-action="uno-save-settings">
-        ${ic('check','sm')} حفظ الإعدادات
-      </button>
-    </div>
+               maxlength="20" autocomplete="off">
+      </div>` : ''}
   `;
 }
 
@@ -24684,6 +24721,7 @@ async function unoStartMatchmaking(modeKey){
         maxPlayers:  cfg.maxPlayers,
         initialHand: cfg.initialHand,
         turnTime:    cfg.turnTime,
+		teamMode:    cfg.teamMode || 'ffa',   /* ★ جديد */
         password:    cfg.isPublic ? null : (cfg.password || null),
       },
       hostId:      state.user.uid,
@@ -24739,6 +24777,797 @@ async function unoStartMatchmaking(modeKey){
     console.error('uno matchmaking:', e);
     closeModal();
     toast('فشل البدء: ' + (e.message || ''));
+  }
+}
+
+/* ============================================================
+   🃏 UNO — صفحة اللعبة المنفصلة
+   ============================================================ */
+
+/* قواعد كل طور */
+const UNO_MODE_RULES = {
+  classic: {
+    howTo: [
+      { icon: '1️⃣', text: 'كل لاعب يحصل على 7 أوراق في البداية' },
+      { icon: '2️⃣', text: 'العب ورقة تطابق اللون أو الرقم أو الرمز' },
+      { icon: '3️⃣', text: 'إذا لم يكن لديك ورقة قابلة للعب، اسحب من الكومة' },
+      { icon: '4️⃣', text: 'أول من يتخلص من كل أوراقه يفوز!' }
+    ],
+    features: [
+      { icon: '📌', text: 'القواعد الرسمية لأونو الكلاسيكية' },
+      { icon: '🎯', text: 'سهل التعلم — مناسب للجميع' },
+      { icon: '⏱️', text: '30 ثانية لكل دور' }
+    ],
+    difficulty: { label: 'سهل', color: '#22c55e' }
+  },
+  stacking: {
+    howTo: [
+      { icon: '📚', text: 'عند لعب +2، يمكنك تكديس +2 أخرى لتفادي السحب' },
+      { icon: '🔥', text: 'عند لعب +4، يمكنك تكديس +4 أخرى' },
+      { icon: '⚠️', text: 'اللاعب التالي يسحب مجموع كل الأوراق المكدسة' }
+    ],
+    features: [
+      { icon: '📈', text: 'يزيد الحماس والإستراتيجية' },
+      { icon: '💥', text: 'قد تسحب 8 أوراق دفعة واحدة!' },
+      { icon: '🎲', text: 'يحتاج تخطيط دقيق' }
+    ],
+    difficulty: { label: 'متوسط', color: '#f5b301' }
+  },
+  jumpin: {
+    howTo: [
+      { icon: '⚡', text: 'يمكنك اللعب حتى لو لم يكن دورك' },
+      { icon: '🎯', text: 'إذا كانت لديك ورقة مطابقة تماماً (نفس اللون والرقم)' },
+      { icon: '🚀', text: 'اضغط على الورقة لسرقة الدور من اللاعب الحالي' }
+    ],
+    features: [
+      { icon: '⚡', text: 'سريع ومفاجئ' },
+      { icon: '🧠', text: 'يتطلب تركيز دائم' },
+      { icon: '😱', text: 'قد يفوز لاعب بينما الآخرون ينتظرون!' }
+    ],
+    difficulty: { label: 'متوسط', color: '#f5b301' }
+  },
+  sevenzero: {
+    howTo: [
+      { icon: '7️⃣', text: 'عند لعب ورقة رقم 7، بدّل يدك مع لاعب آخر (تختار من)' },
+      { icon: '0️⃣', text: 'عند لعب ورقة رقم 0، جميع اللاعبين يدورون أيديهم' },
+      { icon: '🔄', text: 'اللاعب الذي كان بيده أوراقك الآن يملك أوراقك' }
+    ],
+    features: [
+      { icon: '🎭', text: 'مليء بالمفاجآت' },
+      { icon: '🔀', text: 'يقلب الموازين فجأة' },
+      { icon: '💡', text: 'يحتاج ذكاء في اختيار التوقيت' }
+    ],
+    difficulty: { label: 'صعب', color: '#ff3d71' }
+  },
+  team: {
+    howTo: [
+      { icon: '👥', text: 'العبوا في فرق من لاعبين ضد لاعبين آخرين' },
+      { icon: '🤝', text: 'الفريق الفائز هو من يتخلص أفراده من أوراقهم أولاً' },
+      { icon: '🎯', text: 'تعاون مع زميلك — لكن لا يمكنكما التحدث!' }
+    ],
+    features: [
+      { icon: '🤝', text: 'يتطلب تعاون وتنسيق' },
+      { icon: '🧠', text: 'استراتيجية مشتركة' },
+      { icon: '🎉', text: 'مناسب للأصدقاء' }
+    ],
+    difficulty: { label: 'متوسط', color: '#f5b301' }
+  },
+  elimination: {
+    howTo: [
+      { icon: '💀', text: 'عندما تتخلص من أوراقك، تُقصي اللاعب التالي' },
+      { icon: '🚫', text: 'اللاعب المُقصى لا يستمر في اللعب' },
+      { icon: '👑', text: 'آخر لاعب صامد يفوز' }
+    ],
+    features: [
+      { icon: '💀', text: 'لا رحمة — إقصاء مباشر' },
+      { icon: '⚔️', text: 'يزداد التحدي كل جولة' },
+      { icon: '🏆', text: 'الفائز يأخذ كل شيء' }
+    ],
+    difficulty: { label: 'صعب', color: '#ff3d71' }
+  },
+  chaos: {
+    howTo: [
+      { icon: '🌪️', text: 'كل 5 أدوار، يحدث حدث عشوائي' },
+      { icon: '🔄', text: 'قد تكون: انعكاس جماعي، سحب قسري، إعصار بري...' },
+      { icon: '🎲', text: 'استعد للمجهول!' }
+    ],
+    features: [
+      { icon: '🌪️', text: 'فوضى كاملة ومجنونة' },
+      { icon: '🎰', text: 'لا يمكن التخطيط — فقط استمتع' },
+      { icon: '😈', text: 'الأكثر إثارة في نكسوس' }
+    ],
+    difficulty: { label: 'فوضى', color: '#ec4899' }
+  },
+  speed: {
+    howTo: [
+      { icon: '⏱️', text: '15 ثانية فقط لكل دور' },
+      { icon: '⚡', text: 'يُفعّل Jump-in و Stacking تلقائياً' },
+      { icon: '🏃', text: 'من يتردد يخسر!' }
+    ],
+    features: [
+      { icon: '⚡', text: 'أسرع طور في اللعبة' },
+      { icon: '🔥', text: 'يمنح إحساساً بالحماس' },
+      { icon: '🎯', text: 'للمحترفين فقط' }
+    ],
+    difficulty: { label: 'سريع', color: '#f97316' }
+  }
+};
+
+/* ============================================================
+   🎮 صفحة اللعبة العامة — تعمل مع أي لعبة
+   ============================================================ */
+
+function pageGame(){
+  const gameId = state.activeGame;
+
+  /* ★ لا توجد لعبة محددة */
+  if(!gameId){
+    setTimeout(() => go('games'), 0);
+    return `<div class="empty" style="padding:60px 20px">
+      <div class="spinner"></div>
+    </div>`;
+  }
+
+  const game = GAMES.find(g => g.id === gameId);
+  if(!game){
+    setTimeout(() => go('games'), 0);
+    return `<div class="empty" style="padding:60px 20px">
+      <div class="spinner"></div>
+    </div>`;
+  }
+
+  /* ★ توجيه حسب اللعبة */
+  if(game.id === 'uno') return renderUnoGameHome(game);
+
+  /* ★ لعبة عامة (قريباً) */
+  return renderGenericGameHome(game);
+}
+
+/* ═══ الصفحة الرئيسية لأونو — داخل الصفحة العامة ═══ */
+function renderUnoGameHome(game){
+  loadUnoSettingsFromDB();
+
+  const modeKey = state.unoSelectedMode;
+  const mode = modeKey ? UNO.MODES[modeKey] : null;
+  const s = state.unoSettings;
+  const isAdmin =
+    state.profile?.role === 'admin' ||
+    (state.profile?.role === 'moderator' && state.profile?.adminTask === 'games');
+
+  /* ★ وضع تعديل الإعدادات */
+  if(state.unoSettingsEditing && mode){
+    return `
+      ${renderGamePageHero(game)}
+      ${renderUnoSettingsForm(mode)}
+    `;
+  }
+
+  return `
+    <!-- ═══ Hero ═══ -->
+    ${renderGamePageHero(game)}
+
+    <!-- ═══ زر الطور + زر الإعدادات ═══ -->
+    <div class="game-action-btns-row">
+      <button class="game-action-btn-h" data-action="uno-mode-info">
+        <div class="gabh-icon" style="background:linear-gradient(135deg,rgba(255,61,113,.22),rgba(245,179,1,.1))">🎯</div>
+        <div class="gabh-body">
+          <div class="gabh-label">الطور</div>
+          <div class="gabh-sub">${mode ? esc(mode.name) : 'اختر طوراً'}</div>
+        </div>
+      </button>
+      <button class="game-action-btn-h" data-action="uno-change-settings">
+        <div class="gabh-icon" style="background:linear-gradient(135deg,rgba(0,210,255,.22),rgba(108,92,231,.1))">⚙️</div>
+        <div class="gabh-body">
+          <div class="gabh-label">الإعدادات</div>
+          <div class="gabh-sub">${s.maxPlayers} لاعب · ${s.turnTime}s</div>
+        </div>
+      </button>
+    </div>
+
+    <!-- ═══ شبكة الأطوار — تمرير أفقي ═══ -->
+    <div class="section-title">${ic('play','sm')} اختر طور اللعب</div>
+    <div class="uno-modes-scroll">
+      ${Object.entries(UNO.MODES).map(([key, m]) => `
+        <div class="uno-mode-card-h ${modeKey === key ? 'active' : ''}">
+          <button type="button" class="uno-mode-info-btn"
+                  data-uno-mode-info="${key}" title="معلومات الطور">ℹ️</button>
+          <button type="button" class="uno-mode-card-h-btn" data-uno-select-mode="${key}">
+            <div class="uno-mode-icon-h">${m.icon}</div>
+            <div class="uno-mode-name-h">${esc(m.name)}</div>
+            <div class="uno-mode-desc-h">${esc(m.desc)}</div>
+          </button>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- ═══ دعوة لاعب ═══ -->
+<button class="game-invite-btn-main" data-action="uno-invite">
+  <span class="gib-icon">👥</span>
+  <div class="gib-body">
+    <div class="gib-title">دعوة لاعب</div>
+    <div class="gib-sub">${
+      mode ? `ادعُ صديقاً للعب ${esc(mode.name)}` : 'اختر طوراً أولاً'
+    }</div>
+  </div>
+  <span class="gib-arrow">${ic('back','xs')}</span>
+</button>
+
+    <!-- ═══ بدء اللعب ═══ -->
+    <button class="game-start-btn-main" data-action="uno-confirm-settings"
+            ${!mode ? 'disabled' : ''}>
+      <span class="gsb-icon">▶️</span>
+      <span class="gsb-label">${
+        mode ? `ابدأ ${esc(mode.name)}` : 'اختر طوراً للبدء'
+      }</span>
+    </button>
+
+    <!-- ═══ معاينة إدارية ═══ -->
+    ${isAdmin ? renderGameAdminPreview(game, mode) : ''}
+  `;
+}
+
+/* ═══ Hero اللعبة (مشترك بين كل الألعاب) ═══ */
+function renderGamePageHero(game){
+  return `
+    <div class="game-page-hero">
+      <div class="gph-icon-wrap" style="background:${game.grad}">
+        <span class="gph-icon">${game.emoji}</span>
+      </div>
+      <div class="gph-info">
+        <div class="gph-name">${esc(game.name)}</div>
+        <div class="gph-cat">${esc(game.catLabel)}</div>
+      </div>
+      <div class="gph-badge ${game.playable ? 'playable' : 'soon'}">
+        ${game.playable ? '✓ جاهزة' : 'قريباً'}
+      </div>
+    </div>
+  `;
+}
+
+/* ═══ صفحة لعبة عامة (غير قابلة للعب بعد) ═══ */
+function renderGenericGameHome(game){
+  const isAdmin =
+    state.profile?.role === 'admin' ||
+    (state.profile?.role === 'moderator' && state.profile?.adminTask === 'games');
+
+  return `
+    ${renderGamePageHero(game)}
+
+    <div class="game-coming-soon-card">
+      <div class="gcsc-icon">${game.emoji}</div>
+      <div class="gcsc-title">قريباً</div>
+      <div class="gcsc-sub">هذه اللعبة قيد التطوير — ترقبوها!</div>
+    </div>
+
+    ${isAdmin ? renderGameAdminPreview(game, null) : ''}
+  `;
+}
+
+/* ═══ معاينة إدارية للعبة ═══ */
+function renderGameAdminPreview(game, mode){
+  return `
+    <div class="game-admin-preview">
+      <div class="gap-head">
+        <div class="gap-badge">${ic('shield','xs')} معاينة للمشرفين</div>
+        <div class="gap-title">معاينة تجريبية${mode ? ' — ' + esc(mode.name) : ''}</div>
+      </div>
+      ${game.id === 'uno'
+        ? renderUnoPreviewStage(mode)
+        : `<div class="gap-generic-stage">
+             <div style="text-align:center;color:rgba(255,255,255,.55)">
+               <div style="font-size:48px;margin-bottom:12px">${game.emoji}</div>
+               <div style="font-size:13px;font-weight:900">${esc(game.name)}</div>
+               <div style="font-size:11px;margin-top:6px">معاينة غير متاحة — اللعبة قيد التطوير</div>
+             </div>
+           </div>`}
+      <div class="gap-hint">👁️ هذه معاينة تجريبية — لن تبدأ مباراة فعلية</div>
+      ${game.id === 'uno' ? `
+        <button class="gap-full-preview-btn" data-action="uno-full-preview">
+          🖥️ معاينة كاملة للشاشة
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
+/* ═══ معاينة أونو التجريبية ═══ */
+function renderUnoPreviewStage(mode){
+  return `
+    <div class="uno-preview-stage">
+      <div class="uno-preview-opponents">
+        <div class="uno-preview-opp">
+          <div class="uno-preview-opp-avatar"
+               style="background:linear-gradient(135deg,#6c5ce7,#00d2ff)">ل</div>
+          <div class="uno-preview-opp-name">لاعب 1</div>
+          <div class="uno-preview-opp-cards">🂠🂠🂠🂠</div>
+        </div>
+        <div class="uno-preview-opp active">
+          <div class="uno-preview-opp-avatar"
+               style="background:linear-gradient(135deg,#ff3d71,#f5b301)">م</div>
+          <div class="uno-preview-opp-name">لاعب 2</div>
+          <div class="uno-preview-opp-cards">🂠🂠</div>
+        </div>
+        <div class="uno-preview-opp">
+          <div class="uno-preview-opp-avatar"
+               style="background:linear-gradient(135deg,#22c55e,#00d2ff)">ع</div>
+          <div class="uno-preview-opp-name">لاعب 3</div>
+          <div class="uno-preview-opp-cards">🂠🂠🂠</div>
+        </div>
+      </div>
+
+      <div class="uno-preview-piles">
+        <div class="uno-preview-deck">
+          <div class="uno-preview-deck-back">UNO</div>
+          <div class="uno-preview-deck-count">60</div>
+        </div>
+        <div class="uno-preview-discard">
+          <div class="uno-preview-card uno-color-red">
+            <div class="upc-tl">7</div>
+            <div class="upc-center">7</div>
+            <div class="upc-br">7</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="uno-preview-hand">
+        <div class="uno-preview-card uno-color-blue"><div class="upc-center">7</div></div>
+        <div class="uno-preview-card uno-color-wild"><div class="upc-center">🌈</div></div>
+        <div class="uno-preview-card uno-color-green"><div class="upc-center">+2</div></div>
+        <div class="uno-preview-card uno-color-red highlight"><div class="upc-center">⊘</div></div>
+        <div class="uno-preview-card uno-color-yellow"><div class="upc-center">3</div></div>
+      </div>
+    </div>
+  `;
+}
+
+/* ═══ شبكة الأطوار — تمرير أفقي ═══ */
+function renderUnoModeGrid(){
+  return `
+    <div class="uno-hero">
+      <div class="uno-hero-cards">
+        <div class="uno-mini-card uno-color-red">7</div>
+        <div class="uno-mini-card uno-color-blue">+2</div>
+        <div class="uno-mini-card uno-color-green">↺</div>
+        <div class="uno-mini-card uno-color-wild">🌈</div>
+      </div>
+      <h1 class="uno-hero-title">أونو</h1>
+      <p class="uno-hero-desc">
+        اختر طور اللعب المفضل لديك<br>
+        <b style="color:var(--brand-2)">${Object.keys(UNO.MODES).length} أطوار</b> مختلفة
+      </p>
+    </div>
+
+    <div class="section-title">${ic('play','sm')} اختر طور اللعب</div>
+
+    <div class="uno-modes-scroll">
+      ${Object.entries(UNO.MODES).map(([key, mode]) => `
+        <div class="uno-mode-card-h ${state.unoSelectedMode === key ? 'active' : ''}">
+          <button type="button" class="uno-mode-info-btn" data-uno-mode-info="${key}" title="معلومات الطور">ℹ️</button>
+          <button type="button" class="uno-mode-card-h-btn" data-uno-select-mode="${key}">
+            <div class="uno-mode-icon-h">${mode.icon}</div>
+            <div class="uno-mode-name-h">${mode.name}</div>
+            <div class="uno-mode-desc-h">${mode.desc}</div>
+          </button>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="uno-invite-section">
+      <button class="uno-invite-btn" data-action="uno-invite" disabled title="اختر طوراً أولاً">
+        <span>👥</span>
+        <span>دعوة صديق</span>
+      </button>
+    </div>
+  `;
+}
+
+/* ═══ شاشة اللعب الرئيسية ═══ */
+function renderUnoMainScreen(mode){
+  const s = state.unoSettings;
+  const isAdmin = state.profile?.role === 'admin' || 
+                  (state.profile?.role === 'moderator' && state.profile?.adminTask === 'games');
+  
+  return `
+    <div class="uno-main-mode-card">
+      <div class="umc-icon">${mode.icon}</div>
+      <div class="umc-body">
+        <div class="umc-name">${mode.name}</div>
+        <div class="umc-desc">${mode.desc}</div>
+      </div>
+      <button class="uno-mode-info-btn-lg" data-uno-mode-info="${state.unoSelectedMode}" title="معلومات الطور">ℹ️</button>
+    </div>
+    
+    <div class="uno-actions-grid">
+      <button class="uno-action-btn" data-action="uno-back-to-modes">
+        <div class="uab-icon">🎮</div>
+        <div class="uab-body">
+          <div class="uab-label">الطور</div>
+          <div class="uab-sub">${Object.keys(UNO.MODES).length} طور متاح</div>
+        </div>
+      </button>
+      
+      <button class="uno-action-btn" data-action="uno-change-settings">
+        <div class="uab-icon">⚙️</div>
+        <div class="uab-body">
+          <div class="uab-label">الإعدادات</div>
+          <div class="uab-sub">${s.maxPlayers} لاعب · ${s.turnTime}s</div>
+        </div>
+      </button>
+    </div>
+    
+    <button class="uno-invite-btn-main" data-action="uno-invite">
+      <span class="uib-icon">👥</span>
+      <div class="uib-body">
+        <div class="uib-title">دعوة لاعب</div>
+        <div class="uib-sub">ادعُ صديقاً للعب معك</div>
+      </div>
+      <span class="uib-arrow">${ic('back','xs')}</span>
+    </button>
+    
+    <button class="uno-start-btn-main" data-action="uno-confirm-settings">
+      <span class="usb-icon">▶️</span>
+      <span class="usb-label">ابدأ اللعب</span>
+    </button>
+    
+    ${isAdmin ? renderUnoAdminPreview(mode) : ''}
+  `;
+}
+
+/* ═══ معاينة إدارية للعبة ═══ */
+function renderUnoAdminPreview(mode){
+  return `
+    <div class="uno-admin-preview">
+      <div class="uno-admin-preview-head">
+        <div class="uap-badge">${ic('shield','xs')} معاينة للمشرفين</div>
+        <div class="uap-title">معاينة تجريبية — ${mode.name}</div>
+      </div>
+      <div class="uno-preview-stage">
+        <div class="uno-preview-opponents">
+          <div class="uno-preview-opp">
+            <div class="uno-preview-opp-avatar" style="background:linear-gradient(135deg,#6c5ce7,#00d2ff)">ل</div>
+            <div class="uno-preview-opp-name">لاعب 1</div>
+            <div class="uno-preview-opp-cards">🂠🂠🂠🂠</div>
+          </div>
+          <div class="uno-preview-opp active">
+            <div class="uno-preview-opp-avatar" style="background:linear-gradient(135deg,#ff3d71,#f5b301)">م</div>
+            <div class="uno-preview-opp-name">لاعب 2</div>
+            <div class="uno-preview-opp-cards">🂠🂠</div>
+          </div>
+          <div class="uno-preview-opp">
+            <div class="uno-preview-opp-avatar" style="background:linear-gradient(135deg,#22c55e,#00d2ff)">ع</div>
+            <div class="uno-preview-opp-name">لاعب 3</div>
+            <div class="uno-preview-opp-cards">🂠🂠🂠</div>
+          </div>
+        </div>
+        
+        <div class="uno-preview-piles">
+          <div class="uno-preview-deck">
+            <div class="uno-preview-deck-back">UNO</div>
+            <div class="uno-preview-deck-count">60</div>
+          </div>
+          <div class="uno-preview-discard">
+            <div class="uno-preview-card uno-color-red">
+              <div class="upc-tl">7</div>
+              <div class="upc-center">7</div>
+              <div class="upc-br">7</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="uno-preview-hand">
+          <div class="uno-preview-card uno-color-blue"><div class="upc-center">7</div></div>
+          <div class="uno-preview-card uno-color-wild"><div class="upc-center">🌈</div></div>
+          <div class="uno-preview-card uno-color-green"><div class="upc-center">+2</div></div>
+          <div class="uno-preview-card uno-color-red highlight"><div class="upc-center">⊘</div></div>
+          <div class="uno-preview-card uno-color-yellow"><div class="upc-center">3</div></div>
+        </div>
+      </div>
+      <div class="uno-preview-hint">
+        👁️ هذه معاينة تجريبية — لن تبدأ مباراة فعلية
+      </div>
+    </div>
+  `;
+}
+
+function openUnoFullPreview(){
+  const modeKey = state.unoSelectedMode || 'classic';
+  const mode = UNO.MODES[modeKey];
+
+  const opps = [
+    { name:'لاعب 1', grad:'linear-gradient(135deg,#6c5ce7,#00d2ff)', cards:5, active:false, team:'A' },
+    { name:'لاعب 2', grad:'linear-gradient(135deg,#ff3d71,#f5b301)', cards:3, active:true,  team:'B' },
+    { name:'لاعب 3', grad:'linear-gradient(135deg,#22c55e,#00d2ff)', cards:7, active:false, team:'A' },
+  ];
+  const myTeam = 'A';
+  const positions = getUnoSeatPositions(opps.length);
+
+  document.getElementById('gameOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  const c = document.getElementById('gameContainer');
+  c.innerHTML = `
+    <div class="uno-game uno-preview-live">
+      <button class="uno-preview-close-btn" data-action="close-uno-preview" aria-label="إغلاق">
+        ${ic('close','sm')}
+      </button>
+
+      <div class="uno-table" style="padding-top:56px">
+        ${opps.map((o, i) => {
+          const isTeammate = o.team === myTeam;
+          const seatPos = positions[i];
+          const sampleColors = ['red','blue','green','yellow','wild','red'];
+          const cards = sampleColors.slice(0, o.cards);
+
+          return `
+            <div class="uno-seat uno-seat-${seatPos} ${o.active?'active':''} ${isTeammate?'teammate':''}">
+              <div class="uno-seat-hand">
+                ${cards.map((color, idx) => `
+                  <div class="uno-mini-player-card ${isTeammate ? `uno-color-${color}` : 'face-down'}"
+                       style="--i:${idx};--z:${idx}">
+                    ${isTeammate ? `<span class="umpc-val">${idx+1}</span>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+              <div class="uno-seat-avatar-wrap">
+                <div class="uno-opp-avatar">
+                  <div class="av" style="--s:38px;background:${o.grad}">${esc(o.name.charAt(5))}</div>
+                </div>
+                <div class="uno-seat-count-badge">${o.cards}</div>
+                ${o.active ? `
+                  <div class="uno-seat-timer">
+                    <div class="uno-seat-timer-fill" style="width:65%;background:#22c55e"></div>
+                  </div>
+                ` : ''}
+              </div>
+              <div class="uno-opp-name">${esc(o.name)}</div>
+            </div>
+          `;
+        }).join('')}
+
+        <div class="uno-piles-center">
+          <div class="uno-deck-pile">
+            <div class="uno-deck-back">
+              <span class="uno-deck-logo-text">UNO</span>
+              <span class="uno-deck-count">60</span>
+            </div>
+          </div>
+          <div class="uno-discard-pile">
+            <div class="uno-card uno-color-red discard">
+              <div class="uno-card-tl">7</div>
+              <div class="uno-card-center">7</div>
+              <div class="uno-card-br">7</div>
+            </div>
+          </div>
+          <div class="uno-play-info">
+            <div class="uno-color-chip" style="--c:#ff3d71"><span class="uno-color-dot"></span></div>
+            <div class="uno-direction cw">↻</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="uno-hand-wrap">
+        <div class="uno-hand" style="--overlap:14px">
+          <div class="uno-card-btn" style="--i:0;--z:0">
+            <div class="uno-card uno-color-blue">
+              <div class="uno-card-tl">7</div>
+              <div class="uno-card-center">7</div>
+              <div class="uno-card-br">7</div>
+            </div>
+          </div>
+          <div class="uno-card-btn" style="--i:1;--z:1">
+            <div class="uno-card uno-color-wild">
+              <div class="uno-card-tl">🌈</div>
+              <div class="uno-card-center">🌈</div>
+              <div class="uno-card-br">🌈</div>
+            </div>
+          </div>
+          <div class="uno-card-btn" style="--i:2;--z:2">
+            <div class="uno-card uno-color-green">
+              <div class="uno-card-tl">+2</div>
+              <div class="uno-card-center">+2</div>
+              <div class="uno-card-br">+2</div>
+            </div>
+          </div>
+          <div class="uno-card-btn" style="--i:3;--z:3">
+            <div class="uno-card uno-color-red highlight">
+              <div class="uno-card-tl">⊘</div>
+              <div class="uno-card-center">⊘</div>
+              <div class="uno-card-br">⊘</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function closeUnoFullPreview(){
+  document.getElementById('gameOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+/* ═══ مودال معلومات الطور ═══ */
+function openUnoModeInfoModal(modeKey){
+  const mode = UNO.MODES[modeKey];
+  if(!mode) return;
+  
+  const rules = UNO_MODE_RULES[modeKey] || { howTo: [], features: [] };
+  const isCurrent = state.unoSelectedMode === modeKey;
+  
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">${mode.icon} ${mode.name}</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+    
+    <div class="uno-mode-info-hero">
+      <div class="uno-mode-info-desc">${mode.desc}</div>
+    </div>
+    
+    ${rules.howTo?.length ? `
+      <div class="section-title" style="margin-top:16px">🎯 كيف تلعب</div>
+      <div class="uno-rules-list">
+        ${rules.howTo.map(r => `
+          <div class="uno-rule-row">
+            <span class="urr-icon">${r.icon || '•'}</span>
+            <span class="urr-text">${r.text}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+    
+    ${rules.features?.length ? `
+      <div class="section-title" style="margin-top:14px">✨ ما يميزه</div>
+      <div class="uno-features-list">
+        ${rules.features.map(f => `
+          <div class="uno-feature-item">
+            <span class="ufi-icon">${f.icon || '✓'}</span>
+            <span class="ufi-text">${f.text}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+    
+    ${rules.difficulty ? `
+      <div class="uno-difficulty-row">
+        <span class="udr-label">الصعوبة:</span>
+        <span class="udr-value" style="color:${rules.difficulty.color}">${rules.difficulty.label}</span>
+      </div>
+    ` : ''}
+    
+    ${isCurrent ? `
+      <button class="btn btn-ghost" style="width:100%;margin-top:16px" data-action="modal-close">
+        ✓ الطور المختار — إغلاق
+      </button>
+    ` : `
+      <div class="row" style="margin-top:16px;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" data-action="modal-close">إغلاق</button>
+        <button class="btn btn-primary" style="flex:1" data-uno-select-mode="${modeKey}">
+          اختر هذا الطور
+        </button>
+      </div>
+    `}
+  `);
+}
+
+/* ═══ مودال دعوة لاعب ═══ */
+async function openUnoInviteModal(){
+  const modeKey = state.unoSelectedMode;
+  if(!modeKey) return toast('اختر طور اللعب أولاً');
+  
+  const mode = UNO.MODES[modeKey];
+  const gameUrl = `${window.location.origin}${window.location.pathname}?game=uno&mode=${modeKey}`;
+  
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">👥 دعوة لاعب</h3>
+      <button class="icon-btn" data-action="modal-close" style="width:32px;height:32px">
+        ${ic('close','sm')}
+      </button>
+    </div>
+    
+    <button class="uno-invite-share-btn" data-uno-copy-link="${esc(gameUrl)}">
+      <span style="font-size:24px">🔗</span>
+      <div style="flex:1;text-align:start">
+        <div style="font-size:13px;font-weight:800">نسخ رابط اللعبة</div>
+        <div class="muted" style="font-size:10.5px;margin-top:2px">${mode.icon} ${mode.name}</div>
+      </div>
+      ${ic('share','sm')}
+    </button>
+    
+    <div class="section-title" style="margin-top:16px">${ic('users','sm')} أرسل لصديق</div>
+    
+    <div id="unoInviteFriendsList" style="max-height:45vh;overflow-y:auto">
+      <div class="empty" style="padding:24px"><div class="spinner"></div></div>
+    </div>
+  `);
+  
+  try {
+    const fSnap = await getDocs(query(collection(db,'follows'), where('followerId','==',state.user.uid)));
+    const myFollowing = new Set(fSnap.docs.map(d=>d.data().followingId));
+    const rSnap = await getDocs(query(collection(db,'follows'), where('followingId','==',state.user.uid)));
+    const myFollowers = new Set(rSnap.docs.map(d=>d.data().followerId));
+    const mutual = [...myFollowing].filter(u=>myFollowers.has(u));
+    const friends = mutual.map(uid=>state.users[uid]).filter(Boolean);
+    
+    const list = document.getElementById('unoInviteFriendsList');
+    if(!list) return;
+    
+    if(!friends.length){
+      list.innerHTML = `<div class="empty" style="padding:30px">${ic('users')}<div>لا أصدقاء متبادلون بعد</div></div>`;
+      return;
+    }
+    
+    list.innerHTML = friends.map(u => `
+      <div class="follow-list-item" data-uno-send-invite="${u.uid}">
+        ${avatar(u, 44)}
+        <div style="flex:1;min-width:0">
+          <div class="follow-name">${esc(u.name)}</div>
+          <div class="muted" style="font-size:10.5px">@${esc(u.username)}</div>
+        </div>
+        <span style="color:var(--brand-2)">${ic('send','sm')}</span>
+      </div>
+    `).join('');
+  } catch(e){
+    console.error(e);
+    const list = document.getElementById('unoInviteFriendsList');
+    if(list) list.innerHTML = `<div class="empty" style="padding:30px">فشل التحميل</div>`;
+  }
+}
+
+/* ═══ إرسال دعوة ═══ */
+async function sendUnoInvite(targetUid){
+  const modeKey = state.unoSelectedMode;
+  const mode = UNO.MODES[modeKey];
+  if(!mode) return;
+  
+  const gameUrl = `${window.location.origin}${window.location.pathname}?uno=${modeKey}`;
+  
+  try {
+    const chatId = [state.user.uid, targetUid].sort().join('_');
+    const chatRef = doc(db, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+    if(!chatSnap.exists()){
+      await setDoc(chatRef, {
+        participants: [state.user.uid, targetUid],
+        lastMessage: '',
+        lastSender: '',
+        lastTime: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        unreadCounts: { [state.user.uid]: 0, [targetUid]: 0 },
+        typing: {},
+        lastSeen: {},
+      });
+    }
+    
+    await addDoc(collection(db, 'chats', chatId, 'messages'), {
+      senderId: state.user.uid,
+      text: `🃏 دعوتك للعب أونو — ${mode.name}\n${gameUrl}`,
+      createdAt: serverTimestamp(),
+      readBy: [state.user.uid],
+      edited: false,
+      deleted: false,
+      reactions: {},
+    });
+    
+    await updateDoc(chatRef, {
+      lastMessage: `🃏 دعوة أونو — ${mode.name}`,
+      lastSender: state.user.uid,
+      lastTime: serverTimestamp(),
+      [`unreadCounts.${targetUid}`]: increment(1),
+    });
+    
+    await notify(targetUid, 'game_invite',
+      `<b>${esc(state.profile.name)}</b> دعاك للعب أونو — ${mode.name}`,
+      gameUrl, 'game');
+    
+    toast('✓ تم إرسال الدعوة');
+    closeModal();
+  } catch(e){
+    console.error(e);
+    toast('فشل الإرسال');
   }
 }
 
@@ -24840,7 +25669,8 @@ const t = e.target.closest(
   '[data-delete-comment-new],[data-toggle-thread],[data-action="cancel-reply"],' +
   '[data-action="open-hashtag"],[data-action="open-mention"],' +
   '[data-action="open-game-mention"],' +
-  '[data-open-full-profile],' +     /* ★ جديد */
+  '[data-open-full-profile],' +
+  '[data-uno-send-invite],' +
   'button'
 );
 
@@ -26482,6 +27312,29 @@ if(t.dataset.action === 'uno-play-again'){
   return;
 }
 
+if(t.dataset.action === 'uno-chat-toggle'){
+  if(!state.activeUnoMatch) return;
+  state._unoChatOpen = !state._unoChatOpen;
+  renderUnoGame();
+  return;
+}
+
+if(t.dataset.action === 'uno-chat-send'){
+  const inp = document.getElementById('unoChatInput');
+  const txt = inp?.value.trim();
+  if(!txt || !state.activeUnoMatch?.roomId) return;
+  inp.value = '';
+  try {
+    await addDoc(collection(db, 'rooms', state.activeUnoMatch.roomId, 'chat'), {
+      uid: state.user.uid,
+      name: state.profile.name,
+      text: txt,
+      createdAt: serverTimestamp(),
+    });
+  } catch(e){ console.error(e); }
+  return;
+}
+
 /* ═══ أونو: اختيار الطور ═══ */
 if(t.dataset.unoSelectMode){
   const modeKey = t.dataset.unoSelectMode;
@@ -26490,7 +27343,12 @@ if(t.dataset.unoSelectMode){
   state.unoSelectedMode = modeKey;
   state.unoSettingsEditing = false;
 
-  /* إذا لم يخصص المستخدم إعدادات من قبل — استخدم توصية الطور */
+  /* ★ إغلاق مودال معلومات الطور إذا كان مفتوحاً */
+  const modalRoot = document.getElementById('modalRoot');
+  if(modalRoot && modalRoot.innerHTML.trim()){
+    closeModal();
+  }
+
   if(!state.unoHasCustomSettings && mode?.turnTime){
     state.unoSettings.turnTime = mode.turnTime;
   }
@@ -26499,30 +27357,10 @@ if(t.dataset.unoSelectMode){
   return;
 }
 
-/* ═══ أونو: الرجوع لتغيير الطور ═══ */
-if(t.dataset.action === 'uno-back-to-modes'){
-  state.unoSelectedMode = null;
-  state.unoSettingsEditing = false;
-  state._unoSettingsBackup = null;
-  render();
-  return;
-}
-
 /* ═══ أونو: الدخول لوضع التعديل ═══ */
 if(t.dataset.action === 'uno-change-settings'){
   state._unoSettingsBackup = { ...state.unoSettings };
   state.unoSettingsEditing = true;
-  render();
-  return;
-}
-
-/* ═══ أونو: إلغاء التعديل ═══ */
-if(t.dataset.action === 'uno-cancel-settings'){
-  if(state._unoSettingsBackup){
-    state.unoSettings = { ...state._unoSettingsBackup };
-    state._unoSettingsBackup = null;
-  }
-  state.unoSettingsEditing = false;
   render();
   return;
 }
@@ -26544,23 +27382,77 @@ if(t.dataset.action === 'uno-save-settings'){
   return;
 }
 
-/* ═══ أونو: تعديل إعداد ═══ */
+/* ═══ معلومات الطور ═══ */
+if(t.dataset.unoModeInfo){
+  openUnoModeInfoModal(t.dataset.unoModeInfo);
+  return;
+}
+
+if(t.dataset.action === 'uno-mode-info'){
+  if(!state.unoSelectedMode){
+    return toast('اختر طوراً أولاً');
+  }
+  openUnoModeInfoModal(state.unoSelectedMode);
+  return;
+}
+
+/* ═══ معالجات أونو الجديدة ═══ */
 if(t.dataset.unoSetting){
   const key = t.dataset.unoSetting;
-  const val = t.dataset.val;
+  let val = t.dataset.val;
 
   if(key === 'isPublic'){
     state.unoSettings.isPublic = val === 'true';
-    if(!state.unoSettings.isPublic && !state.unoSettings.password){
-      /* اترك الباسورد فارغة — سيتم إدخالها يدوياً */
-    } else if(state.unoSettings.isPublic){
-      state.unoSettings.password = '';
-    }
+    if(state.unoSettings.isPublic) state.unoSettings.password = '';
+  } else if(key === 'teamMode'){
+    state.unoSettings.teamMode = val;
   } else {
-    state.unoSettings[key] = parseInt(val, 10);
+    val = parseInt(val, 10);
+    state.unoSettings[key] = val;
+    if(key === 'maxPlayers' && val < 4){
+      state.unoSettings.teamMode = 'ffa';
+    }
   }
 
+  /* ★ الحفظ التلقائي */
+  persistUnoSettings();
   render();
+  return;
+}
+
+if(t.dataset.action === 'uno-back-from-settings'){
+  state.unoSettingsEditing = false;
+  render();
+  return;
+}
+
+if(t.dataset.action === 'uno-full-preview'){
+  openUnoFullPreview();
+  return;
+}
+
+if(t.dataset.action === 'close-uno-preview'){
+  closeUnoFullPreview();
+  return;
+}
+
+if(t.dataset.action === 'uno-invite'){
+  if(!state.unoSelectedMode) return toast('اختر طوراً أولاً');
+  await openUnoInviteModal();
+  return;
+}
+
+if(t.dataset.unoCopyLink){
+  try {
+    await navigator.clipboard.writeText(t.dataset.unoCopyLink);
+    toast('✓ تم نسخ رابط اللعبة');
+    closeModal();
+  } catch(e){ toast('فشل النسخ'); }
+  return;
+}
+
+if(t.dataset.unoSendInvite){
+  await sendUnoInvite(t.dataset.unoSendInvite);
   return;
 }
 
@@ -26887,7 +27779,15 @@ if(t.dataset.gamesCat){
   /* ============================================================
      32) الألعاب والغرف
      ============================================================ */
-  if(t.dataset.gameOpen){ go('games', { activeGame: t.dataset.gameOpen }); return; }
+if(t.dataset.gameOpen){
+  const gameId = t.dataset.gameOpen;
+  const game = GAMES.find(g => g.id === gameId);
+  if(!game) return toast('اللعبة غير موجودة');
+
+  state.activeGame = gameId;
+  go('game');
+  return;
+}
   if(t.id === 'matchmakingBtn'){ startMatchmaking(t.dataset.game); return; }
   if(t.id === 'createRoomBtn'){ createRoom(t.dataset.game); return; }
   if(t.dataset.createRoom){ await confirmCreateRoom(t.dataset.createRoom); return; }
@@ -27522,6 +28422,11 @@ document.addEventListener('keydown', (e)=>{
     e.preventDefault();
     document.getElementById('chatSendBtn')?.click();
   }
+  if(e.target.id === 'unoChatInput' && e.key === 'Enter' && !e.shiftKey){
+  e.preventDefault();
+  document.querySelector('[data-action="uno-chat-send"]')?.click();
+  return;
+}
 });
 
 /* Auth */

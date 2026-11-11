@@ -17597,3 +17597,1578 @@ html[dir="rtl"] .spa-actions .pact.ml{
   .uno-call-btn{ padding: 4px 12px; font-size: 10px; margin-bottom: 2px; }
   .uno-turn-banner{ display: none; }
 }
+
+/* ============================================================
+   🃏 UNO — صفحة اللعبة الجديدة
+   ============================================================ */
+
+/* ═══ شبكة الأطوار — تمرير أفقي ═══ */
+.uno-modes-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px 2px 14px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.2) transparent;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+.uno-modes-scroll::-webkit-scrollbar { height: 5px; }
+.uno-modes-scroll::-webkit-scrollbar-track { background: transparent; }
+.uno-modes-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.2);
+  border-radius: 9px;
+}
+.uno-modes-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,61,113,.5);
+}
+
+.uno-mode-card-h {
+  flex: 0 0 170px;
+  min-width: 170px;
+  scroll-snap-align: start;
+  position: relative;
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: .22s;
+}
+.uno-mode-card-h:hover {
+  border-color: rgba(255,61,113,.5);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0,0,0,.4);
+}
+.uno-mode-card-h.active {
+  border-color: #ff3d71;
+  box-shadow: 0 0 24px rgba(255,61,113,.4);
+  background: linear-gradient(135deg, rgba(255,61,113,.08), var(--card));
+}
+
+.uno-mode-card-h-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 12px 16px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+}
+.uno-mode-icon-h {
+  font-size: 38px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.4));
+}
+.uno-mode-name-h {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--txt);
+  letter-spacing: -.2px;
+}
+.uno-mode-desc-h {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.uno-mode-info-btn {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(7,10,17,.85);
+  border: 1px solid rgba(255,255,255,.16);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  z-index: 5;
+  font-family: inherit;
+  transition: .2s;
+  padding: 0;
+}
+.uno-mode-info-btn:hover {
+  background: rgba(0,210,255,.25);
+  border-color: rgba(0,210,255,.5);
+  transform: scale(1.1);
+}
+.uno-mode-info-btn:active { transform: scale(.9); }
+
+/* ═══ زر الدعوة في شبكة الأطوار ═══ */
+.uno-invite-section {
+  margin-top: 16px;
+}
+.uno-invite-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: var(--card);
+  border: 1.5px dashed rgba(108,92,231,.4);
+  border-radius: 12px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .2s;
+}
+.uno-invite-btn:hover:not(:disabled) {
+  background: rgba(108,92,231,.08);
+  border-color: var(--brand-2);
+  color: var(--brand-2);
+}
+.uno-invite-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* ═══ بطاقة الطور في الشاشة الرئيسية ═══ */
+.uno-main-mode-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(255,61,113,.15), rgba(245,179,1,.06));
+  border: 1.5px solid rgba(255,61,113,.4);
+  border-radius: 20px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.uno-main-mode-card::before {
+  content: "";
+  position: absolute;
+  top: -50px; right: -50px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(255,61,113,.4), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+.umc-icon {
+  font-size: 48px;
+  filter: drop-shadow(0 6px 18px rgba(255,61,113,.5));
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.umc-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.umc-name {
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--txt);
+  letter-spacing: -.3px;
+}
+.umc-desc {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.uno-mode-info-btn-lg {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: rgba(7,10,17,.5);
+  border: 1.5px solid rgba(255,255,255,.2);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: .2s;
+  position: relative;
+  z-index: 1;
+  padding: 0;
+}
+.uno-mode-info-btn-lg:hover {
+  background: rgba(0,210,255,.25);
+  border-color: rgba(0,210,255,.6);
+  transform: scale(1.08);
+}
+
+/* ═══ شبكة الأزرار ═══ */
+.uno-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.uno-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 13px;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: .2s;
+  text-align: start;
+}
+.uno-action-btn:hover {
+  background: var(--card-2);
+  border-color: rgba(108,92,231,.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.3);
+}
+.uab-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.uab-body { flex: 1; min-width: 0; }
+.uab-label {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: var(--txt);
+}
+.uab-sub {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ═══ زر الدعوة الرئيسي ═══ */
+.uno-invite-btn-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, rgba(0,210,255,.1), rgba(108,92,231,.05));
+  border: 1.5px dashed rgba(0,210,255,.4);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  text-align: start;
+  margin-bottom: 10px;
+  transition: .2s;
+}
+.uno-invite-btn-main:hover {
+  background: linear-gradient(135deg, rgba(0,210,255,.18), rgba(108,92,231,.1));
+  border-color: var(--brand-2);
+  transform: translateY(-1px);
+}
+.uib-icon { font-size: 24px; flex-shrink: 0; }
+.uib-body { flex: 1; min-width: 0; }
+.uib-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--txt);
+}
+.uib-sub {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+.uib-arrow {
+  color: var(--brand-2);
+  flex-shrink: 0;
+  transform: scaleX(-1);
+}
+
+/* ═══ زر البدء الرئيسي ═══ */
+.uno-start-btn-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #ff3d71, #f5b301);
+  border: 0;
+  border-radius: 14px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: .2s;
+  box-shadow: 0 8px 24px rgba(255,61,113,.5);
+  margin-bottom: 20px;
+}
+.uno-start-btn-main:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255,61,113,.7);
+}
+.uno-start-btn-main:active { transform: scale(.98); }
+.usb-icon { font-size: 20px; }
+.usb-label { letter-spacing: .5px; }
+
+/* ═══ معاينة إدارية ═══ */
+.uno-admin-preview {
+  margin-top: 20px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(108,92,231,.06), rgba(0,210,255,.03));
+  border: 1.5px dashed rgba(108,92,231,.4);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.uno-admin-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.uap-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: rgba(245,179,1,.18);
+  border: 1px solid rgba(245,179,1,.45);
+  border-radius: 7px;
+  color: #f5c451;
+  font-size: 9.5px;
+  font-weight: 900;
+}
+.uap-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--txt);
+}
+
+.uno-preview-stage {
+  background: radial-gradient(ellipse at top center,
+    #1e7a4a 0%, #0f4a2a 35%, #062a15 70%, #03150a 100%);
+  border-radius: 12px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 260px;
+  position: relative;
+  overflow: hidden;
+}
+.uno-preview-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,.03) 0 2px, transparent 2px 4px);
+  pointer-events: none;
+}
+
+/* لاعبون معاينة */
+.uno-preview-opponents {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.uno-preview-opp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 8px;
+  background: rgba(0,0,0,.5);
+  border: 1.5px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  min-width: 62px;
+  backdrop-filter: blur(8px);
+}
+.uno-preview-opp.active {
+  border-color: #00d2ff;
+  background: rgba(0,210,255,.15);
+  box-shadow: 0 0 14px rgba(0,210,255,.4);
+}
+.uno-preview-opp-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1.5px solid rgba(255,255,255,.2);
+}
+.uno-preview-opp-name {
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+.uno-preview-opp-cards {
+  font-size: 10px;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+/* أكوام المعاينة */
+.uno-preview-piles {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+  padding: 4px 0;
+}
+.uno-preview-deck {
+  width: 44px;
+  height: 62px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #2a1e5c, #1a1540);
+  border: 1.5px solid rgba(255,255,255,.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.5), inset 0 0 16px rgba(108,92,231,.3);
+  position: relative;
+}
+.uno-preview-deck-back {
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 1px;
+  transform: rotate(-12deg);
+  text-shadow: 0 0 8px rgba(0,210,255,.7);
+}
+.uno-preview-deck-count {
+  position: absolute;
+  bottom: 3px;
+  inset-inline-end: 3px;
+  font-size: 8px;
+  font-weight: 900;
+  color: #fff;
+  padding: 1px 4px;
+  background: rgba(0,0,0,.6);
+  border-radius: 4px;
+}
+.uno-preview-discard {
+  width: 44px;
+  height: 62px;
+}
+.uno-preview-discard .uno-preview-card {
+  width: 100%;
+  height: 100%;
+}
+
+/* أوراق المعاينة */
+.uno-preview-hand {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+  padding: 4px 0;
+}
+.uno-preview-card {
+  width: 40px;
+  height: 56px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3px;
+  font-weight: 900;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 0 0 1.5px rgba(255,255,255,.2);
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  position: relative;
+}
+.uno-preview-card.highlight {
+  box-shadow: 0 0 0 2px #00d2ff, 0 0 14px rgba(0,210,255,.7), 0 2px 8px rgba(0,0,0,.5);
+}
+.upc-tl, .upc-br {
+  font-size: 8px;
+  line-height: 1;
+}
+.upc-br { align-self: flex-end; transform: rotate(180deg); }
+.upc-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 900;
+}
+.uno-preview-discard .upc-center { font-size: 20px; }
+
+.uno-preview-hint {
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+/* ═══ مودال معلومات الطور ═══ */
+.uno-mode-info-hero {
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(255,61,113,.1), rgba(245,179,1,.04));
+  border: 1px solid rgba(255,61,113,.3);
+  border-radius: 12px;
+  margin-bottom: 6px;
+}
+.uno-mode-info-desc {
+  font-size: 12.5px;
+  color: #dbe3f5;
+  line-height: 1.6;
+  font-weight: 600;
+}
+
+.uno-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.uno-rule-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+.urr-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.urr-text {
+  flex: 1;
+  font-size: 12px;
+  color: #dbe3f5;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.uno-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.uno-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(0,210,255,.04);
+  border: 1px solid rgba(0,210,255,.2);
+  border-radius: 10px;
+}
+.ufi-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ufi-text {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--txt);
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.uno-difficulty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(0,0,0,.2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-top: 14px;
+}
+.udr-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.udr-value {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+/* ═══ زر النسخ في مودال الدعوة ═══ */
+.uno-invite-share-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(0,210,255,.1), rgba(108,92,231,.05));
+  border: 1.5px solid rgba(0,210,255,.35);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  width: 100%;
+  transition: .2s;
+  margin-bottom: 14px;
+}
+.uno-invite-share-btn:hover {
+  background: linear-gradient(135deg, rgba(0,210,255,.18), rgba(108,92,231,.1));
+  border-color: var(--brand-2);
+  transform: translateY(-1px);
+}
+
+/* ═══ استجابة للشاشات الصغيرة ═══ */
+@media (max-width: 400px){
+  .uno-mode-card-h { flex: 0 0 145px; min-width: 145px; }
+  .uno-mode-icon-h { font-size: 32px; }
+  .uno-mode-name-h { font-size: 12.5px; }
+  .uno-mode-desc-h { font-size: 9.5px; }
+  .umc-icon { font-size: 38px; }
+  .umc-name { font-size: 15px; }
+  .umc-desc { font-size: 10.5px; }
+  .uno-action-btn { padding: 11px; }
+  .uab-icon { font-size: 18px; }
+  .uab-label { font-size: 11.5px; }
+  .uab-sub { font-size: 9.5px; }
+  .uno-preview-card { width: 34px; height: 48px; }
+  .upc-center { font-size: 14px; }
+  .uno-preview-opp-avatar { width: 24px; height: 24px; font-size: 10px; }
+  .uno-preview-opp-name { font-size: 8px; }
+}
+
+/* ============================================================
+   🎮 صفحة اللعبة العامة
+   ============================================================ */
+
+/* ═══ Hero اللعبة ═══ */
+.game-page-hero{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(108,92,231,.1), rgba(0,210,255,.04));
+  border: 1px solid rgba(108,92,231,.25);
+  border-radius: 18px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.game-page-hero::before{
+  content: "";
+  position: absolute;
+  top: -50px; right: -50px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(108,92,231,.35), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+.gph-icon-wrap{
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  position: relative;
+  z-index: 1;
+}
+.gph-icon{
+  font-size: 32px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.4));
+}
+.gph-info{
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+.gph-name{
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--txt);
+  letter-spacing: -.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gph-cat{
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 3px;
+}
+.gph-badge{
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 900;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+.gph-badge.playable{
+  background: rgba(34,197,94,.15);
+  color: #5ee08a;
+  border: 1px solid rgba(34,197,94,.4);
+}
+.gph-badge.soon{
+  background: rgba(138,149,173,.15);
+  color: #8a95ad;
+  border: 1px solid rgba(138,149,173,.3);
+}
+
+/* ═══ صف أزرار الطور والإعدادات ═══ */
+.game-action-btns-row{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.game-action-btn-h{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: .2s;
+  text-align: start;
+}
+.game-action-btn-h:hover{
+  background: var(--card-2);
+  border-color: rgba(108,92,231,.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.3);
+}
+.game-action-btn-h:active{ transform: scale(.97); }
+.gabh-icon{
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.gabh-body{
+  flex: 1;
+  min-width: 0;
+}
+.gabh-label{
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--txt);
+  line-height: 1.2;
+}
+.gabh-sub{
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ═══ زر دعوة لاعب (صفحة اللعبة) ═══ */
+.game-invite-btn-main{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, rgba(0,210,255,.1), rgba(108,92,231,.05));
+  border: 1.5px dashed rgba(0,210,255,.4);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  text-align: start;
+  margin-bottom: 10px;
+  transition: .2s;
+}
+.game-invite-btn-main:hover:not(:disabled){
+  background: linear-gradient(135deg, rgba(0,210,255,.18), rgba(108,92,231,.1));
+  border-color: var(--brand-2);
+  transform: translateY(-1px);
+}
+.game-invite-btn-main:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+}
+.gib-icon{
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.gib-body{
+  flex: 1;
+  min-width: 0;
+}
+.gib-title{
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--txt);
+}
+.gib-sub{
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gib-arrow{
+  color: var(--brand-2);
+  flex-shrink: 0;
+  transform: scaleX(-1);
+}
+
+/* ═══ زر البدء الرئيسي ═══ */
+.game-start-btn-main{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #ff3d71, #f5b301);
+  border: 0;
+  border-radius: 14px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: .2s;
+  box-shadow: 0 8px 24px rgba(255,61,113,.5);
+  margin-bottom: 20px;
+}
+.game-start-btn-main:hover:not(:disabled){
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255,61,113,.7);
+}
+.game-start-btn-main:active:not(:disabled){ transform: scale(.98); }
+.game-start-btn-main:disabled{
+  opacity: .5;
+  cursor: not-allowed;
+  filter: grayscale(.6);
+  box-shadow: none;
+}
+.gsb-icon{ font-size: 20px; }
+.gsb-label{ letter-spacing: .5px; }
+
+/* ═══ بطاقة "قريباً" للعبة غير جاهزة ═══ */
+.game-coming-soon-card{
+  text-align: center;
+  padding: 48px 24px;
+  background: linear-gradient(135deg, rgba(138,149,173,.08), rgba(0,210,255,.03));
+  border: 1.5px dashed rgba(138,149,173,.35);
+  border-radius: 18px;
+  margin-bottom: 16px;
+}
+.gcsc-icon{
+  font-size: 60px;
+  margin-bottom: 14px;
+  filter: grayscale(.3) drop-shadow(0 4px 16px rgba(0,0,0,.4));
+}
+.gcsc-title{
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--txt);
+  margin-bottom: 6px;
+}
+.gcsc-sub{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+/* ═══ المعاينة الإدارية (عامة) ═══ */
+.game-admin-preview{
+  margin-top: 20px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(108,92,231,.06), rgba(0,210,255,.03));
+  border: 1.5px dashed rgba(108,92,231,.4);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.gap-head{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.gap-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: rgba(245,179,1,.18);
+  border: 1px solid rgba(245,179,1,.45);
+  border-radius: 7px;
+  color: #f5c451;
+  font-size: 9.5px;
+  font-weight: 900;
+}
+.gap-title{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--txt);
+}
+.gap-generic-stage{
+  background: radial-gradient(ellipse at top center,
+    #1a1f30 0%, #0a0e17 60%, #060810 100%);
+  border-radius: 12px;
+  padding: 30px 20px;
+  min-height: 200px;
+  display: grid;
+  place-items: center;
+}
+.gap-hint{
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 400px){
+  .game-page-hero{ padding: 13px; gap: 11px; }
+  .gph-icon-wrap{ width: 52px; height: 52px; }
+  .gph-icon{ font-size: 26px; }
+  .gph-name{ font-size: 15.5px; }
+  .gph-cat{ font-size: 10.5px; }
+  .gph-badge{ font-size: 9px; padding: 3px 8px; }
+
+  .game-action-btn-h{ padding: 10px; gap: 8px; }
+  .gabh-icon{ width: 36px; height: 36px; font-size: 17px; }
+  .gabh-label{ font-size: 12px; }
+  .gabh-sub{ font-size: 9.5px; }
+
+  .game-start-btn-main{ padding: 14px; font-size: 14.5px; }
+  .gsb-icon{ font-size: 18px; }
+}
+
+/* ============================================================
+   🎮 UNO — مواضع اللاعبين + معاينة كاملة + إعدادات تلقائية
+   ============================================================ */
+
+/* ═══ منطقة الطاولة ═══ */
+.uno-table {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ═══ الأكوام في المنتصف ═══ */
+.uno-piles-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 2;
+}
+
+/* ═══ مواضع اللاعبين ═══ */
+.uno-seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px 5px;
+  background: rgba(0,0,0,.55);
+  border: 1.5px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  min-width: 68px;
+  z-index: 3;
+  transition: all .25s;
+}
+.uno-seat-top-center  { top: 8px;  left: 50%; transform: translateX(-50%); }
+.uno-seat-top-left    { top: 8px;  left: 12px; }
+.uno-seat-top-right   { top: 8px;  right: 12px; }
+.uno-seat-left        { top: 50%;  left: 8px;  transform: translateY(-50%); }
+.uno-seat-right       { top: 50%;  right: 8px; transform: translateY(-50%); }
+
+.uno-seat.active {
+  border-color: #00d2ff;
+  background: rgba(0,210,255,.15);
+  box-shadow: 0 0 24px rgba(0,210,255,.5);
+}
+.uno-seat.teammate {
+  border-color: rgba(34,197,94,.5);
+  background: rgba(34,197,94,.1);
+}
+.uno-seat.active.teammate {
+  border-color: #22c55e;
+  box-shadow: 0 0 20px rgba(34,197,94,.5);
+}
+
+.uno-teammate-badge {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -6px;
+  padding: 1px 6px;
+  background: rgba(34,197,94,.9);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  border-radius: 6px;
+  border: 1.5px solid #0a1a0f;
+  z-index: 5;
+}
+
+/* ═══ زر المعاينة الكاملة (للمشرف) ═══ */
+.gap-full-preview-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  background: var(--grad);
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: .2s;
+  box-shadow: 0 4px 16px rgba(108,92,231,.4);
+}
+.gap-full-preview-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* ═══ شريط المعاينة الكاملة ═══ */
+.uno-preview-live {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 200 !important;
+}
+.uno-preview-banner-full {
+  position: absolute;
+  top: env(safe-area-inset-top, 0);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, rgba(245,179,1,.95), rgba(255,61,113,.9));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.5);
+}
+.uno-preview-banner-full button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.4);
+  border: 1.5px solid rgba(255,255,255,.35);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-family: inherit;
+  padding: 0;
+  transition: .2s;
+}
+.uno-preview-banner-full button:hover {
+  background: rgba(0,0,0,.6);
+  transform: rotate(90deg);
+}
+.uno-preview-live .uno-topbar {
+  padding-top: calc(44px + env(safe-area-inset-top, 0));
+}
+
+/* ═══ استجابة للشاشات الصغيرة ═══ */
+@media (max-width: 400px){
+  .uno-seat { min-width: 60px; padding: 5px 8px 4px; }
+  .uno-opp-avatar .av {
+    --s: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+  }
+  .uno-opp-name { font-size: 9px; }
+  .uno-seat-top-left   { top: 6px; left: 6px; }
+  .uno-seat-top-right  { top: 6px; right: 6px; }
+  .uno-seat-left       { left: 4px; }
+  .uno-seat-right      { right: 4px; }
+}
+
+/* ============================================================
+   🃏 UNO — أوراق اللاعبين + شريط الوقت + المحادثة
+   ============================================================ */
+
+/* ═══ طاولة اللعب ═══ */
+.uno-table{
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.uno-piles-center{
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 2;
+}
+
+/* ═══ مواضع اللاعبين — ملتصقة بالأطراف ═══ */
+.uno-seat{
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px 4px;
+  background: rgba(0,0,0,.55);
+  border: 1.5px solid rgba(255,255,255,.12);
+  border-radius: 11px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  min-width: 68px;
+  z-index: 3;
+  transition: all .25s;
+}
+.uno-seat-top-center  { top: 4px;  left: 50%; transform: translateX(-50%); }
+.uno-seat-top-left    { top: 4px;  left: 4px; }
+.uno-seat-top-right   { top: 4px;  right: 4px; }
+.uno-seat-left        { top: 50%;  left: 4px;  transform: translateY(-50%); }
+.uno-seat-right       { top: 50%;  right: 4px; transform: translateY(-50%); }
+
+.uno-seat.active{
+  border-color: #00d2ff;
+  background: rgba(0,210,255,.15);
+  box-shadow: 0 0 22px rgba(0,210,255,.5);
+}
+.uno-seat.teammate{
+  border-color: rgba(34,197,94,.5);
+  background: rgba(34,197,94,.1);
+}
+.uno-seat.active.teammate{
+  border-color: #22c55e;
+  box-shadow: 0 0 20px rgba(34,197,94,.5);
+}
+
+/* ═══ يد اللاعب — مربعات صغيرة مقلوبة/مكشوفة ═══ */
+.uno-seat-hand{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 4px;
+  max-width: 90px;
+  overflow: hidden;
+}
+
+.uno-mini-player-card{
+  width: 22px;
+  height: 30px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 2px 4px rgba(0,0,0,.4);
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  margin-inline-start: -14px;
+  position: relative;
+  z-index: var(--z, 0);
+}
+.uno-mini-player-card:first-child{ margin-inline-start: 0; }
+.uno-mini-player-card.face-down{
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 3px, transparent 3px 6px),
+    linear-gradient(135deg, #2a1e5c, #1a1540);
+}
+.uno-mini-player-card.face-down::after{
+  content: "U";
+  font-size: 10px;
+  font-weight: 900;
+  color: rgba(255,255,255,.45);
+  font-style: italic;
+  transform: rotate(-15deg);
+}
+.umpc-val{
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.uno-extra-count{
+  margin-inline-start: 4px;
+  padding: 1px 5px;
+  background: rgba(0,210,255,.2);
+  border: 1px solid rgba(0,210,255,.5);
+  border-radius: 5px;
+  color: #5fe3ff;
+  font-size: 9px;
+  font-weight: 900;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* ═══ الصورة + العدّاد + شريط الوقت ═══ */
+.uno-seat-avatar-wrap{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+}
+
+.uno-seat-count-badge{
+  position: absolute;
+  bottom: -3px;
+  inset-inline-end: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--brand-2);
+  color: #0a0e17;
+  font-size: 9px;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #0a0e17;
+  z-index: 2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══ شريط الوقت للاعبين الآخرين ═══ */
+.uno-seat-timer{
+  width: 100%;
+  height: 3px;
+  background: rgba(255,255,255,.1);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.uno-seat-timer-fill{
+  height: 100%;
+  border-radius: 99px;
+  transition: width .25s linear, background .25s;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* ═══ شريط وقتي ═══ */
+.uno-my-timer-wrap{
+  width: 80%;
+  max-width: 300px;
+  height: 4px;
+  background: rgba(255,255,255,.1);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 0 auto 6px;
+}
+.uno-my-timer-fill{
+  height: 100%;
+  border-radius: 99px;
+  transition: width .25s linear, background .25s;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* ═══ شارة الفريق ═══ */
+.uno-teammate-badge{
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -6px;
+  padding: 1px 6px;
+  background: rgba(34,197,94,.9);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  border-radius: 6px;
+  border: 1.5px solid #0a1a0f;
+  z-index: 5;
+}
+
+/* ═══ زر المحادثة العائم ═══ */
+.uno-chat-fab{
+  position: fixed;
+  left: 12px;
+  bottom: 145px;
+  z-index: 100;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--grad);
+  border: 2px solid rgba(255,255,255,.3);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(108,92,231,.55);
+  font-family: inherit;
+  padding: 0;
+  transition: .2s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.uno-chat-fab:hover{
+  transform: translateY(-2px) scale(1.05);
+  filter: brightness(1.1);
+}
+.uno-chat-fab:active{ transform: scale(.92); }
+.uno-chat-fab .ic{ width: 20px; height: 20px; }
+
+/* ═══ مودال المحادثة ═══ */
+.uno-chat-modal{
+  position: fixed;
+  bottom: 90px;
+  left: 12px;
+  right: 12px;
+  max-width: 380px;
+  max-height: 42vh;
+  background: rgba(7,10,17,.72);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 16px;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,.65);
+  animation: unoChatSlideUp .25s cubic-bezier(.34,1.2,.64,1);
+}
+@keyframes unoChatSlideUp{
+  from{ opacity: 0; transform: translateY(20px); }
+  to{ opacity: 1; transform: translateY(0); }
+}
+
+.uno-chat-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  flex-shrink: 0;
+  background: rgba(0,0,0,.3);
+}
+.uno-chat-head > span{
+  font-size: 12px;
+  font-weight: 900;
+  color: #fff;
+}
+.uno-chat-head button{
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-family: inherit;
+  padding: 0;
+  transition: .15s;
+}
+.uno-chat-head button:hover{ background: rgba(255,61,113,.4); }
+
+.uno-chat-messages{
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.2) transparent;
+}
+.uno-chat-messages::-webkit-scrollbar{ width: 3px; }
+.uno-chat-messages::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.2);
+  border-radius: 9px;
+}
+
+.uno-chat-msg{
+  padding: 6px 10px;
+  background: rgba(255,255,255,.08);
+  border-radius: 10px;
+  font-size: 12px;
+  color: #fff;
+  line-height: 1.4;
+  word-wrap: break-word;
+  max-width: 85%;
+  align-self: flex-start;
+}
+.uno-chat-msg.me{
+  background: linear-gradient(135deg, rgba(108,92,231,.65), rgba(0,210,255,.5));
+  align-self: flex-end;
+}
+.uno-chat-from{
+  display: block;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--brand-2);
+  margin-bottom: 2px;
+}
+.uno-chat-empty{
+  text-align: center;
+  padding: 20px;
+  color: rgba(255,255,255,.45);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.uno-chat-input-row{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  flex-shrink: 0;
+  background: rgba(0,0,0,.3);
+}
+.uno-chat-input-row input{
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 10px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+.uno-chat-input-row input:focus{
+  border-color: var(--brand-2);
+  background: rgba(0,210,255,.08);
+}
+.uno-chat-input-row input::placeholder{ color: rgba(255,255,255,.4); }
+.uno-chat-input-row button{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--grad);
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-family: inherit;
+  padding: 0;
+  flex-shrink: 0;
+  transition: .15s;
+}
+.uno-chat-input-row button:hover{ filter: brightness(1.1); }
+.uno-chat-input-row button:active{ transform: scale(.92); }
+
+/* ═══ زر إغلاق معاينة المشرف ═══ */
+.uno-preview-close-btn{
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0));
+  inset-inline-end: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.65);
+  border: 1.5px solid rgba(255,255,255,.3);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 200;
+  backdrop-filter: blur(10px);
+  font-family: inherit;
+  padding: 0;
+  transition: .2s;
+}
+.uno-preview-close-btn:hover{
+  background: rgba(255,61,113,.85);
+  transform: rotate(90deg);
+}
+
+.uno-preview-live{
+  z-index: 150 !important;
+}
+
+/* ═══ استجابة للشاشات الصغيرة ═══ */
+@media (max-width: 400px){
+  .uno-seat{ min-width: 60px; padding: 4px 6px 3px; }
+  .uno-opp-avatar .av{
+    --s: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+  }
+  .uno-opp-name{ font-size: 9px; }
+  .uno-seat-hand{ max-width: 76px; }
+  .uno-mini-player-card{ width: 18px; height: 26px; font-size: 9.5px; margin-inline-start: -11px; }
+  .uno-mini-player-card:first-child{ margin-inline-start: 0; }
+  .umpc-val{ font-size: 9px; }
+  .uno-chat-fab{ bottom: 130px; width: 42px; height: 42px; }
+  .uno-chat-modal{ max-height: 40vh; }
+}
