@@ -25004,20 +25004,21 @@ async function unoStartMatchmaking(modeKey){
     const newRoomRef = await addDoc(collection(db, 'rooms'), {
       gameId:      'uno',
       unoMode:     modeKey,
-      unoSettings: {
-        maxPlayers:  cfg.maxPlayers,
-        initialHand: cfg.initialHand,
-        turnTime:    cfg.turnTime,
-		teamMode:    cfg.teamMode || 'ffa',   /* ★ جديد */
-        password:    cfg.isPublic ? null : (cfg.password || null),
-      },
+unoSettings: {
+  maxPlayers:  cfg.maxPlayers,
+  initialHand: cfg.initialHand,
+  turnTime:    cfg.turnTime,
+  teamMode:    cfg.teamMode || 'ffa',
+  isPublic:    !!cfg.isPublic,                          // ✅ أضف هذا
+  password:    cfg.isPublic ? '' : (cfg.password || ''),  // ✅ '' بدل null
+},
       hostId:      state.user.uid,
       name:        `أونو · ${mode.name}`,
       players:     [state.user.uid],
       maxPlayers:  cfg.maxPlayers,
       mode:        'multiplayer',
       public:      !!cfg.isPublic,
-      password:    cfg.isPublic ? null : (cfg.password || null),
+      password:    cfg.isPublic ? '' : (cfg.password || ''),
       status:      'waiting',
       createdAt:   serverTimestamp(),
     });
