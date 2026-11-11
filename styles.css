@@ -20492,3 +20492,910 @@ html[dir="rtl"] .spa-actions .pact.ml{
 /* إخفاء حاويات قديمة (تنظيف) */
 .uno-seat-header, .uno-seat-avatar-block,
 .uno-seat-cards-wrap, .uno-opponents{ display: none !important; }
+
+/* ============================================================
+   🃏 UNO — التصميم النهائي (بدون صناديق + تراكم + التصاق بالحواف)
+   ============================================================ */
+
+/* 1. زر القائمة (الخيارات) */
+.uno-top-menu-btn {
+  position: fixed;
+  top: 16px;
+  inset-inline-end: 16px;
+  z-index: 1000;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: 0.2s;
+  padding: 0;
+}
+.uno-top-menu-btn:hover { background: rgba(0,0,0,0.8); transform: scale(1.05); }
+
+/* 2. منطقة الطاولة (الوسط) */
+.uno-table {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.uno-piles-center { pointer-events: auto; }
+
+/* 3. الخصم (في الأعلى، بدون صندوق) */
+.uno-seat-pos-top {
+  position: absolute;
+  top: -30px; /* نصف الأوراق خارج الشاشة */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+}
+.uno-opp-cards-stack {
+  position: relative;
+  width: 60px;
+  height: 100px;
+}
+.uno-opp-card {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 62px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  background: linear-gradient(135deg, #2a1e5c, #1a1540);
+}
+.uno-opp-card.face-down::after {
+  content: "U";
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-15deg);
+  font-size: 14px; font-weight: 900; color: rgba(255,255,255,0.4); font-style: italic;
+}
+.uno-opp-card.show { background: #1a1a2e; }
+.uno-opp-card.show > span { position: absolute; top: 4px; left: 4px; font-size: 12px; font-weight: 900; color: #fff; }
+
+/* 4. معلومات اللاعب (تحت الأوراق) */
+.uno-seat-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: -5px;
+}
+.uno-seat-timer {
+  width: 40px; height: 4px; background: rgba(0,0,0,0.8); border-radius: 99px; overflow: hidden;
+}
+.uno-seat-timer-fill { height: 100%; transition: width 0.2s, background 0.2s; }
+.uno-seat-avatar-wrap { position: relative; }
+.uno-seat-avatar .av { border: 2px solid rgba(255,255,255,0.3); width: 36px; height: 36px; }
+.uno-seat.active .uno-seat-avatar .av {
+  border-color: #00d2ff; box-shadow: 0 0 15px rgba(0,210,255,0.8);
+  animation: unoPulseActive 1.5s infinite;
+}
+@keyframes unoPulseActive { 0%,100%{ box-shadow: 0 0 15px rgba(0,210,255,0.8); } 50%{ box-shadow: 0 0 25px rgba(0,210,255,1); } }
+.uno-seat-count-badge {
+  position: absolute; bottom: -4px; right: -4px; background: #00d2ff; color: #000;
+  font-size: 9px; font-weight: 900; padding: 2px 5px; border-radius: 10px; border: 1.5px solid #000;
+}
+.uno-seat-name { font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 2px 4px #000; }
+
+/* 5. أوراقي (في الأسفل، تراكمية) */
+.uno-hand-wrap {
+  position: fixed;
+  bottom: -40px; /* إخفاء نصف الأوراق السفلية */
+  left: 0; right: 0;
+  height: 140px;
+  pointer-events: none; /* لمنع حجب الطاولة */
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.uno-hand {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+.uno-card-btn {
+  position: absolute;
+  pointer-events: auto;
+  background: transparent;
+  border: none; padding: 0;
+  width: 68px;
+  transition: transform 0.2s, bottom 0.2s;
+  cursor: pointer;
+  /* إزالة أي شفافية */
+  opacity: 1 !important;
+}
+/* إزالة الشفافية من الأوراق غير القابلة للعب */
+.uno-card-btn.not-playable {
+  filter: brightness(0.6) grayscale(0.5);
+  cursor: not-allowed;
+}
+.uno-card-btn.playable:hover {
+  transform: translateY(-15px) scale(1.05) !important;
+  z-index: 999 !important;
+}
+
+/* زر UNO فوق الأوراق */
+.uno-call-btn {
+  position: absolute;
+  bottom: 100px;
+  z-index: 1000;
+  pointer-events: auto;
+  background: linear-gradient(135deg, #ff3d71, #f5b301);
+  border: 2px solid #fff; border-radius: 20px;
+  padding: 8px 20px; color: #fff; font-weight: 900; font-size: 13px;
+  box-shadow: 0 4px 15px rgba(255,61,113,0.6); animation: pulse 1s infinite;
+}
+
+/* 6. أزرار التفاعل والدردشة (على اليسار، لا تتداخل) */
+.uno-floating-actions {
+  position: fixed;
+  left: 16px;
+  bottom: 160px; /* فوق الأوراق */
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.uno-action-fab {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--grad); border: 2px solid rgba(255,255,255,0.3); color: #fff;
+  display: grid; place-items: center; font-size: 20px; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5); transition: 0.2s;
+  padding: 0;
+}
+.uno-action-fab:hover { transform: scale(1.1); }
+
+/* شريط الدور */
+.uno-turn-banner { position: absolute; bottom: 180px; margin: 0 auto; }
+
+/* ============================================================
+   🚨 إصلاح حرج: رفع المودال فوق شاشة اللعبة
+   ============================================================ */
+.modal-wrap {
+  z-index: 300 !important;
+}
+.toast {
+  z-index: 400 !important;
+}
+
+/* ضمان بقاء أزرار اللعبة قابلة للنقر ومرئية */
+.uno-game .uno-top-menu-btn {
+  position: fixed !important;
+  top: 16px !important;
+  left: auto !important;
+  right: 16px !important;
+  z-index: 200 !important;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.5);
+  border: 1.5px solid rgba(255,255,255,.2);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: .2s;
+  padding: 0;
+  font-family: inherit;
+}
+.uno-game .uno-top-menu-btn:hover {
+  background: rgba(0,0,0,.8);
+  transform: scale(1.05);
+}
+
+.uno-game .uno-floating-actions {
+  position: fixed !important;
+  left: 16px !important;
+  right: auto !important;
+  bottom: 160px !important;
+  z-index: 200 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.uno-game .uno-action-fab {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--grad);
+  border: 2px solid rgba(255,255,255,.3);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  transition: .2s;
+  padding: 0;
+  font-family: inherit;
+}
+.uno-game .uno-action-fab:hover {
+  transform: scale(1.1);
+}
+
+/* ============================================================
+   🃏 الأوراق — ترتيب أفقي (Fan Layout)
+   ============================================================ */
+
+/* ═══ يد اللاعب — تراكم أفقي مع ميل بسيط ═══ */
+.uno-hand {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+  padding: 6px 20px 14px !important;
+  min-height: 140px !important;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  gap: 0;
+}
+.uno-hand::-webkit-scrollbar { display: none; }
+
+.uno-card-btn {
+  flex: 0 0 auto !important;
+  width: 68px !important;
+  position: relative !important;
+  margin-inline-start: -38px !important;
+  margin-bottom: 0 !important;
+  bottom: auto !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: transform .2s cubic-bezier(.34,1.4,.64,1), filter .2s;
+  transform: translateY(calc(var(--i, 0) * -3px));
+  z-index: calc(var(--i, 0) + 1);
+}
+.uno-card-btn:first-child {
+  margin-inline-start: 0 !important;
+}
+.uno-card-btn.playable:hover {
+  transform: translateY(calc(var(--i, 0) * -3px - 15px)) scale(1.08);
+  z-index: 500 !important;
+}
+.uno-card-btn.playable:active {
+  transform: translateY(calc(var(--i, 0) * -3px - 8px)) scale(1.02);
+}
+.uno-card-btn.not-playable {
+  opacity: .5;
+  filter: grayscale(.6) brightness(.75);
+  cursor: not-allowed;
+}
+.uno-card-btn.not-playable:hover {
+  transform: translateY(calc(var(--i, 0) * -3px));
+}
+
+/* ═══ أوراق الخصم — تراكم أفقي خلفي ═══ */
+.uno-opp-cards-row {
+  position: relative !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  min-height: 62px !important;
+  height: auto !important;
+  width: auto !important;
+  padding: 0 8px;
+}
+
+.uno-opp-card {
+  position: relative !important;
+  flex: 0 0 auto !important;
+  width: 44px !important;
+  height: 62px !important;
+  border-radius: 6px !important;
+  border: 1.5px solid rgba(255,255,255,0.3) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
+  background: linear-gradient(135deg, #2a1e5c, #1a1540);
+  margin-inline-start: -22px !important;
+  top: auto !important;
+  left: auto !important;
+  bottom: auto !important;
+  right: auto !important;
+  transform: none !important;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: #fff;
+  font-size: 12px;
+  overflow: hidden;
+}
+.uno-opp-card:first-child {
+  margin-inline-start: 0 !important;
+}
+
+.uno-opp-card.face-down::after {
+  content: "U" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%,-50%) rotate(-15deg) !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  color: rgba(255,255,255,0.4) !important;
+  font-style: italic !important;
+  text-shadow: none !important;
+}
+
+.uno-opp-card.show {
+  background: #1a1a2e !important;
+}
+.uno-opp-card.show > span {
+  position: absolute !important;
+  top: 4px !important;
+  left: 4px !important;
+  right: auto !important;
+  bottom: auto !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  color: #fff !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,.85) !important;
+  z-index: 2 !important;
+  line-height: 1;
+}
+
+/* ============================================================
+   👤 رأس اللاعب (أنا) — فوق يده
+   ============================================================ */
+.uno-my-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 6px;
+  margin-bottom: 4px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.15));
+  border-radius: 14px 14px 0 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.uno-my-avatar {
+  position: relative;
+  flex-shrink: 0;
+  transition: transform .25s;
+}
+.uno-my-avatar .av {
+  border: 2px solid rgba(255,255,255,0.35);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.55);
+  width: 44px;
+  height: 44px;
+}
+.uno-my-avatar.active .av {
+  border-color: #00d2ff;
+  box-shadow:
+    0 0 0 2px #00d2ff,
+    0 0 22px rgba(0,210,255,0.7),
+    0 2px 8px rgba(0,0,0,0.55);
+  animation: unoAvatarPulse 1.5s infinite;
+}
+@keyframes unoAvatarPulse {
+  0%, 100% { box-shadow: 0 0 0 2px #00d2ff, 0 0 22px rgba(0,210,255,0.7), 0 2px 8px rgba(0,0,0,0.55); }
+  50%      { box-shadow: 0 0 0 2px #00d2ff, 0 0 34px rgba(0,210,255,0.95), 0 2px 8px rgba(0,0,0,0.55); }
+}
+
+/* شارة UNO المفعّلة */
+.uno-my-avatar .uno-badge-uno {
+  position: absolute;
+  top: -6px;
+  inset-inline-start: -6px;
+  padding: 2px 7px;
+  background: linear-gradient(135deg, #ff3d71, #f5b301);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  border-radius: 7px;
+  border: 1.5px solid #0a1a0f;
+  animation: unoUnoPulse 1s infinite;
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* شارة ! (لديك ورقة واحدة ولم تنادي UNO) */
+.uno-my-avatar .uno-badge-uno-pulse {
+  position: absolute;
+  top: -6px;
+  inset-inline-start: -6px;
+  width: 20px;
+  height: 20px;
+  background: #ff3d71;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #0a1a0f;
+  animation: unoBadgePulse 0.8s infinite;
+  z-index: 5;
+}
+@keyframes unoBadgePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,61,113,0.7); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(255,61,113,0); }
+}
+
+.uno-my-info {
+  flex: 1;
+  min-width: 0;
+}
+.uno-my-name {
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  line-height: 1.2;
+}
+.uno-my-count {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 700;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.uno-my-turn-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: rgba(0,210,255,0.2);
+  border: 1px solid rgba(0,210,255,0.5);
+  color: #5fe3ff;
+  font-size: 9px;
+  font-weight: 900;
+  animation: unoTurnPulse 1s infinite;
+}
+@keyframes unoTurnPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+/* زر UNO داخل الرأس */
+.uno-my-header .uno-call-btn {
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #ff3d71, #f5b301);
+  border: 2px solid #fff;
+  border-radius: 20px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255,61,113,0.6);
+  animation: unoCallPulse 1s infinite;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@keyframes unoCallPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+/* تعديل uno-hand-wrap لاستيعاب الرأس */
+.uno-hand-wrap {
+  padding: 0 12px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  background: linear-gradient(0deg, rgba(0,0,0,0.7), rgba(0,0,0,0.3) 40%, transparent) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+/* إزالة الهامش السفلي القديم من الرأس */
+.uno-hand-wrap > .uno-my-header {
+  margin-top: 6px;
+}
+
+/* ============================================================
+   🃏 إصلاح ترتيب الأوراق (مستوى واحد + تراكم متزن)
+   ============================================================ */
+.uno-hand {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+  padding: 10px 20px 20px !important;
+  min-height: 130px !important;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  gap: 0;
+}
+.uno-hand::-webkit-scrollbar { display: none; }
+
+.uno-card-btn {
+  flex: 0 0 auto !important;
+  width: 68px !important;
+  position: relative !important;
+  /* ★ استخدام متغير --overlap المحسوب في JS */
+  margin-inline-start: calc(-1 * var(--overlap, 30px)) !important;
+  margin-bottom: 0 !important;
+  
+  /* ★ إزالة translateY ليكونوا في مستوى واحد */
+  transform: none !important; 
+  transition: transform .2s cubic-bezier(.34,1.4,.64,1);
+  z-index: calc(var(--i, 0) + 1);
+  
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.uno-card-btn:first-child {
+  margin-inline-start: 0 !important;
+}
+
+.uno-card-btn.playable:hover {
+  transform: translateY(-15px) scale(1.05) !important;
+  z-index: 500 !important;
+}
+.uno-card-btn.playable:active {
+  transform: translateY(-5px) scale(1.02) !important;
+}
+
+.uno-card-btn.not-playable {
+  opacity: .5;
+  filter: grayscale(.6) brightness(.75);
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   👤 صندوق اللاعب (أنا) + أزرار الإجراءات
+   ============================================================ */
+.uno-my-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.2));
+  border-radius: 16px 16px 0 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+.uno-my-avatar {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform .2s;
+}
+.uno-my-avatar:hover { transform: scale(1.05); }
+.uno-my-avatar .av {
+  border: 2px solid rgba(255,255,255,0.35);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.55);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+.uno-my-avatar.active .av {
+  border-color: #00d2ff;
+  box-shadow: 0 0 0 2px #00d2ff, 0 0 22px rgba(0,210,255,0.7);
+  animation: unoAvatarPulse 1.5s infinite;
+}
+
+/* أزرار الإجراءات داخل الهيدر */
+.uno-header-actions {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+  margin-inline-end: 8px;
+}
+
+.uno-header-action-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: .2s;
+  padding: 0;
+  font-family: inherit;
+}
+.uno-header-action-btn:hover {
+  background: rgba(255,255,255,0.15);
+  transform: scale(1.05);
+}
+.uno-header-action-btn:active {
+  transform: scale(0.95);
+}
+
+/* ============================================================
+   💬 صندوق الدردشة (ملتصق بالأسفل + شفافية عالية)
+   ============================================================ */
+.uno-chat-modal {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: 55vh !important;
+  border-radius: 20px 20px 0 0 !important;
+  background: rgba(10, 15, 25, 0.78) !important; /* شفافية عالية */
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-top: 1px solid rgba(255,255,255,0.15) !important;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.5) !important;
+  z-index: 250 !important;
+  display: flex;
+  flex-direction: column;
+  animation: chatSlideUp 0.3s cubic-bezier(.34,1.2,.64,1) !important;
+}
+
+@keyframes chatSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.uno-chat-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.uno-chat-messages {
+  padding: 12px 16px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uno-chat-input-row {
+  padding: 10px 16px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  gap: 8px;
+  background: transparent;
+}
+
+.uno-chat-input-row input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.uno-chat-input-row input:focus {
+  border-color: var(--brand-2);
+  background: rgba(0,210,255,0.1);
+}
+
+/* ============================================================
+   🚨 ضمان قابلية النقر لكل الأزرار
+   ============================================================ */
+
+/* كل الحاويات الشفافة تسمح بمرور النقر للأزرار */
+.uno-hand-wrap {
+  pointer-events: none;
+}
+.uno-hand-wrap > * {
+  pointer-events: auto;
+}
+
+/* رأس اللاعب مع أزراره */
+.uno-my-header {
+  pointer-events: auto !important;
+  z-index: 100;
+  position: relative;
+}
+
+.uno-my-avatar {
+  pointer-events: auto !important;
+  cursor: pointer;
+  z-index: 101;
+  position: relative;
+}
+
+.uno-header-action-btn {
+  pointer-events: auto !important;
+  cursor: pointer;
+  z-index: 250;
+  position: relative;
+}
+
+/* الأزرار العائمة (القديمة) — نتأكد أنها قابلة للنقر إن كانت موجودة */
+.uno-floating-actions {
+  pointer-events: auto !important;
+  z-index: 250;
+}
+
+.uno-action-fab {
+  pointer-events: auto !important;
+  cursor: pointer;
+  z-index: 251;
+  position: relative;
+}
+
+/* زر UNO */
+.uno-call-btn {
+  pointer-events: auto !important;
+  z-index: 260;
+  position: relative;
+}
+
+/* البطاقات */
+.uno-card-btn {
+  pointer-events: auto !important;
+}
+
+/* زر القائمة العلوي */
+.uno-top-menu-btn {
+  pointer-events: auto !important;
+  z-index: 500 !important;
+}
+
+/* زر السحب */
+.uno-deck-pile {
+  pointer-events: auto !important;
+  z-index: 100;
+}
+
+/* ═══ تأكيد ترتيب الطبقات ═══ */
+#gameOverlay { z-index: 150 !important; }
+.modal-wrap   { z-index: 300 !important; }
+.toast        { z-index: 400 !important; }
+.uno-chat-modal { z-index: 350 !important; }
+
+/* ═══ منع أي عنصر من تغطية الأزرار ═══ */
+.uno-game,
+.uno-table,
+.uno-piles-center,
+.uno-turn-banner {
+  pointer-events: none;
+}
+.uno-game > .uno-top-menu-btn,
+.uno-game .uno-my-header,
+.uno-game .uno-hand,
+.uno-game .uno-table button {
+  pointer-events: auto;
+}
+
+/* ============================================================
+   ✨ حركات UNO — إيموجي طائر + لعب ورقة سريع
+   ============================================================ */
+
+/* ═══ الإيموجي الطائر فوق الصورة ═══ */
+.uno-floating-reaction {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  font-size: 34px;
+  pointer-events: none;
+  z-index: 500;
+  animation: unoReactionFloat 1.8s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7));
+  will-change: transform, opacity;
+  text-shadow: 0 0 12px rgba(255,255,255,0.3);
+}
+
+@keyframes unoReactionFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.3);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -8px) scale(1.3);
+  }
+  30% {
+    transform: translate(-50%, -14px) scale(1.05);
+  }
+  55% {
+    transform: translate(-50%, -22px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -90px) scale(1.4);
+  }
+}
+
+/* ═══ تسريع حركة البطاقة عند اللعب ═══ */
+.uno-discard-pile .uno-card.discard {
+  animation: unoDiscardIn 0.28s cubic-bezier(0.34, 1.4, 0.64, 1);
+  will-change: transform, opacity;
+}
+
+@keyframes unoDiscardIn {
+  0% {
+    transform: scale(0.5) rotate(-25deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08) rotate(3deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+/* ═══ لمسة سريعة عند الضغط على ورقة ═══ */
+.uno-card-btn.playable:active {
+  transform: translateY(calc(var(--i, 0) * -3px - 5px)) scale(1.04) !important;
+  transition-duration: 0.08s !important;
+}
+
+/* ═══ منع وميض عند إعادة الرسم ═══ */
+.uno-hand,
+.uno-discard-pile,
+.uno-seat-avatar-wrap {
+  will-change: contents;
+}
+
+/* ═══ حركة سلسة للأوراق عند التغيير ═══ */
+.uno-card-btn {
+  transition: 
+    transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1),
+    margin-inline-start 0.2s ease-out,
+    opacity 0.15s ease-out !important;
+}
+
+/* ═══ الكارت المسحوب حديثاً — نبضة خفيفة ═══ */
+.uno-card-btn.draw-just-now {
+  animation: unoDrawPulse 0.5s ease-out;
+}
+@keyframes unoDrawPulse {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-8px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* ═══ تحسين شريط الوقت ليحدّث بسلاسة ═══ */
+.uno-seat-timer-fill,
+.uno-my-timer-fill {
+  transition: width 0.15s linear, background 0.3s !important;
+  will-change: width;
+}

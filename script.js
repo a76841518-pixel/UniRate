@@ -1714,6 +1714,10 @@ unoSettingsEditing: false,
 unoSettingsLoaded: false,
 unoHasCustomSettings: false,
 _unoSettingsBackup: null,
+/* ✅ أضف هذه الثلاثة الجديدة: */
+_unoPlaying: false,          // ← جديد: منع النقر المزدوج
+_lastReactionAt: 0,          // ← جديد: تتبع آخر تفاعل
+_unoResizeTimer: null,       // ← جديد: debounce للـ resize
 unoSettings: {
   maxPlayers: 2,
   initialHand: 7,
@@ -3097,22 +3101,14 @@ await setDoc(userRef, {
 async function handleLogout(){
   if(!confirm('هل تريد تسجيل الخروج؟')) return;
 
-  try {
-    await signOut(auth);
-  } catch(e){
-    console.warn('logout:', e);
-  }
+  stopActiveGamesChecker();   /* ← أضف */
 
-  /* ★ مسح الجلسة — يمنع أي بقايا محلية */
-  try {
-    sessionStorage.clear();
-  } catch(e){}
+  try { await signOut(auth); }
+  catch(e){ console.warn('logout:', e); }
 
-  /* ★ إعادة تحميل الصفحة كصفحة نظيفة تماماً
-     — يمسح state.page وكل المتغيرات، ويفتح دائماً على شاشة الدخول */
-  setTimeout(() => {
-    window.location.reload();
-  }, 80);
+  try { sessionStorage.clear(); } catch(e){}
+
+  setTimeout(() => window.location.reload(), 80);
 }
 
 /* ============ Auth State ============ */
@@ -3200,7 +3196,10 @@ setTimeout(() => startPresenceHeartbeat(), 2000);
     // ★ حمل الموسم
     setTimeout(loadSeasonInfo, 500);
     // افحص وجود مباراة نشطة
-    setTimeout(checkActiveMatch, 2000);
+    /* بدلاً من: setTimeout(checkActiveMatch, 2000); */
+setTimeout(() => {
+  startActiveGamesChecker();
+}, 2000);
     // ★ افحص المكافأة اليومية وأظهرها
     setTimeout(async ()=>{
       await checkDailyReward();
@@ -6319,43 +6318,132 @@ async function joinRoom(roomId){
   } catch(e){ toast('تعذّر الانضمام'); }
 }
 
-async function checkActiveMatch(){
+/* ══════════════════════════════════════════════
+   🔄 فحص المباريات النشطة + شريط العودة للعبة
+   ══════════════════════════════════════════════ */
+let _activeGamesInterval = null;
+
+async function checkActiveGames(){
+  if(!state.user?.uid) return;
+
+  const banner = document.getElementById('resumeBanner');
+  const gameOverlay = document.getElementById('gameOverlay');
+
+  /* ★ إذا كانت اللعبة معروضة الآن (وليس مجرد مفتوحة في الخلفية) — أخفِ البانر */
+  const inGameView = gameOverlay && !gameOverlay.classList.contains('hidden');
+  if(inGameView && (state.activeUnoMatch || state.activeMatch)){
+    banner?.classList.add('hidden');
+    return;
+  }
+
+  if(!banner) return;
+  const textEl   = document.getElementById('resumeBannerText');
+  const resumeEl = document.getElementById('resumeMatchBtn');
+  const leaveEl  = document.getElementById('leaveMatchBtn');
+  if(!textEl || !resumeEl || !leaveEl) return;
+
   try {
     const snap = await getDocs(query(
-      collection(db,'rooms'),
-      where('players','array-contains',state.user.uid)
+      collection(db, 'rooms'),
+      where('players', 'array-contains', state.user.uid)
     ));
-    const active = snap.docs.find(d=>{
-      const data = d.data();
-      return data.gameId === 'g3' && (data.status === 'waiting' || data.status === 'playing');
-    });
-    if(!active){
-      document.getElementById('resumeBanner')?.classList.add('hidden');
+
+    const activeGames = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(d => {
+        if(d.status !== 'waiting' && d.status !== 'playing') return false;
+        if(d.gameId === 'uno' && d.unoState?.finished) return false;
+        return d.gameId === 'g3' || d.gameId === 'uno';
+      });
+
+    if(!activeGames.length){
+      banner.classList.add('hidden');
       return;
     }
 
-    const data = active.data();
-    const isHost = data.hostId === state.user.uid;
+    const game = activeGames.sort((a, b) =>
+      (b.startedAt?.seconds || b.createdAt?.seconds || 0) -
+      (a.startedAt?.seconds || a.createdAt?.seconds || 0)
+    )[0];
 
-    if(data.status === 'playing'){
-      subscribeToMatch(active.id);
-      return;
-    }
+    const gameLabel   = game.gameId === 'uno' ? '🃏 أونو' : '❓ Quiz Clash';
+    const statusLabel = game.status === 'playing' ? 'جارية' : 'بانتظار لاعبين';
+    const playerCount = (game.players || []).length;
+    const maxPlayers  = game.maxPlayers || 2;
 
-    const banner = document.getElementById('resumeBanner');
-    const text = document.getElementById('resumeBannerText');
-    if(banner && text){
-      text.textContent = `Quiz Clash · ${(data.players||[]).length}/2 لاعب`;
-      banner.classList.remove('hidden');
-      document.getElementById('resumeMatchBtn').onclick = ()=> startQuizMatch(active.id, isHost);
-      document.getElementById('leaveMatchBtn').onclick = async ()=>{
-        try { await updateDoc(active.ref, { players: arrayRemove(state.user.uid) }); } catch(e){}
+    textEl.textContent = `${gameLabel} · ${statusLabel} · ${playerCount}/${maxPlayers}`;
+    banner.classList.remove('hidden');
+
+    resumeEl.onclick = () => {
+      banner.classList.add('hidden');
+      if(game.gameId === 'uno'){
+        /* ★ فعّل الـ overlay ثم اشترك */
+        const ov = document.getElementById('gameOverlay');
+        if(ov) ov.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        subscribeToUnoMatch(game.id);
+      } else if(game.gameId === 'g3'){
+        startQuizMatch(game.id, game.hostId === state.user.uid);
+      }
+    };
+
+    leaveEl.onclick = async () => {
+      if(!confirm('مغادرة المباراة؟')) return;
+      try {
+        if(game.gameId === 'uno'){
+          await updateDoc(doc(db, 'rooms', game.id), {
+            status: 'finished',
+            'unoState.finished': true,
+            'unoState.finishReason': 'left',
+          });
+        } else {
+          await updateDoc(doc(db, 'rooms', game.id), {
+            players: arrayRemove(state.user.uid),
+            status: 'waiting',
+          });
+        }
         banner.classList.add('hidden');
         toast('غادرت المباراة');
-      };
-    }
-  } catch(e){ console.error(e); }
+        setTimeout(checkActiveGames, 500);
+      } catch(e){
+        console.error(e);
+        toast('فشل المغادرة');
+      }
+    };
+  } catch(e){
+    console.warn('checkActiveGames:', e);
+  }
 }
+
+/* بدء الفحص الدوري */
+function startActiveGamesChecker(){
+  stopActiveGamesChecker();
+  /* فحص أولي بعد ثانيتين */
+  setTimeout(checkActiveGames, 2000);
+  /* كل 15 ثانية */
+  _activeGamesInterval = setInterval(checkActiveGames, 15000);
+}
+
+function stopActiveGamesChecker(){
+  if(_activeGamesInterval){
+    clearInterval(_activeGamesInterval);
+    _activeGamesInterval = null;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   🌐 استئناف تلقائي عند إعادة الاتصال / العودة للصفحة
+   ══════════════════════════════════════════════ */
+window.addEventListener('online', () => {
+  console.log('🌐 عاد الاتصال — فحص المباريات');
+  setTimeout(checkActiveGames, 500);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && state.user?.uid){
+    setTimeout(checkActiveGames, 800);
+  }
+});
 
 async function leaveRoom(roomId){
   try {
@@ -11854,17 +11942,18 @@ ${cust.miniShowBio && u.bio ? `
   `, 'mini-profile-modal');
 
   /* ═══ النقر على البطاقة → الملف الكامل ═══ */
-  setTimeout(() => {
-    const card = document.getElementById('miniProfileCard');
-    if(card){
-      card.addEventListener('click', (e) => {
-        if(e.target.closest('button')) return;
-        closeModal();
-        state.profileTab = 'posts';
-        go('userprofile', { viewingUid: uid });
-      });
-    }
-  }, 30);
+setTimeout(() => {
+  const card = document.getElementById('miniProfileCard');
+  if(card){
+    card.addEventListener('click', (e) => {
+      if(e.target.closest('button')) return;
+      closeModal();
+      state.profileTab = 'posts';
+      go('userprofile', { viewingUid: uid });
+      /* ★ _doRender سيتكفل بإخفاء الـ overlay */
+    });
+  }
+}, 30);
 
   loadMiniProfileAsyncStats(uid);
 }
@@ -18780,6 +18869,15 @@ function scheduleRender(delay = 150){
 function _doRender(){
   const isMain = MAIN_PAGES.includes(state.page);
 
+  /* ★★★ إخفاء شاشة اللعبة عند التنقل لصفحة أخرى ★★★ */
+  if(state.page !== 'game'){
+    const gameOverlay = document.getElementById('gameOverlay');
+    if(gameOverlay && !gameOverlay.classList.contains('hidden')){
+      gameOverlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
+
   const topbar    = document.querySelector('.topbar');
   const bottombar = document.getElementById('bottombar');
   const appEl     = document.getElementById('app');
@@ -23584,31 +23682,33 @@ if(isHost && !room.unoState){
 
     const modeCfg = UNO.MODES[room.unoMode || 'classic'] || UNO.MODES.classic;
 
-    const unoState = {
-      deck,
-      discard: [topCard],
-      hands,
-      playerOrder,
-      currentTurn: 0,
-      direction: 1,
-      currentColor: topCard.color,
-      activePenalty: 0,
-      penaltyType: null,
-      lastPlayed: topCard,
-      turnStartedAt: Date.now(),
-      turnTime: settings.turnTime || modeCfg.turnTime || 30,
-      mode: room.unoMode || 'classic',
-      winnerId: null,
-      finished: false,
-      unoCalled: {},
-      turnCount: 0,
-      chaosLog: [],
-      nextChaosAt: modeCfg.chaos ? 5 : 0,
-      teams: (settings.teamMode === 'teams' && playerOrder.length >= 4)
-  ? buildUnoTeams(playerOrder)
-  : null,
-      round: 1,
-    };
+const unoState = {
+  deck,
+  discard: [topCard],
+  hands,
+  playerOrder,
+  currentTurn: 0,
+  direction: 1,
+  currentColor: topCard.color,
+  activePenalty: 0,
+  penaltyType: null,
+  lastPlayed: topCard,
+  turnStartedAt: Date.now(),
+  turnTime: settings.turnTime || modeCfg.turnTime || 30,
+  mode: room.unoMode || 'classic',
+  winnerId: null,
+  finished: false,
+  finishReason: null,      /* ★ جديد — 'timeout' | 'empty-hand' */
+  timeoutCounts: {},       /* ★ جديد — { [uid]: count } */
+  unoCalled: {},
+  turnCount: 0,
+  chaosLog: [],
+  nextChaosAt: modeCfg.chaos ? 5 : 0,
+  teams: (settings.teamMode === 'teams' && playerOrder.length >= 4)
+    ? buildUnoTeams(playerOrder)
+    : null,
+  round: 1,
+};
 
     await updateDoc(roomRef, {
       status: 'playing',
@@ -23656,6 +23756,15 @@ function subscribeToUnoMatch(roomId){
     renderUnoGame();
     startUnoTurnTimer(roomId);
 
+  /* ✅ جديد: معالجة التفاعلات الواردة */
+  const lr = data.unoState?.lastReaction;
+  if(lr && lr.at > (state._lastReactionAt || 0)){
+    state._lastReactionAt = lr.at;
+    if(lr.uid !== state.user.uid){
+      showUnoReactionOverAvatar(lr.uid, lr.emoji);
+    }
+  }
+
     if(data.unoState.winnerId && !state._unoWinnerShown){
       state._unoWinnerShown = true;
       setTimeout(() => unoShowResult(roomId), 600);
@@ -23689,6 +23798,34 @@ function subscribeToUnoMatch(roomId){
 }
 
 /* ══════════════════════════════════════════════
+   📐 حساب التراكم الديناميكي للأوراق
+   ══════════════════════════════════════════════ */
+function computeUnoOverlap(cardCount){
+  if(cardCount <= 1) return 0;
+
+  /* عرض الشاشة الفعلي متاح للأوراق */
+  const isMobile = window.innerWidth <= 420;
+  const cardW   = isMobile ? 60 : 68;   /* مطابق لـ CSS */
+  const minVis  = isMobile ? 18 : 22;   /* أقل عرض مرئي مقبول */
+  const containerW = window.innerWidth - 32; /* padding */
+
+  /* إذا كان العدد صغيراً — تراكم خفيف فقط */
+  const fullWidth = cardCount * cardW;
+  if(fullWidth + 20 < containerW){
+    return 24;  /* تراكم جمالي خفيف */
+  }
+
+  /* اضغط الأوراق حتى تتناسب */
+  const available = containerW - cardW;
+  const spacing = available / (cardCount - 1);
+  const overlap = cardW - spacing;
+
+  /* لا تسمح بأقل من الحد الأدنى للرؤية */
+  return Math.max(0, Math.min(cardW - minVis, overlap));
+}
+
+
+/* ══════════════════════════════════════════════
    🖼️ رسم واجهة اللعبة
    ══════════════════════════════════════════════ */
 function renderUnoGame(){
@@ -23718,79 +23855,60 @@ function renderUnoGame(){
     return a.value.localeCompare(b.value);
   });
 
-  const overlap = Math.min(45, Math.max(20, (sortedHand.length - 3) * 5));
   const teams = s.teams || {};
   const myTeam = teams[me];
 
-  /* ★ توزيع المقاعد حسب العدد */
-  const seatPositions = {
-    1: ['top'],
-    2: ['left', 'right'],
-    3: ['top', 'left', 'right'],
-    4: ['top', 'left', 'right', 'bottom'],
-    5: ['top-left', 'top-right', 'left', 'right'],
-  };
-  const positions = seatPositions[others.length] || seatPositions[3];
+  /* ★ حساب التداخل ديناميكياً بناءً على عدد الأوراق (بين 15 و 45 بكسل) */
+  const overlap = computeUnoOverlap(myHand.length);
 
-  /* ★ رسم مقعد لاعب */
-/* ★ رسم مقعد لاعب — التخطيط الجديد */
-const renderOpponentSeat = (uid, pos) => {
-  const u = state.users[uid] || { name:'لاعب' };
-  const isCurrent = currentPlayer === uid;
-  const hand = s.hands[uid] || [];
-  const count = hand.length;
-  const uno = count === 1;
-  const isTeammate = myTeam && teams[uid] === myTeam;
+  const renderOpponentSeat = (uid, pos) => {
+    const u = state.users[uid] || { name:'لاعب' };
+    const isCurrent = currentPlayer === uid;
+    const hand = s.hands[uid] || [];
+    const count = hand.length;
+    const uno = count === 1;
+    const isTeammate = myTeam && teams[uid] === myTeam;
+    const displayCards = hand.slice(0, 6);
 
-  /* عرض حتى 6 أوراق، والباقي في العدّاد */
-  const displayCards = hand.slice(0, 6);
-  const isVertical = ['left', 'right'].includes(pos);
-  const offset = 20; // px لكل ورقة
-
-  return `
-    <div class="uno-seat uno-seat-pos-${pos} ${isCurrent?'active':''} ${isTeammate?'teammate':''}">
-      <div class="uno-seat-cards">
-        ${displayCards.map((card, i) => {
-          const shift = isVertical
-            ? `transform:translateY(${i * offset}px)`
-            : `transform:translateX(${i * offset}px)`;
-          return `
+    return `
+      <div class="uno-seat uno-seat-pos-${pos} ${isCurrent?'active':''} ${isTeammate?'teammate':''}">
+        <div class="uno-opp-cards-row">
+          ${displayCards.map((card, i) => `
             <div class="uno-opp-card ${isTeammate ? `uno-color-${card.color} show` : 'face-down'}"
-                 style="${shift};z-index:${displayCards.length - i}">
+                 style="z-index:${i + 1}">
               ${isTeammate ? `<span>${unoCardDisplay(card)}</span>` : ''}
             </div>
-          `;
-        }).join('')}
-      </div>
-      <div class="uno-seat-info">
-        <div class="uno-seat-timer">
-          <div class="uno-seat-timer-fill"
-               style="width:${isCurrent?timerPct:0}%;background:${isCurrent?timerColor:'transparent'}"></div>
+          `).join('')}
         </div>
-        <div class="uno-seat-avatar-wrap">
-          <div class="uno-seat-avatar">${avatar(u, 36)}</div>
-          <div class="uno-seat-count-badge">${count}</div>
-          ${uno ? '<div class="uno-badge-uno">UNO!</div>' : ''}
-          ${isTeammate ? '<div class="uno-teammate-badge">🤝</div>' : ''}
-        </div>
-        <div class="uno-seat-name">${esc((u.name||'').split(' ')[0])}</div>
-      </div>
-    </div>
-  `;
-};
 
-  const savedChatInput = state._unoChatOpen ? (document.getElementById('unoChatInput')?.value || '') : '';
+        <div class="uno-seat-info">
+          <div class="uno-seat-timer">
+            <div class="uno-seat-timer-fill"
+                 style="width:${isCurrent?timerPct:0}%;background:${isCurrent?timerColor:'transparent'}"></div>
+          </div>
+          <div class="uno-seat-avatar-wrap">
+            <!-- ★ تفعيل فتح الملف الشخصي للخصم -->
+            <div class="uno-seat-avatar" data-view-profile="${uid}">
+              ${avatar(u, 36)}
+            </div>
+            <div class="uno-seat-count-badge">${count}</div>
+            ${uno ? '<div class="uno-badge-uno">UNO!</div>' : ''}
+            ${isTeammate ? '<div class="uno-teammate-badge">🤝</div>' : ''}
+          </div>
+          <div class="uno-seat-name" data-view-profile="${uid}">${esc((u.name||'').split(' ')[0])}</div>
+        </div>
+      </div>
+    `;
+  };
 
   container.innerHTML = `
     <div class="uno-game">
-      <div class="uno-topbar">
-        <button class="uno-menu-btn" data-action="uno-menu" aria-label="القائمة">
-          ${ic('menu','sm')}
-        </button>
-      </div>
+      <button class="uno-top-menu-btn" data-action="uno-menu" aria-label="القائمة">
+        ${ic('menu','sm')}
+      </button>
 
       <div class="uno-table">
-        ${others.map((uid, i) => renderOpponentSeat(uid, positions[i])).join('')}
+        ${others.length > 0 ? renderOpponentSeat(others[0], 'top') : ''}
 
         <div class="uno-piles-center">
           <button class="uno-deck-pile" data-action="uno-draw" ${!isMyTurn || s.finished ? 'disabled' : ''}>
@@ -23810,40 +23928,62 @@ const renderOpponentSeat = (uid, pos) => {
             ${s.activePenalty > 0 ? `<div class="uno-penalty-chip">+${s.activePenalty}</div>` : ''}
           </div>
         </div>
-      </div>
 
-      <div class="uno-turn-banner ${isMyTurn ? 'my-turn' : ''}">
-        ${isMyTurn ? `<span class="uno-turn-pulse"></span><span>🎯 دورك الآن</span>` : 
-          s.finished ? '' : `
-          <span class="uno-turn-dots"><span></span><span></span><span></span></span>
-          <span>بانتظار ${esc((state.users[currentPlayer]?.name||'لاعب').split(' ')[0])}</span>`}
+        <div class="uno-turn-banner ${isMyTurn ? 'my-turn' : ''}">
+          ${isMyTurn ? `<span class="uno-turn-pulse"></span><span>🎯 دورك الآن</span>` : 
+            s.finished ? '' : `
+            <span class="uno-turn-dots"><span></span><span></span><span></span></span>
+            <span>بانتظار ${esc((state.users[currentPlayer]?.name||'لاعب').split(' ')[0])}</span>`}
+        </div>
       </div>
 
       <div class="uno-hand-wrap">
-        ${myHand.length === 1 && !s.unoCalled[me] && !s.finished ? `
-          <button class="uno-call-btn" data-action="uno-call">🔔 UNO!</button>
-        ` : ''}
-        <div class="uno-hand" style="--overlap:${overlap}px">
+        <!-- ★ صندوق اللاعب مع الأزرار -->
+        <div class="uno-my-header">
+          <!-- الصورة (تفتح الملف) -->
+          <div class="uno-my-avatar ${isMyTurn ? 'active' : ''}" data-view-profile="${state.user.uid}">
+            ${avatar(state.profile, 44)}
+            ${myHand.length === 1 && s.unoCalled[me] ? '<div class="uno-badge-uno">UNO!</div>' : ''}
+            ${myHand.length === 1 && !s.unoCalled[me] ? '<div class="uno-badge-uno-pulse">!</div>' : ''}
+          </div>
+          
+          <!-- الاسم وعدد الأوراق -->
+          <div class="uno-my-info">
+            <div class="uno-my-name">${esc(state.profile.name)}</div>
+            <div class="uno-my-count">
+              ${myHand.length} ${myHand.length === 1 ? 'ورقة' : 'أوراق'}
+              ${isMyTurn ? '<span class="uno-my-turn-dot">🎯 دورك</span>' : ''}
+            </div>
+          </div>
+
+          <!-- أزرار التفاعل والدردشة -->
+          <div class="uno-header-actions">
+            <button type="button" class="uno-header-action-btn" data-action="uno-react-toggle" aria-label="تفاعل">💪</button>
+            <button type="button" class="uno-header-action-btn" data-action="uno-chat-toggle" aria-label="دردشة">
+              ${ic('message','sm')}
+            </button>
+          </div>
+
+          <!-- زر UNO (يظهر عند الحاجة) -->
+          ${myHand.length === 1 && !s.unoCalled[me] && !s.finished ? `
+            <button type="button" class="uno-call-btn" data-action="uno-call">🔔 UNO!</button>
+          ` : ''}
+        </div>
+
+        <!-- أوراقي -->
+        <div class="uno-hand" style="--overlap: ${overlap}px">
           ${sortedHand.map((card, i) => {
             const playable = isMyTurn && unoCanPlay(card, topCard, currentColor, s.activePenalty, modeCfg);
             return `
-              <button class="uno-card-btn ${playable?'playable':'not-playable'}"
-                      data-uno-card="${card.id}" style="--z:${i}"
+              <button type="button" class="uno-card-btn ${playable?'playable':'not-playable'}"
+                      data-uno-card="${card.id}"
+                      style="--i:${i}"
                       ${playable && !s.finished ? '' : 'disabled'}>
                 ${renderUnoCard(card, { playable })}
               </button>
             `;
           }).join('')}
         </div>
-      </div>
-
-      <div class="uno-bottom-actions">
-        <button class="uno-fab-btn uno-chat-fab" data-action="uno-chat-toggle">
-          ${ic('message','sm')}
-        </button>
-        <button class="uno-fab-btn uno-react-fab" data-action="uno-react-toggle">
-          💪
-        </button>
       </div>
 
       ${state._unoColorPickerOpen ? renderUnoColorPicker() : ''}
@@ -23853,7 +23993,7 @@ const renderOpponentSeat = (uid, pos) => {
 
   if(state._unoChatOpen){
     const inp = document.getElementById('unoChatInput');
-    if(inp) inp.value = savedChatInput;
+    if(inp) inp.value = state._unoChatSavedInput || '';
     const el = document.getElementById('unoChatMessages');
     if(el) el.scrollTop = el.scrollHeight;
   }
@@ -23936,15 +24076,20 @@ function unoCardDisplay(card){
 /* ══════════════════════════════════════════════
    🎯 لعب ورقة
    ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   ⚡ لعب ورقة — Optimistic Update (فوري)
+   ══════════════════════════════════════════════ */
 async function unoPlayCard(cardId, chosenColor = null){
+  if(state._unoPlaying) return; /* منع النقر المزدوج */
+
   const m = state.activeUnoMatch;
   if(!m || !m.unoState) return;
   const s = m.unoState;
   const me = state.user.uid;
   const modeCfg = UNO.MODES[s.mode] || UNO.MODES.classic;
 
-  /* ليس دوري؟ */
   if(s.playerOrder[s.currentTurn] !== me) return toast('ليس دورك');
+  if(s.finished) return;
 
   const myHand = s.hands[me] || [];
   const card = myHand.find(c => c.id === cardId);
@@ -23955,7 +24100,6 @@ async function unoPlayCard(cardId, chosenColor = null){
     return toast('لا يمكنك لعب هذه الورقة');
   }
 
-  /* بري يحتاج اختيار لون */
   if(card.type === 'wild' && !chosenColor){
     state._unoPendingWild = cardId;
     state._unoColorPickerOpen = true;
@@ -23963,185 +24107,173 @@ async function unoPlayCard(cardId, chosenColor = null){
     return;
   }
 
+  state._unoPlaying = true;
+
+  /* ═══ 1) احسب الحالة الجديدة محلياً (لا انتظار) ═══ */
+  const newUnoState = unoComputePlay(s, card, me, chosenColor, modeCfg);
+
+  /* ═══ 2) حدّث فوراً (الحركة تحدث الآن) ═══ */
+  m.unoState = newUnoState;
+  state._unoColorPickerOpen = false;
+  state._unoPendingWild = null;
+  renderUnoGame();
+
+  /* ═══ 3) اكتب للخادم في الخلفية ═══ */
   try {
-    const roomRef = doc(db, 'rooms', m.roomId);
-
-    await runTransaction(db, async tx => {
-      const snap = await tx.get(roomRef);
-      if(!snap.exists()) throw new Error('room deleted');
-      const data = snap.data();
-      const st = data.unoState;
-      if(!st || st.finished) throw new Error('game finished');
-      if(st.playerOrder[st.currentTurn] !== me) throw new Error('not your turn');
-
-      const hand = [...(st.hands[me] || [])];
-      const idx = hand.findIndex(c => c.id === cardId);
-      if(idx < 0) throw new Error('card not in hand');
-      const played = hand.splice(idx, 1)[0];
-
-      const newDiscard = [...st.discard, played];
-      const newColor = played.type === 'wild' ? chosenColor : played.color;
-      let newPenalty = st.activePenalty;
-      let newDirection = st.direction;
-      let skipNext = false;
-      let drawExtra = 0;
-      let swapHandsWith = null;
-      let everyoneDraw = 0;
-      let rotateAllHands = false;
-
-      /* تطبيق تأثير الورقة */
-      const v = played.value;
-
-      if(v === 'skip'){
-        skipNext = true;
-      } else if(v === 'reverse'){
-        newDirection = st.direction * -1;
-        if(st.playerOrder.length === 2) skipNext = true;
-      } else if(v === 'draw2'){
-        if(modeCfg.stacking && st.activePenalty > 0){
-          newPenalty = st.activePenalty + 2;
-        } else {
-          newPenalty = 2;
-        }
-      } else if(v === 'wild4'){
-        if(modeCfg.stacking && st.activePenalty > 0 && st.penaltyType === 'wild4'){
-          newPenalty = st.activePenalty + 4;
-        } else {
-          newPenalty = 4;
-        }
-      } else if(modeCfg.sevenzero){
-        if(v === '7'){
-          const partnerIdx = (st.currentTurn + 2) % st.playerOrder.length;
-          swapHandsWith = st.playerOrder[partnerIdx];
-        } else if(v === '0'){
-          rotateAllHands = true;
-        }
-      }
-
-      /* تحديث الأيدي */
-      const newHands = { ...st.hands, [me]: hand };
-
-      if(swapHandsWith){
-        const otherHand = [...(newHands[swapHandsWith] || [])];
-        newHands[swapHandsWith] = hand;
-        newHands[me] = otherHand;
-      }
-
-      if(rotateAllHands){
-        const allHands = st.playerOrder.map(uid => [...(newHands[uid] || [])]);
-        const rotated = allHands.map((_, i) => allHands[(i - 1 + allHands.length) % allHands.length]);
-        st.playerOrder.forEach((uid, i) => { newHands[uid] = rotated[i]; });
-      }
-
-      /* حساب اللاعب التالي */
-      let nextTurn = (st.currentTurn + newDirection + st.playerOrder.length) % st.playerOrder.length;
-      if(skipNext){
-        nextTurn = (nextTurn + newDirection + st.playerOrder.length) % st.playerOrder.length;
-      }
-
-      /* فحص الفوز */
-      const newDeck = [...st.deck];
-      let winnerId = null;
-      let finished = false;
-      const playerAfter = st.playerOrder[st.currentTurn];
-
-if(newHands[playerAfter].length === 0){
-  winnerId = playerAfter;
-  finished = true;
-  /* الفريق يفوز بالكامل — يُعرض في شاشة النتيجة */
-}
-
-      /* UNO تلقائي إذا لم ينادي */
-      const unoState = { ...st.unoCalled };
-
-      /* سحب عقوبة إذا كان نشطاً ولم يُكدَّس */
-      if(newPenalty > 0 && !finished){
-        const target = st.playerOrder[nextTurn];
-        const targetHand = [...(newHands[target] || [])];
-        const drawCount = newPenalty;
-
-        for(let i = 0; i < drawCount; i++){
-          if(newDeck.length === 0){
-            /* أعد تدوير discard */
-            const reshuffled = st.discard.slice(0, -1);
-            newDeck.push(...unoShuffle(reshuffled));
-          }
-          if(newDeck.length > 0) targetHand.push(newDeck.shift());
-        }
-
-        newHands[target] = targetHand;
-        newPenalty = 0;
-        /* تجاوز اللاعب المسحوب عليه */
-        nextTurn = (nextTurn + newDirection + st.playerOrder.length) % st.playerOrder.length;
-      }
-
-      /* حدث فوضى */
-      let chaosLog = [...(st.chaosLog || [])];
-      let nextChaosAt = st.nextChaosAt || 0;
-      if(modeCfg.chaos && st.turnCount + 1 >= nextChaosAt && !finished){
-        const chaos = UNO.CHAOS_EVENTS[Math.floor(Math.random() * UNO.CHAOS_EVENTS.length)];
-
-        /* تطبيق الحدث */
-        if(chaos.id === 'draw_one'){
-          st.playerOrder.forEach(uid => {
-            if(newDeck.length > 0) newHands[uid] = [...(newHands[uid] || []), newDeck.shift()];
-          });
-        } else if(chaos.id === 'wild_frenzy'){
-          st.playerOrder.forEach(uid => {
-            newHands[uid] = [...(newHands[uid] || []), { id:`chaos_w${Date.now()}_${uid}`, color:'wild', value:'wild', type:'wild' }];
-          });
-        } else if(chaos.id === 'swap_left'){
-          const prev = (st.currentTurn - 1 + st.playerOrder.length) % st.playerOrder.length;
-          const prevUid = st.playerOrder[prev];
-          const temp = [...(newHands[me] || [])];
-          newHands[me] = [...(newHands[prevUid] || [])];
-          newHands[prevUid] = temp;
-        }
-
-        chaosLog.unshift({ ...chaos, at: Date.now() });
-        chaosLog = chaosLog.slice(0, 5);
-        nextChaosAt = st.turnCount + 1 + 5;
-      }
-
-      /* بناء الحالة الجديدة */
-      const newUnoState = {
-        ...st,
-        deck: newDeck,
-        discard: newDiscard,
-        hands: newHands,
-        currentTurn: nextTurn,
-        direction: newDirection,
-        currentColor: newColor,
-        activePenalty: newPenalty,
-        penaltyType: newPenalty > 0 ? played.value : null,
-        lastPlayed: played,
-        turnStartedAt: Date.now(),
-        winnerId,
-        finished,
-        unoCalled: unoState,
-        turnCount: st.turnCount + 1,
-        chaosLog,
-        nextChaosAt,
-      };
-
-      tx.update(roomRef, { unoState: newUnoState });
+    await updateDoc(doc(db, 'rooms', m.roomId), {
+      unoState: newUnoState,
     });
-
-    state._unoColorPickerOpen = false;
-    state._unoPendingWild = null;
   } catch(e){
     console.error('unoPlayCard:', e);
-    toast('فشل اللعب: ' + (e.message || ''));
-    state._unoColorPickerOpen = false;
-    state._unoPendingWild = null;
+    toast('فشل اللعب — جاري المزامنة');
+    /* onSnapshot سيصلح الحالة تلقائياً */
+  } finally {
+    setTimeout(() => { state._unoPlaying = false; }, 250);
   }
+}
+
+/* ══════════════════════════════════════════════
+   🧮 حساب الحالة الجديدة كاملة على العميل
+   ══════════════════════════════════════════════ */
+function unoComputePlay(s, card, me, chosenColor, modeCfg){
+  const myHand = [...(s.hands[me] || [])];
+  const idx = myHand.findIndex(c => c.id === card.id);
+  const played = myHand.splice(idx, 1)[0];
+
+  const newDiscard = [...s.discard, played];
+  const newColor = played.type === 'wild' ? chosenColor : played.color;
+  let newPenalty = s.activePenalty;
+  let newDirection = s.direction;
+  let skipNext = false;
+  let swapHandsWith = null;
+  let rotateAllHands = false;
+
+  const v = played.value;
+
+  if(v === 'skip')                      skipNext = true;
+  else if(v === 'reverse'){
+    newDirection = s.direction * -1;
+    if(s.playerOrder.length === 2) skipNext = true;
+  }
+  else if(v === 'draw2'){
+    newPenalty = (modeCfg.stacking && s.activePenalty > 0)
+      ? s.activePenalty + 2 : 2;
+  }
+  else if(v === 'wild4'){
+    newPenalty = (modeCfg.stacking && s.activePenalty > 0 && s.penaltyType === 'wild4')
+      ? s.activePenalty + 4 : 4;
+  }
+  else if(modeCfg.sevenzero){
+    if(v === '7'){
+      const partnerIdx = (s.currentTurn + 2) % s.playerOrder.length;
+      swapHandsWith = s.playerOrder[partnerIdx];
+    } else if(v === '0'){
+      rotateAllHands = true;
+    }
+  }
+
+  const newHands = { ...s.hands, [me]: myHand };
+
+  if(swapHandsWith){
+    const otherHand = [...(newHands[swapHandsWith] || [])];
+    newHands[swapHandsWith] = myHand;
+    newHands[me] = otherHand;
+  }
+  if(rotateAllHands){
+    const allHands = s.playerOrder.map(uid => [...(newHands[uid] || [])]);
+    const rotated = allHands.map((_, i) => allHands[(i - 1 + allHands.length) % allHands.length]);
+    s.playerOrder.forEach((uid, i) => { newHands[uid] = rotated[i]; });
+  }
+
+  let nextTurn = (s.currentTurn + newDirection + s.playerOrder.length) % s.playerOrder.length;
+  if(skipNext){
+    nextTurn = (nextTurn + newDirection + s.playerOrder.length) % s.playerOrder.length;
+  }
+
+  const newDeck = [...s.deck];
+  let winnerId = null;
+  let finished = false;
+  const playerAfter = s.playerOrder[s.currentTurn];
+
+  if(newHands[playerAfter].length === 0){
+    winnerId = playerAfter;
+    finished = true;
+  }
+
+  const unoState = { ...s.unoCalled };
+
+  if(newPenalty > 0 && !finished){
+    const target = s.playerOrder[nextTurn];
+    const targetHand = [...(newHands[target] || [])];
+    const drawCount = newPenalty;
+    for(let i = 0; i < drawCount; i++){
+      if(newDeck.length === 0){
+        const reshuffled = s.discard.slice(0, -1);
+        newDeck.push(...unoShuffle(reshuffled));
+      }
+      if(newDeck.length > 0) targetHand.push(newDeck.shift());
+    }
+    newHands[target] = targetHand;
+    newPenalty = 0;
+    nextTurn = (nextTurn + newDirection + s.playerOrder.length) % s.playerOrder.length;
+  }
+
+  let chaosLog = [...(s.chaosLog || [])];
+  let nextChaosAt = s.nextChaosAt || 0;
+  if(modeCfg.chaos && s.turnCount + 1 >= nextChaosAt && !finished){
+    const chaos = UNO.CHAOS_EVENTS[Math.floor(Math.random() * UNO.CHAOS_EVENTS.length)];
+    if(chaos.id === 'draw_one'){
+      s.playerOrder.forEach(uid => {
+        if(newDeck.length > 0) newHands[uid] = [...(newHands[uid] || []), newDeck.shift()];
+      });
+    } else if(chaos.id === 'wild_frenzy'){
+      s.playerOrder.forEach(uid => {
+        newHands[uid] = [...(newHands[uid] || []), { id:`chaos_${Date.now()}_${uid}`, color:'wild', value:'wild', type:'wild' }];
+      });
+    } else if(chaos.id === 'swap_left'){
+      const prev = (s.currentTurn - 1 + s.playerOrder.length) % s.playerOrder.length;
+      const prevUid = s.playerOrder[prev];
+      const temp = [...(newHands[me] || [])];
+      newHands[me] = [...(newHands[prevUid] || [])];
+      newHands[prevUid] = temp;
+    }
+    chaosLog.unshift({ ...chaos, at: Date.now() });
+    chaosLog = chaosLog.slice(0, 5);
+    nextChaosAt = s.turnCount + 1 + 5;
+  }
+
+  const newTimeoutCounts = { ...(s.timeoutCounts || {}), [me]: 0 };
+
+  return {
+    ...s,
+    deck: newDeck,
+    discard: newDiscard,
+    hands: newHands,
+    currentTurn: nextTurn,
+    direction: newDirection,
+    currentColor: newColor,
+    activePenalty: newPenalty,
+    penaltyType: newPenalty > 0 ? played.value : null,
+    lastPlayed: played,
+    turnStartedAt: Date.now(),
+    winnerId,
+    finished,
+    finishReason: finished ? 'empty-hand' : null,
+    timeoutCounts: newTimeoutCounts,
+    unoCalled: unoState,
+    turnCount: s.turnCount + 1,
+    chaosLog,
+    nextChaosAt,
+  };
 }
 
 /* ══════════════════════════════════════════════
    🃏 سحب ورقة
    ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   🃏 سحب ورقة — Optimistic Update (فوري)
+   ══════════════════════════════════════════════ */
 async function unoDrawCard(){
-  /* ★ منع الاستدعاءات المتزامنة */
   if(state._unoDrawing) return;
 
   const m = state.activeUnoMatch;
@@ -24150,56 +24282,58 @@ async function unoDrawCard(){
   const me = state.user.uid;
 
   if(s.playerOrder[s.currentTurn] !== me) return;
+  if(s.finished) return;
 
   state._unoDrawing = true;
+
+  /* ═══ 1) احسب محلياً ═══ */
+  const newDeck = [...s.deck];
+  const newHands = { ...s.hands };
+  const myHand = [...(newHands[me] || [])];
+
+  if(newDeck.length === 0){
+    const reshuffled = s.discard.slice(0, -1);
+    newDeck.push(...unoShuffle(reshuffled));
+  }
+  if(newDeck.length === 0){
+    state._unoDrawing = false;
+    return;
+  }
+
+  const drawn = newDeck.shift();
+  myHand.push(drawn);
+  newHands[me] = myHand;
+
+  const modeCfg = UNO.MODES[s.mode] || UNO.MODES.classic;
+  const topCard = s.discard[s.discard.length - 1];
+  const canPlayDrawn = unoCanPlay(drawn, topCard, s.currentColor, s.activePenalty, modeCfg);
+
+  let nextTurn = s.currentTurn;
+  if(!canPlayDrawn){
+    nextTurn = (s.currentTurn + s.direction + s.playerOrder.length) % s.playerOrder.length;
+  }
+
+  const newUnoState = {
+    ...s,
+    deck: newDeck,
+    hands: newHands,
+    currentTurn: nextTurn,
+    turnStartedAt: Date.now(),
+    turnCount: s.turnCount + 1,
+    timeoutCounts: { ...(s.timeoutCounts || {}), [me]: 0 },
+  };
+
+  /* ═══ 2) حدّث فوراً ═══ */
+  m.unoState = newUnoState;
+  renderUnoGame();
+
+  /* ═══ 3) اكتب للخادم في الخلفية ═══ */
   try {
-    const roomRef = doc(db, 'rooms', m.roomId);
-    await runTransaction(db, async tx => {
-      const snap = await tx.get(roomRef);
-      const data = snap.data();
-      const st = data.unoState;
-      if(!st || st.finished) throw new Error('finished');
-      if(st.playerOrder[st.currentTurn] !== me) throw new Error('not your turn');
-
-      const newDeck = [...st.deck];
-      const newHands = { ...st.hands };
-      const myHand = [...(newHands[me] || [])];
-
-      if(newDeck.length === 0){
-        const reshuffled = st.discard.slice(0, -1);
-        newDeck.push(...unoShuffle(reshuffled));
-      }
-      if(newDeck.length === 0) throw new Error('deck empty');
-
-      const drawn = newDeck.shift();
-      myHand.push(drawn);
-      newHands[me] = myHand;
-
-      const modeCfg = UNO.MODES[st.mode] || UNO.MODES.classic;
-      const topCard = st.discard[st.discard.length - 1];
-      const canPlayDrawn = unoCanPlay(drawn, topCard, st.currentColor, st.activePenalty, modeCfg);
-
-      let nextTurn = st.currentTurn;
-      if(!canPlayDrawn){
-        nextTurn = (st.currentTurn + st.direction + st.playerOrder.length) % st.playerOrder.length;
-      }
-
-      /* ★ دائماً نُعيد ضبط المؤقت عند السحب */
-      tx.update(roomRef, {
-        'unoState.deck': newDeck,
-        'unoState.hands': newHands,
-        'unoState.currentTurn': nextTurn,
-        'unoState.turnStartedAt': Date.now(),
-        'unoState.turnCount': st.turnCount + 1,
-      });
-    });
+    await updateDoc(doc(db, 'rooms', m.roomId), { unoState: newUnoState });
   } catch(e){
-    /* صامت — التزامن مع snapshot طبيعي */
-    if(e.message !== 'not your turn' && e.message !== 'finished'){
-      console.warn('unoDrawCard:', e.message);
-    }
+    console.error('unoDrawCard:', e);
   } finally {
-    setTimeout(() => { state._unoDrawing = false; }, 600);
+    setTimeout(() => { state._unoDrawing = false; }, 350);
   }
 }
 
@@ -24244,6 +24378,59 @@ function unoConfirmColor(color){
 }
 
 /* ══════════════════════════════════════════════
+   💪 إرسال تفاعل — يعرض فوق صورة اللاعب
+   ══════════════════════════════════════════════ */
+async function unoSendReaction(emoji){
+  const m = state.activeUnoMatch;
+  if(!m || !m.unoState) return;
+
+  showUnoReactionOverAvatar(state.user.uid, emoji);
+
+  try {
+    await updateDoc(doc(db, 'rooms', m.roomId), {
+      'unoState.lastReaction': {
+        uid: state.user.uid,
+        emoji,
+        at: Date.now(),
+        id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      },
+    });
+  } catch(e){
+    console.error('reaction:', e);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   🎭 عرض الإيموجي طائراً فوق الصورة
+   ══════════════════════════════════════════════ */
+function showUnoReactionOverAvatar(uid, emoji){
+  let container = null;
+
+  if(uid === state.user.uid){
+    container = document.querySelector('.uno-my-avatar');
+  } else {
+    const seatEl = document.querySelector(`.uno-seat [data-view-profile="${uid}"]`);
+    container = seatEl?.closest('.uno-seat-avatar-wrap') ||
+                seatEl?.closest('.uno-seat-avatar') ||
+                seatEl;
+  }
+
+  if(!container) return;
+
+  const style = window.getComputedStyle(container);
+  if(style.position === 'static'){
+    container.style.position = 'relative';
+  }
+
+  const el = document.createElement('div');
+  el.className = 'uno-floating-reaction';
+  el.textContent = emoji;
+  container.appendChild(el);
+
+  setTimeout(() => el.remove(), 1800);
+}
+
+/* ══════════════════════════════════════════════
    🔔 إعلان UNO
    ══════════════════════════════════════════════ */
 async function unoCallUno(){
@@ -24265,14 +24452,78 @@ async function unoCallUno(){
 }
 
 /* ══════════════════════════════════════════════
+   ⏰ انتهاء الوقت — مع تتبع الخصم
+   ══════════════════════════════════════════════ */
+async function handleUnoTimeout(roomId){
+  const m = state.activeUnoMatch;
+  if(!m || !m.unoState) return;
+
+  try {
+    const roomRef = doc(db, 'rooms', roomId);
+    await runTransaction(db, async tx => {
+      const snap = await tx.get(roomRef);
+      if(!snap.exists()) throw new Error('room deleted');
+      const data = snap.data();
+      const st = data.unoState;
+      if(!st || st.finished) throw new Error('finished');
+
+      const current = st.playerOrder[st.currentTurn];
+      const timeouts = { ...(st.timeoutCounts || {}) };
+      const newCount = (timeouts[current] || 0) + 1;
+
+      /* ★ إذا مرتين متتاليتين → استسلام */
+      if(newCount >= 2){
+        const winner = st.playerOrder.find(u => u !== current) || null;
+        tx.update(roomRef, {
+          'unoState.finished': true,
+          'unoState.winnerId': winner,
+          'unoState.finishReason': 'timeout',
+          [`unoState.timeoutCounts.${current}`]: newCount,
+        });
+        return;
+      }
+
+      /* ★ المرة الأولى → سحب ورقة + انتقال الدور */
+      const newDeck = [...st.deck];
+      const newHands = { ...st.hands };
+      const myHand = [...(newHands[current] || [])];
+
+      if(newDeck.length === 0){
+        const reshuffled = st.discard.slice(0, -1);
+        newDeck.push(...unoShuffle(reshuffled));
+      }
+      if(newDeck.length > 0) myHand.push(newDeck.shift());
+      newHands[current] = myHand;
+
+      const nextTurn = (st.currentTurn + st.direction + st.playerOrder.length) % st.playerOrder.length;
+
+      tx.update(roomRef, {
+        'unoState.deck': newDeck,
+        'unoState.hands': newHands,
+        'unoState.currentTurn': nextTurn,
+        'unoState.turnStartedAt': Date.now(),
+        'unoState.turnCount': st.turnCount + 1,
+        [`unoState.timeoutCounts.${current}`]: newCount,
+      });
+    });
+  } catch(e){
+    if(e.message !== 'finished' && e.message !== 'room deleted'){
+      console.error('handleUnoTimeout:', e);
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════
    ⏱️ مؤقت الدور
    ══════════════════════════════════════════════ */
 function startUnoTurnTimer(roomId){
   if(state.unoTimer) clearInterval(state.unoTimer);
   state.unoTimer = setInterval(() => {
     const m = state.activeUnoMatch;
-    if(!m || !m.unoState){ clearInterval(state.unoTimer); return; }
-    if(m.unoState.finished){ clearInterval(state.unoTimer); return; }
+    if(!m || !m.unoState || m.unoState.finished){ 
+      clearInterval(state.unoTimer); 
+      return; 
+    }
 
     const s = m.unoState;
     const elapsed = (Date.now() - s.turnStartedAt) / 1000;
@@ -24280,28 +24531,22 @@ function startUnoTurnTimer(roomId){
     const pct = Math.max(0, Math.min(100, (remaining / s.turnTime) * 100));
     const color = pct > 50 ? '#22c55e' : pct > 20 ? '#f5b031' : '#ff3d71';
 
-    /* ★ جميع أشرطة اللاعبين (عادةً واحد فقط للنشط) */
-const activeTimerFill = document.querySelector('.uno-seat.active .uno-seat-timer-fill');
-if(activeTimerFill){
-  activeTimerFill.style.width = `${pct}%`;
-  activeTimerFill.style.background = color;
+    /* تحديث شريط الوقت للاعب النشط فقط */
+    const activeTimer = document.querySelector('.uno-seat.active .uno-seat-timer-fill');
+    if(activeTimer){
+      activeTimer.style.width = `${pct}%`;
+      activeTimer.style.background = color;
+      activeTimer.style.boxShadow = `0 0 8px ${color}`;
+    }
+
+    /* السحب التلقائي */
+if(remaining <= 0 && s.playerOrder[s.currentTurn] === state.user.uid && !s.finished){
+  const turnKey = `${s.currentTurn}_${s.turnStartedAt}`;
+  if(state._unoAutoDrawForTurn !== turnKey){
+    state._unoAutoDrawForTurn = turnKey;
+    handleUnoTimeout(roomId);   /* ← الدالة الجديدة */
+  }
 }
-
-    /* شريط دوري في الأسفل */
-    const myTimer = document.querySelector('.uno-my-timer-fill');
-    if(myTimer){
-      myTimer.style.width = `${pct}%`;
-      myTimer.style.background = color;
-    }
-
-    /* سحب تلقائي مرة واحدة عند انتهاء الوقت */
-    if(remaining <= 0 && s.playerOrder[s.currentTurn] === state.user.uid && !s.finished){
-      const turnKey = `${s.currentTurn}_${s.turnStartedAt}`;
-      if(state._unoAutoDrawForTurn !== turnKey){
-        state._unoAutoDrawForTurn = turnKey;
-        unoDrawCard();
-      }
-    }
   }, 250);
 }
 
@@ -24312,11 +24557,19 @@ async function unoShowResult(roomId){
   const m = state.activeUnoMatch;
   if(!m || !m.unoState) return;
   const winnerId = m.unoState.winnerId;
+  const finishReason = m.unoState.finishReason;
   const teams = m.unoState.teams || {};
   const myTeam = teams[state.user.uid];
   const isWinner = winnerId === state.user.uid ||
     (myTeam && teams[winnerId] === myTeam);
   const winnerUser = state.users[winnerId] || { name:'لاعب' };
+
+  /* ★ سبب الفوز */
+  const reasonText = finishReason === 'timeout'
+    ? '⏰ بسبب استسلام الخصم (تجاوز الوقت مرتين)'
+    : finishReason === 'empty-hand'
+      ? '🎴 تخلّص من كل أوراقه أولاً'
+      : '';
   const isTeamWin = myTeam && teams[winnerId] === myTeam;
 
   /* XP/عملات */
@@ -24365,6 +24618,9 @@ async function unoShowResult(roomId){
    🚪 الخروج
    ══════════════════════════════════════════════ */
 function unoExitMatch(){
+  /* ★ إغلاق أي مودال مفتوح أولاً */
+  closeModal();
+
   if(state.unoUnsub){ try{state.unoUnsub();}catch(e){} state.unoUnsub = null; }
   if(state.unoChatUnsub){ try{state.unoChatUnsub();}catch(e){} state.unoChatUnsub = null; }
   if(state.unoTimer){ clearInterval(state.unoTimer); state.unoTimer = null; }
@@ -24378,16 +24634,19 @@ function unoExitMatch(){
   state._unoColorPickerOpen = false;
   state._unoPendingWild = null;
   state._unoChatOpen = false;
-  state._unoDrawing = false;              /* ★ */
-  state._unoAutoDrawForTurn = null;       /* ★ */
+  state._unoDrawing = false;
+  state._unoAutoDrawForTurn = null;
   state.matchChat = [];
-
   state.unoSelectedMode = null;
   state.unoSettingsEditing = false;
   state._unoSettingsBackup = null;
 
   document.getElementById('gameOverlay').classList.add('hidden');
   document.body.style.overflow = '';
+
+  /* ★ بعد ثانية، فحص المباريات النشطة (ليظهر البانر لو الغرفة لا تزال نشطة) */
+  setTimeout(checkActiveGames, 800);
+
   render();
 }
 
@@ -25855,28 +26114,15 @@ if(t.dataset.action === 'uno-menu'){
   return;
 }
 
-if(t.dataset.action === 'uno-surrender'){
-  closeModal();
-  if(confirm('هل أنت متأكد من الاستسلام؟ ستحسب خسارة.')){
-    const m = state.activeUnoMatch;
-    if(m && m.roomId){
-      // إنهاء المباراة كخسارة
-      updateDoc(doc(db, 'rooms', m.roomId), {
-        'unoState.finished': true,
-        'unoState.winnerId': m.unoState.playerOrder.find(u => u !== state.user.uid)
-      }).catch(()=>{});
-    }
-    unoExitMatch();
-  }
-  return;
-}
-
 if(t.dataset.action === 'uno-react-toggle'){
-  const reactions = ['😡', '💪', '😂', '😮', '👍'];
+  const reactions = ['😡', '💪', '😂', '😮', '👍', '🔥', '😱', '🎉'];
   openModal(`
-    <div style="display:flex;justify-content:center;gap:12px;padding:10px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:10px;">
       ${reactions.map(r => `
-        <button class="uno-reaction-btn" data-action="uno-send-react" data-react="${r}">
+        <button class="uno-action-fab" 
+                data-action="uno-send-react" 
+                data-react="${r}"
+                style="width:56px;height:56px;font-size:26px;margin:0 auto;">
           ${r}
         </button>
       `).join('')}
@@ -25885,18 +26131,51 @@ if(t.dataset.action === 'uno-react-toggle'){
   return;
 }
 
-if(t.dataset.action === 'uno-send-react'){
-  closeModal();
-  const emoji = t.dataset.react;
+/* ══════════════════════════════════════════════
+   ⚔️ الاستسلام
+   ══════════════════════════════════════════════ */
+if(t.dataset.action === 'uno-surrender'){
+  if(!confirm('هل أنت متأكد من الاستسلام؟ ستحسب خسارة.')) return;
+
   const m = state.activeUnoMatch;
   if(m && m.roomId){
-    addDoc(collection(db, 'rooms', m.roomId, 'chat'), {
-      uid: state.user.uid,
-      name: state.profile.name,
-      text: emoji,
-      createdAt: serverTimestamp(),
-    });
+    const winner = (m.unoState?.playerOrder || []).find(u => u !== state.user.uid) || null;
+    /* ★ حدّث Firestore أولاً ثم اغلق */
+    try {
+      await updateDoc(doc(db, 'rooms', m.roomId), {
+        status: 'finished',
+        'unoState.finished': true,
+        'unoState.finishReason': 'surrender',
+        'unoState.winnerId': winner,
+        'unoState.finishedAt': Date.now(),
+      });
+    } catch(e){ console.error('surrender update:', e); }
   }
+  unoExitMatch();
+  return;
+}
+
+/* ══════════════════════════════════════════════
+   🚪 الخروج من المباراة
+   ══════════════════════════════════════════════ */
+if(t.dataset.action === 'uno-exit'){
+  const m = state.activeUnoMatch;
+  if(m && m.roomId){
+    try {
+      await updateDoc(doc(db, 'rooms', m.roomId), {
+        players: arrayRemove(state.user.uid),
+        status: 'waiting',
+      });
+    } catch(e){ console.error('exit update:', e); }
+  }
+  unoExitMatch();
+  return;
+}
+
+/* استبدل */
+if(t.dataset.action === 'uno-send-react'){
+  closeModal();
+  await unoSendReaction(t.dataset.react);
   return;
 }
 
@@ -27420,11 +27699,6 @@ if(t.dataset.action === 'uno-cancel-color'){
   return;
 }
 
-if(t.dataset.action === 'uno-exit'){
-  unoExitMatch();
-  return;
-}
-
 if(t.dataset.action === 'uno-play-again'){
   unoExitMatch();
   go('games', { activeGame: 'uno' });
@@ -28562,4 +28836,15 @@ document.querySelectorAll('.auth-tab').forEach(tab=>{
     document.getElementById('signupForm').classList.toggle('hidden', t !== 'signup');
     showAuthError('');
   });
+  /* ══════════════════════════════════════════════
+   📱 إعادة حساب تخطيط أونو عند تغيير حجم الشاشة
+   ══════════════════════════════════════════════ */
+window.addEventListener('resize', () => {
+  if(!state.activeUnoMatch?.unoState) return;
+
+  clearTimeout(state._unoResizeTimer);
+  state._unoResizeTimer = setTimeout(() => {
+    if(state.activeUnoMatch?.unoState) renderUnoGame();
+  }, 150);
+}, { passive: true });
 });
