@@ -20176,3 +20176,319 @@ html[dir="rtl"] .spa-actions .pact.ml{
 .uno-preview-stage .uno-seat-pos-top-right { top: 6px; right: 6px; }
 .uno-preview-stage .uno-seat-pos-left { left: 6px; }
 .uno-preview-stage .uno-seat-pos-right { right: 6px; }
+
+/* ============================================================
+   🃏 UNO — تخطيط المقاعد النهائي
+   (بدون صندوق، أوراق ملتصقة بالأطراف، تراكم تراكمي)
+   ============================================================ */
+
+/* ═══════════════ المقعد — بدون صندوق ═══════════════ */
+.uno-seat{
+  position: absolute !important;
+  z-index: 3 !important;
+  display: flex !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.uno-seat > *{ pointer-events: auto !important; }
+
+/* ═══════════════ المواضع ═══════════════ */
+
+/* أعلى الوسط — نصف الورقة (62px) خارج الشاشة */
+.uno-seat-pos-top{
+  top: -31px !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+/* يسار — نصف الورقة (44px) خارج الشاشة */
+.uno-seat-pos-left{
+  left: -22px !important;
+  right: auto !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  flex-direction: row-reverse !important; /* LTR: الأوراق أولاً (يسار) */
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* يمين — نصف الورقة خارج الشاشة */
+.uno-seat-pos-right{
+  right: -22px !important;
+  left: auto !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  flex-direction: row !important; /* RTL: الأوراق أولاً (يمين) */
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* أعلى اليسار */
+.uno-seat-pos-top-left{
+  top: -31px !important;
+  left: 8px !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+}
+
+/* أعلى اليمين */
+.uno-seat-pos-top-right{
+  top: -31px !important;
+  right: 8px !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  gap: 2px !important;
+}
+
+/* ═══════════════ حاوية الأوراق ═══════════════ */
+.uno-seat-cards{
+  display: flex !important;
+  gap: 0 !important;
+  position: relative !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  flex-wrap: nowrap !important;
+}
+
+.uno-seat-pos-top .uno-seat-cards,
+.uno-seat-pos-top-left .uno-seat-cards,
+.uno-seat-pos-top-right .uno-seat-cards{
+  flex-direction: row !important;
+  align-items: flex-start !important;
+}
+
+.uno-seat-pos-left .uno-seat-cards,
+.uno-seat-pos-right .uno-seat-cards{
+  flex-direction: column-reverse !important;
+  align-items: flex-start !important;
+}
+
+/* ═══════════════ الورقة — تراكم بـ transform ═══════════════ */
+.uno-opp-card{
+  flex-shrink: 0 !important;
+  width: 44px !important;
+  height: 62px !important;
+  border-radius: 6px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  color: #fff !important;
+  border: 1.5px solid rgba(255,255,255,.28) !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,.6),
+              inset 0 0 0 1px rgba(255,255,255,.1) !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+}
+
+/* وجه الورقة الخلفي (الخصوم) */
+.uno-opp-card.face-down{
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.06) 0 3px, transparent 3px 6px),
+    linear-gradient(135deg, #2a1e5c, #1a1540) !important;
+}
+.uno-opp-card.face-down::after{
+  content: "U" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%,-50%) rotate(-15deg) !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  color: rgba(255,255,255,.35) !important;
+  font-style: italic !important;
+  text-shadow: none !important;
+}
+
+/* وجه الورقة المكشوفة (الزميل) — يُظهر الرمز فقط */
+.uno-opp-card.show{
+  display: block !important;
+}
+.uno-opp-card.show > span{
+  position: absolute !important;
+  top: 3px !important;
+  left: 3px !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  color: #fff !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,.85) !important;
+  z-index: 2 !important;
+  line-height: 1 !important;
+}
+
+/* ═══════════════ معلومات اللاعب ═══════════════ */
+.uno-seat-info{
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 3px !important;
+  padding: 2px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ── شريط الوقت (فوق الصورة) ── */
+.uno-seat-timer{
+  width: 42px !important;
+  height: 3px !important;
+  background: rgba(0,0,0,.7) !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+  border-radius: 99px !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+}
+.uno-seat-timer-fill{
+  height: 100% !important;
+  border-radius: 99px !important;
+  transition: width .25s linear, background .25s !important;
+  box-shadow: 0 0 6px currentColor !important;
+}
+
+/* ── الصورة ── */
+.uno-seat-avatar-wrap{
+  position: relative !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.uno-seat-avatar .av{
+  width: 36px !important;
+  height: 36px !important;
+  border: 2px solid rgba(255,255,255,.35) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.55) !important;
+  transition: border-color .25s, box-shadow .25s !important;
+}
+
+/* ★ الدور النشط — إطار وتوهج خفيف */
+.uno-seat.active .uno-seat-avatar .av{
+  border-color: #00d2ff !important;
+  box-shadow:
+    0 0 0 2px #00d2ff,
+    0 0 22px rgba(0,210,255,.7),
+    0 2px 8px rgba(0,0,0,.55) !important;
+  animation: unoAvatarPulse 1.5s infinite !important;
+}
+
+.uno-seat.active.teammate .uno-seat-avatar .av{
+  border-color: #22c55e !important;
+  box-shadow:
+    0 0 0 2px #22c55e,
+    0 0 22px rgba(34,197,94,.7),
+    0 2px 8px rgba(0,0,0,.55) !important;
+  animation: unoTeammatePulse 1.5s infinite !important;
+}
+
+/* عدّاد الأوراق */
+.uno-seat-count-badge{
+  position: absolute !important;
+  bottom: -4px !important;
+  inset-inline-end: -4px !important;
+  min-width: 16px !important;
+  height: 16px !important;
+  padding: 0 4px !important;
+  background: var(--brand-2) !important;
+  color: #0a0e17 !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  border-radius: 8px !important;
+  border: 1.5px solid #0a0e17 !important;
+  display: grid !important;
+  place-items: center !important;
+  font-variant-numeric: tabular-nums !important;
+  z-index: 2 !important;
+}
+
+/* ── اسم اللاعب (تحت الصورة) ── */
+.uno-seat-name{
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  color: #fff !important;
+  text-shadow:
+    0 1px 4px rgba(0,0,0,.95),
+    0 0 8px rgba(0,0,0,.75) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 70px !important;
+  text-align: center !important;
+  margin: 1px 0 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* شارات UNO / الزميل */
+.uno-badge-uno{
+  position: absolute !important;
+  top: -6px !important;
+  inset-inline-start: -6px !important;
+  padding: 2px 6px !important;
+  background: linear-gradient(135deg, #ff3d71, #f5b301) !important;
+  color: #fff !important;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  border-radius: 6px !important;
+  border: 1.5px solid #0a1a0f !important;
+  animation: unoUnoPulse 1s infinite !important;
+  z-index: 5 !important;
+}
+.uno-teammate-badge{
+  position: absolute !important;
+  top: -6px !important;
+  inset-inline-end: -6px !important;
+  padding: 2px 6px !important;
+  background: rgba(34,197,94,.95) !important;
+  color: #fff !important;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  border-radius: 6px !important;
+  border: 1.5px solid #0a1a0f !important;
+  z-index: 5 !important;
+}
+
+/* ═══════════════ استجابة للشاشات الصغيرة ═══════════════ */
+@media (max-width: 420px){
+  .uno-seat-pos-top{ top: -26px !important; }
+  .uno-seat-pos-left{ left: -19px !important; }
+  .uno-seat-pos-right{ right: -19px !important; }
+
+  .uno-opp-card{
+    width: 38px !important;
+    height: 54px !important;
+  }
+  .uno-opp-card.show > span{ font-size: 11px !important; }
+
+  .uno-seat-avatar .av{
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .uno-seat-name{ font-size: 9px !important; max-width: 60px !important; }
+  .uno-seat-timer{ width: 36px !important; }
+  .uno-seat-count-badge{
+    min-width: 14px !important;
+    height: 14px !important;
+    font-size: 8px !important;
+  }
+}
+
+/* إخفاء حاويات قديمة (تنظيف) */
+.uno-seat-header, .uno-seat-avatar-block,
+.uno-seat-cards-wrap, .uno-opponents{ display: none !important; }
