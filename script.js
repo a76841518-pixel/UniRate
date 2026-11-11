@@ -6410,29 +6410,50 @@ async function checkActiveGames(){
       }
     };
 
-    leaveEl.onclick = async () => {
-      if(!confirm('مغادرة المباراة؟')) return;
-      try {
-        if(game.gameId === 'uno'){
-          await updateDoc(doc(db, 'rooms', game.id), {
-            status: 'finished',
-            'unoState.finished': true,
-            'unoState.finishReason': 'left',
-          });
-        } else {
-          await updateDoc(doc(db, 'rooms', game.id), {
-            players: arrayRemove(state.user.uid),
-            status: 'waiting',
-          });
-        }
-        banner.classList.add('hidden');
-        toast('غادرت المباراة');
-        setTimeout(checkActiveGames, 500);
-      } catch(e){
-        console.error(e);
-        toast('فشل المغادرة');
+leaveEl.onclick = async () => {
+  if(!confirm('مغادرة المباراة؟')) return;
+  try {
+    const roomRef = doc(db, 'rooms', game.id);
+    const snap = await getDoc(roomRef);
+
+    if(game.gameId === 'uno'){
+      const data = snap.exists() ? snap.data() : {};
+      const st = data.unoState || {};
+
+      /* إن كانت لم تبدأ (بانتظار لاعبين) → احذف مباشرة */
+      if(data.status === 'waiting'){
+        try { await deleteDoc(roomRef); } catch(e){}
       }
-    };
+      /* إن كانت جارية → اعتبرها استسلاماً */
+      else if(!st.finished){
+        const winner = (data.players || []).find(p => p !== state.user.uid) || null;
+        await updateDoc(roomRef, {
+          status: 'finished',
+          'unoState.finished': true,
+          'unoState.finishReason': 'left',
+          'unoState.winnerId': winner,
+          'unoState.finishedAt': Date.now(),
+        });
+      }
+      /* إن كانت منتهية بالفعل → احذف */
+      else {
+        try { await deleteDoc(roomRef); } catch(e){}
+      }
+    } else {
+      await updateDoc(roomRef, {
+        players: arrayRemove(state.user.uid),
+        status: 'waiting',
+      });
+    }
+
+    banner.classList.add('hidden');
+    toast('غادرت المباراة');
+    setTimeout(checkActiveGames, 500);
+  } catch(e){
+    console.error(e);
+    toast('فشل المغادرة');
+  }
+};
   } catch(e){
     console.warn('checkActiveGames:', e);
   }
@@ -23569,6 +23590,186 @@ document.getElementById('forgotPassBtn')?.addEventListener('click', async () => 
 });
 
 /* ============================================================
+   🔊 UNO Sound Engine — Web Audio API (بدون ملفات صوتية)
+   ============================================================ */
+const UNOSound = (() => {
+  let ctx = null;
+  let master = null;
+  let enabled = true;
+  const volume = 0.55;
+
+  function ensureCtx(){
+    if (ctx) return ctx;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      ctx = new Ctx();
+      master = ctx.createGain();
+      master.gain.value = volume;
+      master.connect(ctx.destination);
+    } catch(e){ console.warn('UNOSound init failed:', e); }
+    return ctx;
+  }
+  function resume(){ if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{}); }
+
+  function tone(freq, dur, type='sine', gain=0.2, delay=0, endFreq=null){
+    if (!ctx || !master) return;
+    const t0 = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+
+  function noise(dur, gain=0.2, filterFreq=2000){
+    if (!ctx || !master) return;
+    const t0 = ctx.currentTime;
+    const size = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, size, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < size; i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/size, 2);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = filterFreq;
+    filt.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.connect(filt); filt.connect(g); g.connect(master);
+    src.start(t0);
+  }
+
+  const sounds = {
+    /* رمي ورقة — swoosh + click */
+    playCard(){
+      noise(0.13, 0.28, 2600);
+      tone(900, 0.07, 'sine', 0.14, 0, 420);
+    },
+    /* سحب ورقة — slide ناعم */
+    drawCard(){
+      noise(0.18, 0.22, 1400);
+      tone(280, 0.11, 'sine', 0.1, 0, 580);
+    },
+    /* نداء UNO — نغمتان */
+    uno(){
+      tone(880, 0.13, 'square', 0.18);
+      tone(1320, 0.16, 'square', 0.18, 0.13);
+    },
+    /* فوز — فانفير صاعد */
+    win(){
+      [523,659,784,1047].forEach((f,i)=>tone(f, 0.22, 'sine', 0.24, i*0.11));
+    },
+    /* خسارة — نزول حزين */
+    lose(){
+      [523,440,349,262].forEach((f,i)=>tone(f, 0.28, 'sine', 0.18, i*0.14));
+    },
+    /* تحذير الوقت — بوقان */
+    timer(){
+      tone(880, 0.08, 'square', 0.16);
+      tone(880, 0.08, 'square', 0.16, 0.16);
+    },
+    /* بدء دوري — ding */
+    turn(){
+      tone(660, 0.32, 'sine', 0.2, 0, 880);
+    },
+    /* نقر زر */
+    click(){ tone(520, 0.04, 'sine', 0.09); },
+    /* تفاعل — whoosh */
+    reaction(){
+      noise(0.11, 0.22, 3200);
+      tone(600, 0.09, 'sine', 0.1, 0, 950);
+    },
+    /* خلط — card shuffle */
+    shuffle(){ noise(0.45, 0.16, 2200); tone(200, 0.3, 'sawtooth', 0.07); },
+    /* خطأ */
+    error(){ tone(180, 0.24, 'sawtooth', 0.13); }
+  };
+
+  return {
+    init(){ ensureCtx(); resume(); },
+    play(name){
+      if (!enabled || !ensureCtx()) return;
+      resume();
+      try { sounds[name]?.(); } catch(e){}
+    },
+    setEnabled(v){
+      enabled = !!v;
+      try { localStorage.setItem('nexus_uno_sound', enabled ? '1' : '0'); } catch(e){}
+    },
+    isEnabled(){ return enabled; },
+    loadPref(){
+      try {
+        const s = localStorage.getItem('nexus_uno_sound');
+        if (s !== null) enabled = s === '1';
+      } catch(e){}
+    }
+  };
+})();
+UNOSound.loadPref();
+
+/* ============================================================
+   🎬 محرك تحريك الأوراق الطائرة
+   ============================================================ */
+function unoAnimateCardFly(fromRect, toRect, card, opts = {}){
+  if (!fromRect || !toRect) return;
+  if (typeof window === 'undefined') return;
+
+  const clone = document.createElement('div');
+  clone.className = 'uno-flying-card';
+
+  if (card) {
+    clone.innerHTML = renderUnoCard(card, {});
+  } else {
+    const skin = state.unoSettings?.skin || 'classic';
+    clone.innerHTML = `
+      <div class="uno-deck-back" style="position:relative;width:100%;height:100%">
+        <img class="uno-deck-back-img loaded" src="${esc(getUnoBackImageUrl(skin))}"
+             alt="" draggable="false" onerror="this.remove()">
+        <div class="uno-deck-back-fallback">
+          <span class="uno-deck-logo-text" style="font-size:14px">UNO</span>
+        </div>
+      </div>`;
+  }
+
+  clone.style.cssText = `
+    position:fixed; top:${fromRect.top}px; left:${fromRect.left}px;
+    width:${fromRect.width}px; height:${fromRect.height}px;
+    z-index:500; pointer-events:none;
+    transition: top .4s cubic-bezier(.34,1.4,.64,1),
+                left .4s cubic-bezier(.34,1.4,.64,1),
+                width .4s cubic-bezier(.34,1.4,.64,1),
+                height .4s cubic-bezier(.34,1.4,.64,1),
+                transform .4s cubic-bezier(.34,1.4,.64,1),
+                opacity .3s ease;
+    will-change:transform,top,left,width,height,opacity;
+  `;
+
+  document.body.appendChild(clone);
+  void clone.offsetWidth;
+
+  requestAnimationFrame(() => {
+    clone.style.top = `${toRect.top}px`;
+    clone.style.left = `${toRect.left}px`;
+    clone.style.width = `${toRect.width}px`;
+    clone.style.height = `${toRect.height}px`;
+    clone.style.transform = opts.fade ? 'scale(.85) rotate(-10deg)' : 'scale(1) rotate(-4deg)';
+    if (opts.fade) clone.style.opacity = '0.7';
+  });
+
+  setTimeout(() => {
+    clone.style.opacity = '0';
+    setTimeout(() => { try { clone.remove(); } catch(e){} }, 220);
+  }, 420);
+}
+
+/* ============================================================
    🃏 أونو — UNO Card Game Engine v1.0
    ============================================================ */
 
@@ -23808,10 +24009,11 @@ function subscribeToUnoMatch(roomId){
 
   /* ✅ جديد: معالجة التفاعلات الواردة */
   const lr = data.unoState?.lastReaction;
-  if(lr && lr.at > (state._lastReactionAt || 0)){
+  if (lr && lr.at > (state._lastReactionAt || 0)){
     state._lastReactionAt = lr.at;
-    if(lr.uid !== state.user.uid){
+    if (lr.uid !== state.user.uid){
       showUnoReactionOverAvatar(lr.uid, lr.emoji);
+      UNOSound.play('reaction');         /* ★ */
     }
   }
 
@@ -23820,24 +24022,6 @@ function subscribeToUnoMatch(roomId){
 if(data.unoState.winnerId && !state._unoWinnerShown){
   state._unoWinnerShown = true;
   setTimeout(() => unoShowResult(roomId), 600);
-} else if(!data.unoState.winnerId && state._unoWinnerShown){
-  /* اللاعب الآخر أغلق النتيجة → اخرج أنا أيضاً */
-  state._unoWinnerShown = false;
-  state._unoRewarded = false;
-  unoExitMatch();
-  setTimeout(() => {
-    state.activeGame = 'uno';
-    go('game');
-  }, 200);
-} else if(!data.unoState.winnerId && state._unoWinnerShown){
-  /* ★ اللاعب الآخر أغلق النتيجة → اخرج أنا أيضاً */
-  state._unoWinnerShown = false;
-  state._unoRewarded = false;
-  unoExitMatch();
-  setTimeout(() => {
-    state.activeGame = 'uno';
-    go('game');
-  }, 200);
 }
   });
 
@@ -23941,6 +24125,7 @@ const renderOpponentSeat = (uid, pos) => {
 
   return `
     <div class="uno-seat uno-seat-pos-${pos} ${isCurrent?'active':''} ${isTeammate?'teammate':''}">
+	         data-seat-uid="${uid}">                          <!-- ★ جديد -->
       <div class="uno-opp-cards-row">
         ${displayCards.map((card, i) => `
           <div class="uno-opp-card ${isTeammate ? `uno-color-${card.color} show` : 'face-down'}"
@@ -24068,6 +24253,42 @@ ${state._unoColorPickerOpen ? renderUnoColorPicker() : ''}
     const el = document.getElementById('unoChatMessages');
     if(el) el.scrollTop = el.scrollHeight;
   }
+
+    /* ═══════════════════════════════════════════════
+     ★★ حركة لعب الخصوم + صوت بدء دوري ★★
+     ═══════════════════════════════════════════════ */
+  const currentLastId = s.lastPlayed?.id;
+  const prevLastId    = state._lastPlayedId;
+  const lastPlayedBy  = s.lastPlayedBy;
+
+  /* حركة الخصم — فقط عندما يلعب لاعب آخر */
+  if (prevLastId !== undefined
+      && currentLastId !== prevLastId
+      && prevLastId !== null
+      && lastPlayedBy
+      && lastPlayedBy !== me){
+
+    const targetEl   = container.querySelector('.uno-discard-pile');
+    const targetRect = targetEl?.getBoundingClientRect();
+    const sourceSeat = container.querySelector(`.uno-seat[data-seat-uid="${lastPlayedBy}"]`);
+    const sourceRect = sourceSeat?.getBoundingClientRect();
+
+    if (sourceRect && targetRect){
+      unoAnimateCardFly(sourceRect, targetRect, s.lastPlayed, {});
+    }
+    UNOSound.play('playCard');
+  }
+  state._lastPlayedId = currentLastId;
+
+  /* صوت بدء دوري */
+  const currentTurnPlayer = s.playerOrder[s.currentTurn];
+  if (!s.finished
+      && state._prevTurnPlayer !== undefined
+      && state._prevTurnPlayer !== currentTurnPlayer
+      && currentTurnPlayer === me){
+    UNOSound.play('turn');
+  }
+  state._prevTurnPlayer = currentTurnPlayer;
 }
 
 /* ★ توزيع أفضل للمواضع */
@@ -24163,53 +24384,62 @@ function unoCardDisplay(card){
    ⚡ لعب ورقة — Optimistic Update (فوري)
    ══════════════════════════════════════════════ */
 async function unoPlayCard(cardId, chosenColor = null){
-  if(state._unoPlaying) return; /* منع النقر المزدوج */
+  if (state._unoPlaying) return;
 
   const m = state.activeUnoMatch;
-  if(!m || !m.unoState) return;
+  if (!m || !m.unoState) return;
   const s = m.unoState;
   const me = state.user.uid;
   const modeCfg = UNO.MODES[s.mode] || UNO.MODES.classic;
 
-  if(s.playerOrder[s.currentTurn] !== me) return toast('ليس دورك');
-  if(s.finished) return;
+  if (s.playerOrder[s.currentTurn] !== me) return toast('ليس دورك');
+  if (s.finished) return;
 
   const myHand = s.hands[me] || [];
   const card = myHand.find(c => c.id === cardId);
-  if(!card) return toast('الورقة غير موجودة');
+  if (!card) return toast('الورقة غير موجودة');
 
   const topCard = s.discard[s.discard.length - 1];
-  if(!unoCanPlay(card, topCard, s.currentColor, s.activePenalty, modeCfg)){
+  if (!unoCanPlay(card, topCard, s.currentColor, s.activePenalty, modeCfg)){
+    UNOSound.play('error');
     return toast('لا يمكنك لعب هذه الورقة');
   }
 
-  if(card.type === 'wild' && !chosenColor){
+  if (card.type === 'wild' && !chosenColor){
     state._unoPendingWild = cardId;
     state._unoColorPickerOpen = true;
+    UNOSound.play('click');
     renderUnoGame();
     return;
   }
 
+  /* ★ التقاط موضع الورقة المصدر قبل إعادة الرسم */
+  const sourceEl = document.querySelector(`[data-uno-card="${cardId}"]`);
+  const sourceRect = sourceEl?.getBoundingClientRect();
+
   state._unoPlaying = true;
 
-  /* ═══ 1) احسب الحالة الجديدة محلياً (لا انتظار) ═══ */
+  /* ═══ الحساب المحلي ═══ */
   const newUnoState = unoComputePlay(s, card, me, chosenColor, modeCfg);
 
-  /* ═══ 2) حدّث فوراً (الحركة تحدث الآن) ═══ */
   m.unoState = newUnoState;
   state._unoColorPickerOpen = false;
   state._unoPendingWild = null;
   renderUnoGame();
 
-  /* ═══ 3) اكتب للخادم في الخلفية ═══ */
+  /* ★★ الحركة الطائرة + الصوت ★★ */
+  if (sourceRect){
+    const targetEl = document.querySelector('.uno-discard-pile');
+    const targetRect = targetEl?.getBoundingClientRect();
+    if (targetRect) unoAnimateCardFly(sourceRect, targetRect, card, {});
+  }
+  UNOSound.play('playCard');
+
   try {
-    await updateDoc(doc(db, 'rooms', m.roomId), {
-      unoState: newUnoState,
-    });
+    await updateDoc(doc(db, 'rooms', m.roomId), { unoState: newUnoState });
   } catch(e){
     console.error('unoPlayCard:', e);
     toast('فشل اللعب — جاري المزامنة');
-    /* onSnapshot سيصلح الحالة تلقائياً */
   } finally {
     setTimeout(() => { state._unoPlaying = false; }, 250);
   }
@@ -24338,6 +24568,7 @@ function unoComputePlay(s, card, me, chosenColor, modeCfg){
     activePenalty: newPenalty,
     penaltyType: newPenalty > 0 ? played.value : null,
     lastPlayed: played,
+    lastPlayedBy: me,                       // ★ جديد
     turnStartedAt: Date.now(),
     winnerId,
     finished,
@@ -24353,32 +24584,33 @@ function unoComputePlay(s, card, me, chosenColor, modeCfg){
 /* ══════════════════════════════════════════════
    🃏 سحب ورقة
    ══════════════════════════════════════════════ */
-/* ══════════════════════════════════════════════
-   🃏 سحب ورقة — Optimistic Update (فوري)
-   ══════════════════════════════════════════════ */
 async function unoDrawCard(){
-  if(state._unoDrawing) return;
+  if (state._unoDrawing) return;
 
   const m = state.activeUnoMatch;
-  if(!m || !m.unoState) return;
+  if (!m || !m.unoState) return;
   const s = m.unoState;
   const me = state.user.uid;
 
-  if(s.playerOrder[s.currentTurn] !== me) return;
-  if(s.finished) return;
+  if (s.playerOrder[s.currentTurn] !== me) return;
+  if (s.finished) return;
+
+  /* ★ التقاط موضع الكومة قبل السحب */
+  const deckEl = document.querySelector('.uno-deck-pile');
+  const deckRect = deckEl?.getBoundingClientRect();
 
   state._unoDrawing = true;
 
-  /* ═══ 1) احسب محلياً ═══ */
   const newDeck = [...s.deck];
   const newHands = { ...s.hands };
   const myHand = [...(newHands[me] || [])];
 
-  if(newDeck.length === 0){
+  if (newDeck.length === 0){
     const reshuffled = s.discard.slice(0, -1);
     newDeck.push(...unoShuffle(reshuffled));
+    UNOSound.play('shuffle');
   }
-  if(newDeck.length === 0){
+  if (newDeck.length === 0){
     state._unoDrawing = false;
     return;
   }
@@ -24392,7 +24624,7 @@ async function unoDrawCard(){
   const canPlayDrawn = unoCanPlay(drawn, topCard, s.currentColor, s.activePenalty, modeCfg);
 
   let nextTurn = s.currentTurn;
-  if(!canPlayDrawn){
+  if (!canPlayDrawn){
     nextTurn = (s.currentTurn + s.direction + s.playerOrder.length) % s.playerOrder.length;
   }
 
@@ -24406,11 +24638,24 @@ async function unoDrawCard(){
     timeoutCounts: { ...(s.timeoutCounts || {}), [me]: 0 },
   };
 
-  /* ═══ 2) حدّث فوراً ═══ */
   m.unoState = newUnoState;
   renderUnoGame();
 
-  /* ═══ 3) اكتب للخادم في الخلفية ═══ */
+  /* ★★ الحركة الطائرة (وجه لأسفل) + الصوت ★★ */
+  if (deckRect){
+    const handEl = document.querySelector('.uno-hand');
+    if (handEl){
+      const handRect = handEl.getBoundingClientRect();
+      unoAnimateCardFly(deckRect, {
+        top:    handRect.top  + handRect.height/2 - 37,
+        left:   handRect.left + handRect.width/2  - 26,
+        width:  52,
+        height: 74,
+      }, null, { fade: true });
+    }
+  }
+  UNOSound.play('drawCard');
+
   try {
     await updateDoc(doc(db, 'rooms', m.roomId), { unoState: newUnoState });
   } catch(e){
@@ -24465,9 +24710,10 @@ function unoConfirmColor(color){
    ══════════════════════════════════════════════ */
 async function unoSendReaction(emoji){
   const m = state.activeUnoMatch;
-  if(!m || !m.unoState) return;
+  if (!m || !m.unoState) return;
 
   showUnoReactionOverAvatar(state.user.uid, emoji);
+  UNOSound.play('reaction');               /* ★ */
 
   try {
     await updateDoc(doc(db, 'rooms', m.roomId), {
@@ -24522,16 +24768,16 @@ function showUnoReactionOverAvatar(uid, emoji){
    ══════════════════════════════════════════════ */
 async function unoCallUno(){
   const m = state.activeUnoMatch;
-  if(!m || !m.unoState) return;
+  if (!m || !m.unoState) return;
   const me = state.user.uid;
   const myHand = m.unoState.hands[me] || [];
-  if(myHand.length !== 1) return toast('لا يمكنك إعلان UNO الآن');
+  if (myHand.length !== 1) return toast('لا يمكنك إعلان UNO الآن');
+
+  UNOSound.play('uno');                    /* ★ */
 
   try {
-    const roomRef = doc(db,'rooms', m.roomId);
-    await updateDoc(roomRef, {
-      [`unoState.unoCalled.${me}`]: true,
-    });
+    const roomRef = doc(db, 'rooms', m.roomId);
+    await updateDoc(roomRef, { [`unoState.unoCalled.${me}`]: true });
     toast('🔔 UNO!');
   } catch(e){
     console.error(e);
@@ -24645,6 +24891,14 @@ function startUnoTurnTimer(roomId){
       const turnKey = `${s.currentTurn}_${s.turnStartedAt}`;
       if(state._unoAutoDrawForTurn !== turnKey){
         state._unoAutoDrawForTurn = turnKey;
+		    /* ★ صوت تحذير الوقت (مرة واحدة لكل دور) */
+    if (isMyTurn && remaining > 0 && remaining <= 5 && !s.finished){
+      const turnKey = `${s.currentTurn}_${s.turnStartedAt}`;
+      if (state._timerWarnedTurn !== turnKey){
+        state._timerWarnedTurn = turnKey;
+        UNOSound.play('timer');
+      }
+    }
         handleUnoTimeout(roomId);
       }
     }
@@ -24703,6 +24957,8 @@ async function unoShowResult(roomId){
 
   const container = document.getElementById('gameContainer');
   if(!container) return;
+
+  UNOSound.play(isWinner ? 'win' : 'lose');
 
   container.innerHTML = `
     <div class="uno-result">
@@ -24767,25 +25023,63 @@ async function unoShowResult(roomId){
 /* ══════════════════════════════════════════════
    🚪 إغلاق النتيجة للجميع + العودة للوبي
    ══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   🚪 إغلاق النتيجة — منفصل لكل لاعب + حذف ذكي
+   ═══════════════════════════════════════════════ */
 async function unoDismissResult(roomId){
-  if(!roomId) return;
-
-  try {
-    await updateDoc(doc(db, 'rooms', roomId), {
-      'unoState.finished': false,
-      'unoState.winnerId': null,
-      'unoState.finishReason': null,
-      'unoState.resultDismissedAt': Date.now(),
-      'unoState.resultDismissedBy': state.user.uid,
-    });
-  } catch(e){
-    console.warn('uno dismiss:', e);
+  if(!roomId){
+    unoExitMatch();
+    setTimeout(() => { state.activeGame = 'uno'; go('game'); }, 200);
+    return;
   }
 
+  try {
+    const roomRef = doc(db, 'rooms', roomId);
+
+    /* 1) تحقق أن الغرفة ما زالت موجودة */
+    const snap0 = await getDoc(roomRef);
+    if(!snap0.exists()){
+      /* حُذفت بالفعل — اخرج مباشرة */
+      state._unoWinnerShown = false;
+      state._unoRewarded = false;
+      unoExitMatch();
+      setTimeout(() => { state.activeGame = 'uno'; go('game'); }, 200);
+      return;
+    }
+
+    /* 2) سجّل خروجي ذرّياً بـ arrayUnion (يمنع سباق التحديث) */
+    await updateDoc(roomRef, {
+      'unoState.resultDismissedBy': arrayUnion(state.user.uid),
+      'unoState.resultDismissedAt': Date.now(),
+    }).catch(() => {});
+
+    /* 3) أعِد القراءة للتحقق من اكتمال الجميع */
+    const snap1 = await getDoc(roomRef);
+    if(snap1.exists()){
+      const data = snap1.data();
+      const players    = data.players || [];
+      const dismissed  = data.unoState?.resultDismissedBy || [];
+      const reason     = data.unoState?.finishReason;
+
+      const allDismissed = players.length > 0 && players.every(p => dismissed.includes(p));
+      const isAbandoned  = reason === 'left' || reason === 'surrender';
+
+      if(allDismissed || isAbandoned){
+        /* ★ الكل انتهى (أو منسحب) → احذف الغرفة نهائياً */
+        try { await deleteDoc(roomRef); } catch(e){ console.warn('delete:', e); }
+      } else {
+        /* ★ بعض اللاعبين ما زالوا يشاهدون → علّمها finished فقط */
+        await updateDoc(roomRef, { status: 'finished' }).catch(() => {});
+      }
+    }
+  } catch(e){
+    console.warn('unoDismissResult:', e);
+  }
+
+  /* ★ خروجي المحلي (مستقل تماماً عن الآخر) */
   state._unoWinnerShown = false;
   state._unoRewarded = false;
   unoExitMatch();
-
   setTimeout(() => {
     state.activeGame = 'uno';
     go('game');
@@ -26381,9 +26675,18 @@ if(t.dataset.action === 'chat-open-challenge'){
   return;
 }
 
-if(t.dataset.action === 'uno-menu'){
+if (t.dataset.action === 'uno-menu'){
+  UNOSound.play('click');
+  const soundOn = UNOSound.isEnabled();
   openModal(`
     <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="uno-sound-toggle ${soundOn ? 'on' : ''}" data-action="uno-toggle-sound">
+        <span style="font-size:18px">${soundOn ? '🔊' : '🔇'}</span>
+        <span style="flex:1;text-align:start;font-size:13px;font-weight:800">
+          ${soundOn ? 'الصوت مفعّل' : 'الصوت مكتوم'}
+        </span>
+        <div class="toggle-switch"></div>
+      </button>
       <button class="set-row" data-action="uno-exit" style="border-radius:12px">
         ${ic('logout','sm')} <span class="sr-txt"><span class="sr-n">خروج من المباراة</span></span>
       </button>
@@ -26392,6 +26695,17 @@ if(t.dataset.action === 'uno-menu'){
       </button>
     </div>
   `);
+  return;
+}
+
+if (t.dataset.action === 'uno-toggle-sound'){
+  UNOSound.play('click');
+  UNOSound.setEnabled(!UNOSound.isEnabled());
+  const isOn = UNOSound.isEnabled();
+  t.classList.toggle('on', isOn);
+  const spans = t.querySelectorAll('span');
+  if (spans[0]) spans[0].textContent = isOn ? '🔊' : '🔇';
+  if (spans[1]) spans[1].textContent = isOn ? 'الصوت مفعّل' : 'الصوت مكتوم';
   return;
 }
 
@@ -27998,7 +28312,8 @@ if(t.dataset.action === 'uno-call'){
 }
 
 /* ✅ FIX 1: النقر على ورقة اللون */
-if(t.dataset.unoColor){
+if (t.dataset.unoColor){
+  UNOSound.play('click');                 /* ★ */
   unoConfirmColor(t.dataset.unoColor);
   return;
 }
@@ -28045,7 +28360,9 @@ if(t.dataset.action === 'uno-chat-send'){
 }
 
 /* ═══ أونو: اختيار الطور ═══ */
-if(t.dataset.unoSelectMode){
+if (t.dataset.unoSelectMode){
+  UNOSound.init();                        /* ★ */
+  UNOSound.play('click');                 /* ★ */
   const modeKey = t.dataset.unoSelectMode;
   const mode = UNO.MODES[modeKey];
 
@@ -28187,7 +28504,9 @@ if(t.dataset.unoPickSkin){
 }
 
 /* ═══ أونو: تأكيد وبدء المباراة ═══ */
-if(t.dataset.action === 'uno-confirm-settings'){
+if (t.dataset.action === 'uno-confirm-settings'){
+  UNOSound.init();                        /* ★ */
+  UNOSound.play('click');                 /* ★ */
   await unoStartMatchmaking(state.unoSelectedMode);
   return;
 }
