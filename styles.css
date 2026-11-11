@@ -21429,3 +21429,95 @@ html[dir="rtl"] .spa-actions .pact.ml{
   will-change: transform, opacity;
   text-shadow: 0 0 12px rgba(255,255,255,0.3);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ⏱️ إطار الوقت حول الصورة الشخصية (conic ring)
+   ═══════════════════════════════════════════════════════════ */
+.uno-avatar-timer{
+  --progress-deg: 0deg;
+  --timer-color: transparent;
+  position: relative;
+  display: inline-block;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(
+    var(--timer-color) 0deg var(--progress-deg),
+    rgba(255,255,255,0.12) var(--progress-deg) 360deg
+  );
+  transition: box-shadow 0.3s ease;
+  /* ✅ الحاوية حول الصورة */
+  line-height: 0;
+}
+
+/* الصورة داخل الإطار — بدون حدود خاصة بها */
+.uno-avatar-timer > .uno-my-avatar,
+.uno-avatar-timer > .uno-seat-avatar{
+  border-radius: 50%;
+  overflow: hidden;
+  background: #0a0e17;
+  padding: 1.5px;
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.uno-avatar-timer > .uno-my-avatar .av,
+.uno-avatar-timer > .uno-seat-avatar .av{
+  border: 0 !important;
+  box-shadow: none !important;
+  animation: none !important;
+  border-radius: 50% !important;
+}
+
+/* ✅ توهج خفيف للاعب النشط */
+.uno-avatar-timer.active{
+  box-shadow: 0 0 16px var(--timer-color, transparent);
+}
+
+/* تعطيل القواعد القديمة (للتوافق) */
+.uno-my-timer-wrap,
+.uno-seat-timer{
+  display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🔔 زر UNO بجانب زر التفاعل
+   ═══════════════════════════════════════════════════════════ */
+.uno-header-action-btn.call-uno{
+  background: linear-gradient(135deg, #ff3d71, #f5b301) !important;
+  border: 1.5px solid #fff !important;
+  font-size: 15px !important;
+  box-shadow: 0 3px 12px rgba(255,61,113,0.65);
+  animation: unoCallBtnPulse 1s infinite;
+  width: auto;
+  min-width: 44px;
+  padding: 0 10px;
+  gap: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 900;
+}
+
+.uno-header-action-btn.call-uno .uno-call-label{
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+@keyframes unoCallBtnPulse{
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+/* ✅ أيقونة الجرس بحجم مناسب */
+.uno-header-action-btn.call-uno svg{
+  width: 14px;
+  height: 14px;
+}
+
+/* ✅ في RTL: عكس الاتجاه عند اللزوم */
+[dir="rtl"] .uno-header-action-btn.call-uno{
+  flex-direction: row;
+}

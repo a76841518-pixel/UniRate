@@ -23861,45 +23861,48 @@ function renderUnoGame(){
   /* ★ حساب التداخل ديناميكياً بناءً على عدد الأوراق (بين 15 و 45 بكسل) */
   const overlap = computeUnoOverlap(myHand.length);
 
-  const renderOpponentSeat = (uid, pos) => {
-    const u = state.users[uid] || { name:'لاعب' };
-    const isCurrent = currentPlayer === uid;
-    const hand = s.hands[uid] || [];
-    const count = hand.length;
-    const uno = count === 1;
-    const isTeammate = myTeam && teams[uid] === myTeam;
-    const displayCards = hand.slice(0, 6);
+const renderOpponentSeat = (uid, pos) => {
+  const u = state.users[uid] || { name:'لاعب' };
+  const isCurrent = currentPlayer === uid;
+  const hand = s.hands[uid] || [];
+  const count = hand.length;
+  const uno = count === 1;
+  const isTeammate = myTeam && teams[uid] === myTeam;
+  const displayCards = hand.slice(0, 6);
 
-    return `
-      <div class="uno-seat uno-seat-pos-${pos} ${isCurrent?'active':''} ${isTeammate?'teammate':''}">
-        <div class="uno-opp-cards-row">
-          ${displayCards.map((card, i) => `
-            <div class="uno-opp-card ${isTeammate ? `uno-color-${card.color} show` : 'face-down'}"
-                 style="z-index:${i + 1}">
-              ${isTeammate ? `<span>${unoCardDisplay(card)}</span>` : ''}
-            </div>
-          `).join('')}
-        </div>
+  /* ✅ حساب زاوية الإطار */
+  const progressDeg = isCurrent ? (timerPct * 3.6) : 0;
+  const ringColor = isCurrent ? timerColor : 'transparent';
 
-        <div class="uno-seat-info">
-          <div class="uno-seat-timer">
-            <div class="uno-seat-timer-fill"
-                 style="width:${isCurrent?timerPct:0}%;background:${isCurrent?timerColor:'transparent'}"></div>
+  return `
+    <div class="uno-seat uno-seat-pos-${pos} ${isCurrent?'active':''} ${isTeammate?'teammate':''}">
+      <div class="uno-opp-cards-row">
+        ${displayCards.map((card, i) => `
+          <div class="uno-opp-card ${isTeammate ? `uno-color-${card.color} show` : 'face-down'}"
+               style="z-index:${i + 1}">
+            ${isTeammate ? `<span>${unoCardDisplay(card)}</span>` : ''}
           </div>
-          <div class="uno-seat-avatar-wrap">
-            <!-- ★ تفعيل فتح الملف الشخصي للخصم -->
+        `).join('')}
+      </div>
+
+      <div class="uno-seat-info">
+        <div class="uno-seat-avatar-wrap">
+          <!-- ✅ الإطار = شريط الوقت -->
+          <div class="uno-avatar-timer ${isCurrent ? 'active' : ''}"
+               style="--progress-deg:${progressDeg}deg; --timer-color:${ringColor}">
             <div class="uno-seat-avatar" data-view-profile="${uid}">
               ${avatar(u, 36)}
             </div>
-            <div class="uno-seat-count-badge">${count}</div>
-            ${uno ? '<div class="uno-badge-uno">UNO!</div>' : ''}
-            ${isTeammate ? '<div class="uno-teammate-badge">🤝</div>' : ''}
           </div>
-          <div class="uno-seat-name" data-view-profile="${uid}">${esc((u.name||'').split(' ')[0])}</div>
+          <div class="uno-seat-count-badge">${count}</div>
+          ${uno ? '<div class="uno-badge-uno">UNO!</div>' : ''}
+          ${isTeammate ? '<div class="uno-teammate-badge">🤝</div>' : ''}
         </div>
+        <div class="uno-seat-name" data-view-profile="${uid}">${esc((u.name||'').split(' ')[0])}</div>
       </div>
-    `;
-  };
+    </div>
+  `;
+};
 
   container.innerHTML = `
     <div class="uno-game">
@@ -23945,55 +23948,62 @@ function renderUnoGame(){
     </div>
 
     <!-- ★ صندوق اللاعب مع الأزرار -->
-    <div class="uno-my-header">
-          <!-- الصورة (تفتح الملف) -->
-          <div class="uno-my-avatar ${isMyTurn ? 'active' : ''}" data-view-profile="${state.user.uid}">
-            ${avatar(state.profile, 44)}
-            ${myHand.length === 1 && s.unoCalled[me] ? '<div class="uno-badge-uno">UNO!</div>' : ''}
-            ${myHand.length === 1 && !s.unoCalled[me] ? '<div class="uno-badge-uno-pulse">!</div>' : ''}
-          </div>
-          
-          <!-- الاسم وعدد الأوراق -->
-          <div class="uno-my-info">
-            <div class="uno-my-name">${esc(state.profile.name)}</div>
-            <div class="uno-my-count">
-              ${myHand.length} ${myHand.length === 1 ? 'ورقة' : 'أوراق'}
-              ${isMyTurn ? '<span class="uno-my-turn-dot">🎯 دورك</span>' : ''}
-            </div>
-          </div>
-
-          <!-- أزرار التفاعل والدردشة -->
-          <div class="uno-header-actions">
-            <button type="button" class="uno-header-action-btn" data-action="uno-react-toggle" aria-label="تفاعل">💪</button>
-            <button type="button" class="uno-header-action-btn" data-action="uno-chat-toggle" aria-label="دردشة">
-              ${ic('message','sm')}
-            </button>
-          </div>
-
-          <!-- زر UNO (يظهر عند الحاجة) -->
-          ${myHand.length === 1 && !s.unoCalled[me] && !s.finished ? `
-            <button type="button" class="uno-call-btn" data-action="uno-call">🔔 UNO!</button>
-          ` : ''}
-        </div>
-
-        <!-- أوراقي -->
-        <div class="uno-hand" style="--overlap: ${overlap}px">
-          ${sortedHand.map((card, i) => {
-            const playable = isMyTurn && unoCanPlay(card, topCard, currentColor, s.activePenalty, modeCfg);
-            return `
-              <button type="button" class="uno-card-btn ${playable?'playable':'not-playable'}"
-                      data-uno-card="${card.id}"
-                      style="--i:${i}"
-                      ${playable && !s.finished ? '' : 'disabled'}>
-                ${renderUnoCard(card, { playable })}
-              </button>
-            `;
-          }).join('')}
-        </div>
-      </div>
-
-      ${state._unoColorPickerOpen ? renderUnoColorPicker() : ''}
+<div class="uno-my-header">
+  <!-- ✅ الصورة مع إطار الوقت الدائري -->
+  <div class="uno-avatar-timer ${isMyTurn ? 'active' : ''}"
+       style="--progress-deg:${isMyTurn ? timerPct * 3.6 : 0}deg; --timer-color:${isMyTurn ? timerColor : 'transparent'}">
+    <div class="uno-my-avatar" data-view-profile="${state.user.uid}">
+      ${avatar(state.profile, 44)}
+      ${myHand.length === 1 && s.unoCalled[me] ? '<div class="uno-badge-uno">UNO!</div>' : ''}
+      ${myHand.length === 1 && !s.unoCalled[me] ? '<div class="uno-badge-uno-pulse">!</div>' : ''}
     </div>
+  </div>
+  
+  <!-- الاسم وعدد الأوراق -->
+  <div class="uno-my-info">
+    <div class="uno-my-name">${esc(state.profile.name)}</div>
+    <div class="uno-my-count">
+      ${myHand.length} ${myHand.length === 1 ? 'ورقة' : 'أوراق'}
+      ${isMyTurn ? '<span class="uno-my-turn-dot">🎯 دورك</span>' : ''}
+    </div>
+  </div>
+
+  <!-- ✅ أزرار: UNO + تفاعل + دردشة -->
+  <div class="uno-header-actions">
+    ${myHand.length === 1 && !s.unoCalled[me] && !s.finished ? `
+      <button type="button"
+              class="uno-header-action-btn call-uno"
+              data-action="uno-call"
+              title="إعلان UNO!"
+              aria-label="UNO!">
+        🔔<span class="uno-call-label">UNO</span>
+      </button>
+    ` : ''}
+    <button type="button" class="uno-header-action-btn" data-action="uno-react-toggle" aria-label="تفاعل">💪</button>
+    <button type="button" class="uno-header-action-btn" data-action="uno-chat-toggle" aria-label="دردشة">
+      ${ic('message','sm')}
+    </button>
+  </div>
+</div>
+
+<!-- أوراقي -->
+<div class="uno-hand" style="--overlap: ${overlap}px">
+  ${sortedHand.map((card, i) => {
+    const playable = isMyTurn && unoCanPlay(card, topCard, currentColor, s.activePenalty, modeCfg);
+    return `
+      <button type="button" class="uno-card-btn ${playable?'playable':'not-playable'}"
+              data-uno-card="${card.id}"
+              style="--i:${i}"
+              ${playable && !s.finished ? '' : 'disabled'}>
+        ${renderUnoCard(card, { playable })}
+      </button>
+    `;
+  }).join('')}
+</div>
+</div>
+
+${state._unoColorPickerOpen ? renderUnoColorPicker() : ''}
+</div>
     ${state._unoChatOpen ? renderUnoChatModal() : ''}
   `;
 
@@ -24542,30 +24552,28 @@ function startUnoTurnTimer(roomId){
     const remaining = Math.max(0, s.turnTime - elapsed);
     const pct = Math.max(0, Math.min(100, (remaining / s.turnTime) * 100));
     const color = pct > 50 ? '#22c55e' : pct > 20 ? '#f5b031' : '#ff3d71';
+    const progressDeg = pct * 3.6;  /* 0–360 */
 
-    /* تحديث شريط وقت الخصم النشط */
-    const activeTimer = document.querySelector('.uno-seat.active .uno-seat-timer-fill');
-    if(activeTimer){
-      activeTimer.style.width = `${pct}%`;
-      activeTimer.style.background = color;
-      activeTimer.style.boxShadow = `0 0 8px ${color}`;
+    /* ✅ إطار الخصم النشط */
+    const activeRing = document.querySelector('.uno-seat.active .uno-avatar-timer');
+    if(activeRing){
+      activeRing.style.setProperty('--progress-deg', `${progressDeg}deg`);
+      activeRing.style.setProperty('--timer-color', color);
     }
 
-    /* ✅ FIX 2: تحديث شريط وقتي */
-    const myTimer = document.getElementById('unoMyTimerFill');
-    if(myTimer){
+    /* ✅ إطاري (إذا كان دوري) */
+    const myRing = document.querySelector('.uno-my-header .uno-avatar-timer');
+    if(myRing){
       if(isMyTurn){
-        myTimer.style.width = `${pct}%`;
-        myTimer.style.background = color;
-        myTimer.style.boxShadow = `0 0 8px ${color}`;
+        myRing.style.setProperty('--progress-deg', `${progressDeg}deg`);
+        myRing.style.setProperty('--timer-color', color);
       } else {
-        myTimer.style.width = '0%';
-        myTimer.style.background = 'transparent';
-        myTimer.style.boxShadow = 'none';
+        myRing.style.setProperty('--progress-deg', '0deg');
+        myRing.style.setProperty('--timer-color', 'transparent');
       }
     }
 
-    /* السحب التلقائي */
+    /* ✅ السحب التلقائي عند انتهاء الوقت */
     if(remaining <= 0 && isMyTurn && !s.finished){
       const turnKey = `${s.currentTurn}_${s.turnStartedAt}`;
       if(state._unoAutoDrawForTurn !== turnKey){
